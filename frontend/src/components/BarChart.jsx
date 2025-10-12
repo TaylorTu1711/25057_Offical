@@ -12,6 +12,8 @@ import {
   PointElement,
   Title,
   Tooltip,
+  BarController,
+  LineController,
   Legend,
 } from 'chart.js';
 
@@ -24,6 +26,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
+  BarController,
+  LineController,
   zoomPlugin,
 );
 

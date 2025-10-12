@@ -1,3 +1,5 @@
+
+import { BASE_URL } from '../config/config';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { saveToken } from '../utils/auth';
@@ -7,8 +9,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  const BASE_URL = "http://10.15.26.169:3000";
 
   const handleSubmit = async (e) => {
     e.preventDefault();

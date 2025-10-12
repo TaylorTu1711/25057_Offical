@@ -15,7 +15,7 @@ function App() {
         <Routes>
 
           <Route path="/login" element={<Login />} />
-          {/* <Route path="/register" element={<Register />} /> */}
+          { /* <Route path="/register" element={<Register />} /> */}
 
           <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>}/>
           <Route path="/machines/:machine_id" element={<ProtectedRoute><Machine /></ProtectedRoute>}/>

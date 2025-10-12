@@ -9,6 +9,8 @@ import {
   BarElement,
   Title,
   Tooltip,
+  BarController,
+  LineController,
   Legend,
 } from 'chart.js';
 
@@ -20,6 +22,8 @@ ChartJS.register(
   Tooltip,
   Legend,
   zoomPlugin,
+  BarController,
+  LineController,
   ChartDataLabels,
 );
 

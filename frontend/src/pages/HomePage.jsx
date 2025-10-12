@@ -1,3 +1,4 @@
+import { BASE_URL } from '../config/config';
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate  } from 'react-router-dom';
 import AppNavbar from '../components/Navbar';
@@ -5,7 +6,6 @@ import "../css/Home.css"
 import "../index.css"
 
 function HomePage() {
-  const BASE_URL = "http://10.15.26.169:3000";
   const [allLocations, setAllLocations] = useState([]);
   const [machines, setMachines] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
