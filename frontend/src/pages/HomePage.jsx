@@ -1,9 +1,10 @@
-import { BASE_URL } from '../config/config';
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate  } from 'react-router-dom';
 import AppNavbar from '../components/Navbar';
 import "../css/Home.css"
 import "../index.css"
+import { Edit, Trash2, Power, AlertCircle } from 'lucide-react';
+import { BASE_URL } from '../config/config';
 
 function HomePage() {
   const [allLocations, setAllLocations] = useState([]);
@@ -11,6 +12,7 @@ function HomePage() {
   const [selectedLocation, setSelectedLocation] = useState(null);
 
   const [showEditInforCard, setShowEditInforCard] = useState(false);
+  const [user, setUser] = useState(null);
 
   const [dtGroup, setDtGroup] = useState([]);
   const [nonDtGroup, setNonDtGroup] = useState([]);
@@ -32,6 +34,8 @@ function HomePage() {
     information: '',
   });
 
+  const role = localStorage.getItem('role');
+
   const handleChangeMachineInfor = (e) => {
     const { name, value } = e.target;
     setUpdateMachineInfor((prev) => ({
@@ -43,13 +47,48 @@ function HomePage() {
 
   const navigate = useNavigate();
 
+    // 🧩 Lấy thông tin người dùng hiện tại
+  const fetchUser = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        localStorage.removeItem('token');
+        navigate('/login');
+        return;
+      }
+      const data = await res.json();
+      setUser(data);
+      localStorage.setItem('role', data.role || 'user');
+    } catch (err) {
+      console.error('Error fetching user:', err);
+      navigate('/login');
+    }
+  };
+
   const handleDeleteMachine = async (machine_id) => {
+
+    const token = localStorage.getItem('token'); // ✅ lấy token
+    if (!token) {
+      alert("Bạn không có quyền xóa máy này!");
+      return;
+    }
     const confirmDelete = window.confirm("Bạn có chắc muốn xoá máy này?");
     if (!confirmDelete) return;
 
       try {
         const response = await fetch(`${BASE_URL}/api/machines/${machine_id}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: {
+          'Authorization': `Bearer ${token}` // ✅ gửi token
+      }
         });
 
         if (!response.ok) throw new Error('Xóa máy thất bại');
@@ -68,7 +107,20 @@ function HomePage() {
     const last = new Date(lastUpdated);
     const now = new Date();
     const diffMinutes = (now - last) / 1000 / 60;
-    return diffMinutes < 2; // giả sử mất kết nối nếu không gửi dữ liệu trong 2 phút
+    return diffMinutes < 5; // giả sử mất kết nối nếu không gửi dữ liệu trong 2 phút
+  };
+
+  const convertStatusToString = (status) => {
+    switch (status) {
+      case 0:
+        return '🟡 Đang dừng';
+      case 1:
+        return '🟡 Đang dừng';
+      case 2:
+        return '🟢 Đang chạy'; // text-dark để chữ không bị mờ trên nền vàng
+      default:
+        return 'NA';
+    }
   };
 
   const getAllLocations = async () => {
@@ -84,11 +136,18 @@ function HomePage() {
   };
 
   const handleSaveMachineInfor = async () => {
+    const token = localStorage.getItem('token'); // ✅ lấy token
+    if (!token) {
+    alert("Bạn không có quyền chỉnh sửa máy!");
+      return;
+    }
+
     try {
       const response = await fetch(`${BASE_URL}/api/machines/${updateMachineInfor.machine_id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
           machine_name: updateMachineInfor.machine_name,
@@ -141,6 +200,12 @@ function HomePage() {
   };
 
   const handleAddMachine = async () => {
+    const token = localStorage.getItem('token'); // ✅ lấy token
+    if (!token) {
+      alert("Bạn không có quyền thêm máy!");
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('machine_id', newMachine.machine_id);
@@ -153,7 +218,8 @@ function HomePage() {
       console.log(formData);
       const response = await fetch(`${BASE_URL}/api/machines`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (!response.ok) throw new Error('Thêm máy thất bại');
@@ -173,6 +239,8 @@ function HomePage() {
 
   useEffect(() => {
     getAllLocations();
+    fetchUser();
+    console.log(role)
     
   }, []);
 
@@ -192,14 +260,20 @@ function HomePage() {
                 <h5 className="fw-bold mb-0" style={{ color: 'rgba(32, 64, 154, 1)' }}>
                   🏭 Khu vực nhà máy
                 </h5>
-                <button
-                  className="btn btn-sm"
-                  title="Thêm máy mới"
-                  onClick={() => setShowModal(true)}
-                  style={{ lineHeight: 1, border: '2px solid rgba(32, 64, 154, 1)' }}
-                >
-                  ➕
-                </button>
+                {role === 'admin' && (
+                  <button
+                    className="btn btn-sm"
+                    title="Thêm máy mới"
+                    onClick={() => setShowModal(true)}
+                    style={{
+                      lineHeight: 1,
+                      border: '2px solid rgba(32, 64, 154, 1)',
+                    }}
+                  >
+                    ➕
+                  </button>
+                )}
+
               </div>
               {/* Button Group */}
               <div className="d-flex gap-2 mb-3">
@@ -261,13 +335,13 @@ function HomePage() {
 
           {/* Main content - Machines */}
           <div className="col-md-9">
-            <div className="bg-light p-4 rounded shadow-lg d-flex flex-column" style={{ height: 'calc(100vh - 100px)' }}>
+            <div className="bg-light p-4 rounded shadow-lg d-flex flex-column" style={{ height: 'calc(100vh - 100px)'}}>
               <h4 className="mb-1" style={{ color: 'rgba(32, 64, 154, 1)' }}>
                 Danh sách máy {selectedLocation && `tại ${selectedLocation}`}
                 {machines.length > 0 && ` (${machines.length} máy)`}
               </h4>
-              <div className="row flex-grow-1 overflow-auto" style={{ minHeight: 0 }}>
-                <div className="col-12" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
+              <div className="row flex-grow-1 overflow-auto" style={{ minHeight: 0, marginTop: '8px', marginLeft: '-15px', width: 'calc(100% + 30px)'}}>
+                <div className="col-12 px-0" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
                   <table className="table table-bordered table-hover align-middle bg-white shadow-sm" style={{ fontSize: '15px' }}>
                     <thead
                       className="table-light text-center"
@@ -296,58 +370,36 @@ function HomePage() {
                           <td style={{ color: '#20409a', fontWeight: '500' }}>{machine.machine_name}</td>
                           <td className="text-muted text-center">{machine.machine_id}</td>
                           <td className="text-center">
-                            <span
-                              title={`Trạng thái: ${isConnected(machine.last_updated) ? 'Đang kết nối' : 'Mất kết nối'}`}
-                              style={{
-                                width: '12px',
-                                height: '12px',
-                                borderRadius: '50%',
-                                display: 'inline-block',
-                                backgroundColor: isConnected(machine.last_updated) ? '#28a745' : '#dc3545',
-                                marginRight: '6px',
-                                verticalAlign: 'middle',
-                              }}
-                            ></span>
-                            {isConnected(machine.last_updated) ? 'Đang kết nối' : 'Mất kết nối'}
+                            {isConnected(machine.last_updated) ? convertStatusToString(machine.status) : '🟡 Đang dừng'}
                           </td>
-                          <td className="text-center">
-                            <button
-                              className="btn btn-sm me-2"
-                              style={{
-                                color: '#20409a',
-                                backgroundColor: 'white',
-                                border: '1px solid #20409a',
-                                transition: 'all 0.2s ease',
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setUpdateMachineInfor(machine);
-                                setShowEditInforCard(true);
-                              }}
-                              onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = '#20409a';
-                                e.target.style.color = 'white';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = 'white';
-                                e.target.style.color = '#20409a';
-                              }}
-                              title='Sửa'
-                            >
-                              ✏️
-                            </button>
+                          <td className="px-2 py-2">
+                            {role === 'admin' && (
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setUpdateMachineInfor(machine);
+                                    setShowEditInforCard(true);
+                                  }}
+                                  className="p-2.5 text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white rounded-lg transition-all duration-200 transform hover:scale-110 shadow-sm"
+                                  title="Chỉnh sửa"
+                                >
+                                  <Edit className="w-5 h-5" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteMachine(machine.machine_id);
+                                  }}
+                                  className="p-2.5 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition-all duration-200 transform hover:scale-110 shadow-sm"
+                                  title="Xóa"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              </div>
+                            )}
+                          </td>
 
-                            <button
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteMachine(machine.machine_id);
-                              }}
-                              title='Xóa'
-                            >
-                              ❌
-                            </button>
-                          </td>
                         </tr>
                       ))}
 
@@ -531,6 +583,7 @@ function HomePage() {
               <label className="form-label">Hình ảnh</label>
               <input
                 type="file"
+                accept="image/*"
                 className="form-control"
                 onChange={(e) => setNewMachine(prev => ({ ...prev, image: e.target.files[0] }))}
               />

@@ -19,3 +19,18 @@ export const getLocations = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const getAllLocations = async (req, res) => {
+  try {
+    const allLocations = await pool.query(
+      "SELECT * FROM machines"
+    );
+
+    res.json({
+      locations: allLocations.rows,
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

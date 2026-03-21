@@ -10,17 +10,31 @@ export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const res = await fetch(`${BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
+
       if (!res.ok) throw new Error('Login failed');
-      const data = await res.json();
+
+      const data = await res.json(); // { token: "..." }
+
+      // ✅ Lưu token
       saveToken(data.token);
+
+      // ✅ Giải mã token để lấy thông tin user (email, role, id)
+      const decoded = JSON.parse(atob(data.token.split('.')[1]));
+      console.log(decoded.role);
+
+      // ✅ Lưu role vào localStorage (hoặc Context)
+      localStorage.setItem('role', decoded.role);
+      localStorage.setItem('email', decoded.email);
+
+      // ✅ Điều hướng về trang chính
       navigate('/');
     } catch (err) {
       setError('Email hoặc mật khẩu không đúng');
@@ -32,13 +46,13 @@ export default function Login() {
       <div className="card shadow p-4" style={{ minWidth: '350px' }}>
         <h3 className="text-center mb-4">Đăng nhập</h3>
         {error && <div className="alert alert-danger text-center">{error}</div>}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleLogin}>
           <div className="mb-3">
-            <label className="form-label">Email</label>
+            <label className="form-label">Tên đăng nhập</label>
             <input
-              type="email"
+              type="text"
               className="form-control"
-              placeholder="Nhập email..."
+              placeholder="Nhập tên đăng nhập..."
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -57,9 +71,9 @@ export default function Login() {
           </div>
           <button className="btn btn-primary w-100" type="submit">Đăng nhập</button>
         </form>
-        <p className="text-center mt-3">
+        {/* <p className="text-center mt-3">
           Chưa có tài khoản? <a href="/register">Đăng ký</a>
-        </p>
+        </p> */}
       </div>
     </div>
   );

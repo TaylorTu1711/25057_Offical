@@ -23,17 +23,25 @@ export const login = async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-  const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET || 'secret_key', {
-  expiresIn: '15m',
-    }); 
+  const token = jwt.sign({ id: user.id, email: user.email, role: user.role}, JWT_SECRET || 'secret_key'); 
   res.json({ token });
 };
 
-export const getCurrentUser = (req, res) => {
-  res.json({ id: req.user.id, email: req.user.email });
-};
+export const getCurrentUser = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, email, role FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-// controllers/authController.js
+    res.json(user);
+  } catch (err) {
+    console.error('getCurrentUser error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
 
 
 export const logout = async (req, res) => {

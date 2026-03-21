@@ -15,6 +15,8 @@ import '../css/Machine.css'
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import BarChart_Error from '../components/BarChart_AnalysisError';
 import { BASE_URL } from '../config/config';
+import MachineTreeSidebar from '../components/MachineTreeSidebar';
+import MachineTreeSidebarMobile from '../components/MachineTreeSidebarMobile';
 
 
 function Machine() {
@@ -49,10 +51,13 @@ function Machine() {
   const [showAnalysisError, setShowAnalysisError] = useState(false);
   const [performanceMachine, setPerformanceMachine] = useState(false);
   const [shootMachine, setShootMachine] = useState(false);
+  const [dtGroup, setDtGroup] = useState([]);
+  const [nonDtGroup, setNonDtGroup] = useState([]);
+  const [allLocations, setAllLocations] = useState([]);
 
   const [labelsChartErr, setLabelsChartErr] = useState([]);
   const [dataValuesChartErr, setDataValuesChartErr] = useState([]);
-  
+
   const [viewModeChart1, setViewModeChart1] = useState('month');
   const [toDateChart1, setToDateChart1] = useState(new Date());
   const [fromDateChart1, setFromDateChart1] = useState(() => {
@@ -60,14 +65,38 @@ function Machine() {
     date.setMonth(date.getMonth() - 1);
     return date;
   });
+  
+  const [isLoading, setIsLoading] = useState(false);
 
   const [tempViewModeChart1, setTempViewModeChart1] = useState('month');
-  const [tempToDateChart1, setTempToDate] = useState(new Date());
+  const [tempToDateChart1, setTempToDateChart1] = useState(new Date());
   const [tempFromDateChart1, setTempFromDateChart1] = useState(() => {
     const date = new Date();
     date.setMonth(date.getMonth() - 1);
     return date;
   });
+
+  const handleViewModeChart1Change = (value) => {
+    setTempViewModeChart1(value);
+
+    if (value === 'year') { // hiển thị theo tháng
+      const now = new Date();
+      setTempToDateChart1(now); // tháng hiện tại
+
+      const date = new Date();
+      date.setMonth(now.getMonth() - 12); // 12 tháng trước
+      setTempFromDateChart1(date);
+    }
+    else if (value === 'month') { // hiển thị theo tháng
+      const now = new Date();
+      setTempToDateChart1(now); // tháng hiện tại
+
+      const date = new Date();
+      date.setMonth(now.getMonth() - 1); // 12 tháng trước
+      setTempFromDateChart1(date);
+    }
+    
+  };
 
   const [viewModeChart2, setViewModeChart2] = useState('month');
   const [toDateChart2, setToDateChart2] = useState(new Date());
@@ -85,18 +114,40 @@ function Machine() {
     return date;
   });
 
+  const handleViewModeChart2Change = (value) => {
+    setTempViewModeChart2(value);
+
+    if (value === 'year') { // hiển thị theo tháng
+      const now = new Date();
+      setTempToDateChart2(now); // tháng hiện tại
+
+      const date = new Date();
+      date.setMonth(now.getMonth() - 12); // 12 tháng trước
+      setTempFromDateChart2(date);
+    }
+    else if (value === 'month') { // hiển thị theo tháng
+      const now = new Date();
+      setTempToDateChart2(now); // tháng hiện tại
+
+      const date = new Date();
+      date.setMonth(now.getMonth() - 1); // 12 tháng trước
+      setTempFromDateChart2(date);
+    }
+    
+  };
+
 
   const [toDateChart3, setToDateChart3] = useState(new Date());
   const [fromDateChart3, setFromDateChart3] = useState(() => {
     const date = new Date();
-    date.setMinutes(date.getMinutes() - 600);
+    date.setMinutes(date.getMinutes() - 1440);
     return date;
   });
 
   const [tempToDateChart3, setTempToDateChart3] = useState(new Date());
   const [tempFromDateChart3, setTempFromDateChart3] = useState(() => {
     const date = new Date();
-    date.setMinutes(date.getMinutes() - 600);
+    date.setMinutes(date.getMinutes() - 1440);
     return date;
   });
 
@@ -109,6 +160,8 @@ function Machine() {
     // cleanup
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+
   
 
   const { machine_id } = useParams();
@@ -124,6 +177,21 @@ function Machine() {
     }
   };
 
+  const handleBootData = async () => {
+    try {
+      if (!window.confirm("Bạn có chắc muốn dọn dữ liệu cũ?")) return;
+      const res = await fetch(`${BASE_URL}/api/boot/${machine_id}`, {
+        method: "DELETE",
+      });
+      const msg = await res.text();
+      alert(msg);
+    } catch (err) {
+      console.error(err.message);
+    }
+  };
+
+
+
   const getMachineInfor = async () => {
     try {
       const res = await fetch(`${BASE_URL}/api/machines/${machine_id}`);
@@ -134,6 +202,29 @@ function Machine() {
     }
   };
 
+  const getAllLocations = async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/locations/alllocations`);
+      const jsonData = await response.json();
+
+      // Nếu API trả về { locations: [...] }
+      const all = jsonData.locations || [];
+
+      // Chia ra 2 nhóm theo isdtgroup
+      const dtGroup = all.filter(m => m.isdtgroup === true);
+      const nonDtGroup = all.filter(m => !m.isdtgroup);
+
+      // Cập nhật state
+      setDtGroup(dtGroup);
+      setNonDtGroup(nonDtGroup);
+      setAllLocations(all); 
+
+    } catch (err) {
+      console.error(err.message);
+    }
+  };
+
+
   const handleUpdateTimeChart1 = () => {
     setFromDateChart1(tempFromDateChart1);
     setToDateChart1(tempToDateChart1);
@@ -142,7 +233,7 @@ function Machine() {
 
   const handleCancelTimeChart1 = () => {
     setTempFromDateChart1(fromDateChart1);
-    setTempToDate(toDateChart1);
+    setTempToDateChart1(toDateChart1);
     setTempViewModeChart1(viewModeChart1);
   };
 
@@ -172,13 +263,12 @@ function Machine() {
     const response = await fetch(`${BASE_URL}/api/machines?location=${encodeURIComponent(location)}&isdtgroup=${isdtgroup}`);
     const jsonData = await response.json();
     setMachines(jsonData);
-    console.log(response)
   };
 
   const getStatusClass = (status) => {
     switch (status) {
       case 0:
-        return 'bg-danger';
+        return 'bg-warning text-dark';
       case 1:
         return 'bg-warning text-dark';
       case 2:
@@ -190,7 +280,7 @@ function Machine() {
     const convertStatusToString = (status) => {
     switch (status) {
       case 0:
-        return 'Đang lỗi';
+        return 'Đang dừng';
       case 1:
         return 'Đang dừng';
       case 2:
@@ -257,6 +347,7 @@ function Machine() {
 
   const getAllParamMachine = async () => {
     try {
+      setIsLoading(true);
       const res = await fetch(`${BASE_URL}/api/detailMachine?machine_id=${machine_id}`);
       const data = await res.json();
 
@@ -265,18 +356,22 @@ function Machine() {
       // Lọc lấy bản ghi cuối cùng của mỗi ngày
       const dataFilter = Object.values(
         data.reduce((acc, item) => {
-          const date = item.timestamp.slice(0, 10);
-          if (!acc[date] || new Date(item.timestamp) > new Date(acc[date].timestamp)) {
+          const date = item.timestamp.slice(0, 10); // ✅ Giữ đúng theo giờ VN
+          if (!acc[date] || new Date(item.timestamp) > new Date(acc[date].timestamp)) { // ✅ So sánh chuỗi ISO an toàn
             acc[date] = item;
           }
           return acc;
         }, {})
       );
 
+      const totalDays = new Set(
+        dataFilter.map(item => item.timestamp.slice(0, 10))
+      ).size;
+      const totalHours = totalDays * 24;
+
       // Tổng thời gian mở máy
-      setTotalTimeOn(
-        (dataFilter.reduce((sum, item) => sum + (item.time_on || 0), 0) / 3600).toFixed(1)
-      );
+      const totalTimeOn = (dataFilter.reduce((sum, item) => sum + (item.time_on || 0), 0) / 3600).toFixed(1)
+      setTotalTimeOn(totalTimeOn);
 
       setRawData(dataFilter);
 
@@ -303,7 +398,6 @@ function Machine() {
 
       // ✅ Nếu chỉ có 1 ngày hoặc không đủ dữ liệu
       if (twoDatesNearest.length < 2) {
-        console.warn("Chỉ có 1 ngày dữ liệu, không tính được hiệu suất.");
 
         const onlyDay = groupedByDate[twoDatesNearest[0]];
         setShootMachine(onlyDay?.shoot || 0);
@@ -341,13 +435,18 @@ function Machine() {
             ).toFixed(2)
           : null;
 
-      const performance = (actualShootNearestDay * (avgCycle/3600)) / timeOnNearestDay;
-      console.log(actualShootNearestDay);
-      console.log(avgCycle);
-      console.log(timeOnNearestDay);
-      setPerformanceMachine(Number((performance * 100).toFixed(2)));
+      //const performance = (actualShootNearestDay * (avgCycle/3600)) / timeOnNearestDay;
+      
+      //const performance = (timeOnNearestDay) / 24;
+
+      const performance = (totalTimeOn) / totalHours;
+
+
+      setPerformanceMachine(Number((performance * 100).toFixed(1)));
     } catch (err) {
       console.error(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -391,7 +490,8 @@ function Machine() {
     getErrorsMachine();
     getAllParamMachine();                                         
     getMachineInfor();
-  }, []);
+    getAllLocations();
+  }, [machine_id]);
 
   useEffect(() => {
     if (!selectedDay || !rawData.length) return;
@@ -480,6 +580,7 @@ function Machine() {
 
     setMonthLabels(dayLabels);
     setProductivityMonthDataValues(productivityValues);
+    
 
     const quantityMonthMap = {};
 
@@ -671,7 +772,6 @@ function Machine() {
     // Cập nhật biểu đồ
     setLabelsChart3(labels);
     setStatusDataValuesChart3(mappedData);      // ví dụ: "Đang chạy"
-    console.log(mappedData)
 
     
   }, [rawData, showTimeWindowChart3]);
@@ -694,28 +794,36 @@ function Machine() {
 
 
   return (
+   <div style={{ backgroundColor: '#e5e5e5', height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
+    <AppNavbar />
 
-    <div className=" row" style={{ fontFamily: 'Arial, sans-serif', backgroundColor: '#e5e5e5' ,
-    }}>   
-
-      <AppNavbar />
-      
-      {width > 1200 && (
-      <div className="row mt-0 mb-1 mt-1 g-0 rounded shadow " style={{ background: "#fff", width: "16.9%",
-              marginLeft: 0}}>
-        <div className="mt-2">
-          <h5
-            style={{
-              fontSize: "20px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              color: "rgba(32, 64, 154, 1)",
-              whiteSpace: "normal",  // cho phép xuống hàng
-              wordWrap: "break-word", // cắt từ dài
-              fontWeight: "bold",
-              marginLeft: "10px"
-            }}
-          >
+    <div className="row" style={{ 
+      fontFamily: 'Arial, sans-serif', 
+      backgroundColor: '#e5e5e5', 
+      flex: 1, 
+      overflow: 'hidden',
+      margin: 0,
+      height: 'calc(100dvh - 56px)'
+    }}>       
+      {/* Sidebar - Danh sách máy */}
+      {/* {width > 1200 && (
+        <div className="col-auto px-2 py-2" style={{ 
+          background: "#fff",
+          height: '100%',
+          overflowY: 'auto',
+          width: '250px',
+          flexShrink: 0
+        }}>
+          <h5 style={{
+            fontSize: "18px",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            color: "rgba(32, 64, 154, 1)",
+            whiteSpace: "normal",
+            wordWrap: "break-word",
+            fontWeight: "bold",
+            marginBottom: "12px"
+          }}>
             {`Danh sách máy tại ${machineInfor?.location || '---'}`}
           </h5>
 
@@ -731,7 +839,7 @@ function Machine() {
                   >
                     <button
                       className="w-100 text-start d-block px-3 py-2 rounded border-0 bg-transparent menu-item"
-                      style={{ fontSize: '15px' }}
+                      style={{ fontSize: '14px' }}
                       onClick={() => {
                         navigate(`/machines/${loc.machine_id}`);
                         window.location.reload();
@@ -746,827 +854,772 @@ function Machine() {
             <p className="text-muted px-3">Không có máy nào tại vị trí này.</p>
           )}
         </div>
-      </div>
-      )}
+      )} */}
 
-      <div className="row mt-0 gx-1 mb-0 g-0" style={{
-        width: width > 1200 ? "83%" : "100%",
-        marginLeft: width > 1200 ? "auto" : 0,
-        marginRight: 0,
+      <MachineTreeSidebar
+        machines={allLocations} // Tất cả máy
+        machineInfor={machineInfor}
+        navigate={navigate}
+        width={width}
+        selectedMachineId={machineInfor?.machine_id}
+        dtGroup={dtGroup} // THÊM: Danh sách locations thuộc Duy Tân
+        nonDtGroup={nonDtGroup} // THÊM: Danh sách locations thuộc Khác
+      />
+
+      {/* Main Content */}
+      <div className="col px-0 py-0 mt-1 ms-1" style={{ 
+        height: '100%',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px'
       }}>
-        <div className="col-lg-12">
-          <div className="row g-1 mt-0">
-            {/* Cột ảnh máy */}
-            <div className="col-12 col-md-12 col-lg-3 ">
-              <div className="bg-white border rounded shadow w-100 h-100 overflow-hidden">
-                <img
-                  src={`${BASE_URL}${machineInfor.image_url}`}
-                  className="w-100 h-100"
-                  style={{
-                    width: "100%",
-                    maxHeight: "226px",   
-                    objectFit: "cover" 
-                  }}
-                  alt="Machine"
-                />
-              </div>
+        {/* Phần thông tin máy và cảnh báo */}
+        <div className="row g-1 flex-shrink-0">
+          {/* Cột ảnh máy */}
+          <div className="col-12 col-md-6 col-lg-3">
+            <div className="bg-white border rounded shadow w-100" style={{ 
+              height: '227px', 
+              overflow: 'hidden',
+              maxHeight: '250px'
+            }}>
+              <img
+                src={`${BASE_URL}${machineInfor.image_url}`}
+                className="w-100 h-100"
+                style={{ objectFit: "cover" }}
+                alt="Machine"
+              />
             </div>
-            
-            <div className="col-lg-4 col-md-12 col-12 gx-0">
-              <div className="row g-1 mb-0">
-                <div className="col-12 col-lg-8 col-md-12">
-                  <div
-                    className="border bg-white rounded text-center fw-semibold shadow d-flex flex-column justify-content-center text-dark"
-                    style={{
-                      height: '103px',
-                      fontSize: '28px',
-                      letterSpacing: '0.5px',
-                      padding: '0 12px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                    title={'Thông tin chi tiết'}
-                  >
-                    {/* PHẦN HIỂN THỊ MÁY */}
-                    <div
-                      className="machine-title"
-                      onClick={() => setShowInforMachine(true)}
-                      style={{
-                        whiteSpace: 'normal',
-                        wordWrap: 'break-word',
-                        overflowWrap: 'break-word',
-                        textAlign: 'center',
-                      }}
-                    >
-                      {machineInfor?.machine_name || 'N/A'}
-                    </div>
-
-                    <div
-                      className="d-flex justify-content-center align-items-center gap-2 mb-0 flex-wrap"
-                      style={{ minHeight: '0px' }}
-                    >
-                      {showInforMachine && (
-                        <div
-                          style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            width: '100vw',
-                            height: '100vh',
-                            backgroundColor: 'rgba(0,0,0,0.4)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            zIndex: 1050,
-                            padding: '1rem', // thêm padding để tránh sát viền
-                            overflowY: 'auto', // xử lý tràn nội dung
-                          }}
-                        >
-                          <div
-                            style={{
-                              backgroundColor: '#fff',
-                              padding: '1.5rem',
-                              borderRadius: '1rem',
-                              width: '100%',
-                              maxWidth: '500px',
-                              boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                              fontSize: '0.95rem',
-                            }}
-                          >
-                            {/* Tiêu đề & nút đóng */}
-                            <div className="d-flex justify-content-between align-items-center">
-                              <h5 style={{ margin: 0, color: '#203E9A', fontWeight: '600' }}>Thông tin máy</h5>
-                              <button
-                                className="btn-close"
-                                onClick={() => setShowInforMachine(false)}
-                                style={{ fontSize: '0.9rem' }}
-                              />
-                            </div>
-
-                            <hr />
-
-                            {/* Grid layout - responsive */}
-                            <div className="mt-1">
-                              <div className="row g-0 align-items-center">
-                                <div className="col-12">
-                                  <div className="fw-semibold mb-0">ID máy:</div>
-                                  <div className="bg-light px-3 py-2 border rounded fw-normal">
-                                    {machineInfor.machine_id}
-                                  </div>
-                                </div>
-
-
-                                {/* <div className="col-4 text-end fw-semibold">Tên máy:</div>
-                                <div className="col-8">
-                                  <div className="bg-light px-3 py-2 border rounded fw-normal">
-                                    {machineInfor.machine_name}
-                                  </div>
-                                </div> */}
-
-                                {/* <div className="col-4 text-end fw-semibold">Nhà máy:</div>
-                                <div className="col-8">
-                                  <div className="bg-light px-3 py-2 border rounded fw-normal">
-                                    {machineInfor.location}
-                                  </div>
-                                </div> */}
-
-                                {/* <div className="col-4 text-end fw-semibold align-self-start">Thông tin khác:</div>
-                                <div className="col-8">
-                                  <div
-                                    className="bg-light px-3 py-2 border rounded text-start fw-normal"
-                                    style={{
-                                      whiteSpace: 'pre-wrap',
-                                      minHeight: '80px',
-                                      maxHeight: '160px',
-                                      overflowY: 'auto',
-                                    }}
-                                  >
-                                    {machineInfor.information}
-                                  </div>
-                                </div> */}
-                                
-                                <div className="col-12">
-                                  <div className="fw-semibold mb-2">Thông tin khác:</div>
-                                  <div
-                                    className="bg-light px-3 py-2 border rounded text-start fw-normal"
-                                    style={{
-                                      minHeight: '80px',
-                                      maxHeight: '400px',
-                                      overflowY: 'auto',
-                                    }}
-                                  >
-                                    <table className="table table-sm table-bordered mb-0">
-                                      <tbody>
-                                        {machineInfor.information
-                                          ?.split("\n")
-                                          .filter(line => line.trim())
-                                          .map((line, index) => {
-                                            const [key, value] = line.split(":");
-                                            return (
-                                              <tr key={index}>
-                                                <td className="fw-semibold" style={{ width: "40%" }}>
-                                                  {key?.trim()}
-                                                </td>
-                                                <td>{value?.trim()}</td>
-                                              </tr>
-                                            );
-                                          })}
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Nút điều khiển */}
-                            <div className="d-flex justify-content-end mt-4 gap-2">
-                              <button className="btn btn-secondary px-4" onClick={() => setShowInforMachine(false)}>
-                                Đóng
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-
-                    {/* DROPDOWN CHỌN LOCATION */}
-                    {/* <div
-                      style={{
-                        fontSize: '20px',
-                        marginTop: '4px',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      
-                    <button
-                      className="btn btn-light dropdown-toggle w-100"
-                      type="button"
-                      data-bs-toggle="dropdown"
-                      aria-expanded="false"
-                      onClick={() =>
-                        handleLocationClick(machineInfor.location, machineInfor.isdtgroup)
-                      }
-                      style={{
-                        fontSize: '25px',
-                        backgroundColor: 'transparent',
-                        border: '0px solid #dee2e6',
-                        borderRadius: '8px',
-                        boxShadow: 'none',                        
-                        padding: '0px 12px',
-                      }}
-                      
-                    >
-                      {machineInfor.location || 'Không có mô tả'}
-                    </button>
-
-                    <ul className="dropdown-menu text-center"
-                        style={{
-                          borderRadius: '10px',
-                          padding: '6px 0',
-                          fontSize: '25px',
-                        }}
-                    >
-                      {machines
-                        .filter((loc) => loc.location === machineInfor.location)
-                        .map((loc, index) => (
-                          <li key={index}>
-                            <button
-                              className="dropdown-item"
-                              onClick={() => {
-                                navigate(`/machines/${loc.machine_id}`);
-                                window.location.reload();
-                              }}
-                            >
-                              {loc.machine_name}
-                            </button>
-                          </li>
-                        ))}
-                    </ul>                     
-                    </div> */}
+          </div>
+          
+          {/* Cột thông số máy */}
+          <div className="col-12 col-md-6 col-lg-4">
+            <div className="row g-1 mb-1">
+              <div className="col-8">
+                <div
+                  className="border bg-white rounded text-center fw-semibold shadow d-flex flex-column justify-content-center text-dark"
+                  style={{
+                    height: '103px',
+                    fontSize: 'clamp(18px, 3vw, 24px)',
+                    letterSpacing: '0.5px',
+                    padding: '0 12px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => setShowInforMachine(true)}
+                  title={'Thông tin chi tiết'}
+                >
+                  <div style={{
+                    whiteSpace: 'normal',
+                    wordWrap: 'break-word',
+                    overflowWrap: 'break-word',
+                    textAlign: 'center',
+                  }}>
+                    {machineInfor?.machine_name || 'N/A'}
                   </div>
                 </div>
-
-                <div className="col-12 col-lg-4 gx-1">
-                  <div
-                    className={`border rounded text-center fw-bold shadow d-flex align-items-center justify-content-center text-white ${isConnected(machineInfor.last_updated) ? getStatusClass(statusMachine?.status) : 'bg-secondary'}`}
-                    style={{ height: '103px', fontSize: '20px' }}
-                  >
-                    {isConnected(machineInfor.last_updated) ? convertStatusToString(statusMachine?.status) : 'Mất kết nối'}                  
-                  </div>
-                </div>         
               </div>
-              {/* Hàng thông số */}
-              <div className="row g-1 mt-0">
-                {/* Thẻ Hiệu suất */}
-                <div className="col-6 col-sm-4 col-lg-4">
-                  <div
-                    className="border rounded text-center p-3 shadow d-flex flex-column justify-content-between bg-white"
-                    style={{ height: '120px' }}
-                  >
-                    <p
-                      className="fw-semibold mb-0 mt-1"
-                      style={{ fontSize: '14px', color: 'rgba(32, 64, 154, 1)' }}
-                    >
-                      Hiệu suất
-                    </p>
 
-                    {paramMachine ? (
-                      <>
-                        <div className="d-flex justify-content-center align-items-center" style={{ height: '60px' }}>
-                          <PerformanceChart performance={performanceMachine} />
-                        </div>
-                      </>
-                    ) : (
-                      <h5 className="m-0 text-dark">N/A</h5>
-                    )}
-                  </div>
+              <div className="col-4">
+                <div
+                  className={`border rounded text-center fw-bold shadow d-flex align-items-center justify-content-center text-white 
+                    ${isConnected(machineInfor.last_updated) ? getStatusClass(statusMachine?.status) : 'bg-warning text-dark'}`}
+                  style={{ 
+                    height: '103px', 
+                    fontSize: 'clamp(14px, 2.5vw, 18px)',
+                    padding: '8px'
+                  }}
+                >
+                  <span style={{ wordBreak: 'break-word', textAlign: 'center' }}>
+                    {isConnected(machineInfor.last_updated) ? convertStatusToString(statusMachine?.status) : 'Đang dừng'}
+                  </span>
                 </div>
+              </div> 
+                       
+            </div>
 
-                {/* Thẻ Số shoot */}
-                <div className="col-6 col-sm-4 col-lg-4">
-                  <div
-                    className="border rounded text-center p-3 shadow d-flex flex-column justify-content-between bg-white"
-                    style={{ height: '120px' }}
-                  >
-                    <p
-                      className="fw-semibold mb-2"
-                      style={{ fontSize: '14px', color: 'rgba(32, 64, 154, 1)' }}
-                    >
-                      Số Shoot
-                    </p>
-                    <h5 className="m-0 text-dark">
-                      {paramMachine ? `${shootMachine}` : 'N/A'}
+            {/* Hàng thông số */}
+            <div className="row g-1">
+              <div className="col-4">
+                <div className="border rounded text-center p-2 shadow d-flex flex-column bg-white" style={{ height: '120px' }}>
+                  <p className="fw-semibold mb-2" style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: 'rgba(32, 64, 154, 1)' }}>
+                    Hiệu suất
+                  </p>
+                  {paramMachine ? (
+                    <div className="d-flex justify-content-center align-items-center" style={{ height: '55px' }}>
+                      <PerformanceChart performance={performanceMachine} />
+                    </div>
+                  ) : (
+                    <h5 className="m-0 text-dark">N/A</h5>
+                  )}
+                </div>
+              </div>
+
+              <div className="col-4">
+                <div className="border rounded text-center p-2 shadow d-flex flex-column bg-white" style={{ height: '120px' }}>
+                  <p className="fw-semibold mb-0" style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: 'rgba(32, 64, 154, 1)' }}>
+                    Số Shoot
+                  </p>
+                  <div className="flex-grow-1 d-flex align-items-center justify-content-center">
+                    <h5 className="m-0 text-dark" style={{ fontSize: 'clamp(16px, 3vw, 20px)' }}>
+                      {paramMachine ? shootMachine.toLocaleString('en-US') : 'N/A'}
                     </h5>
                   </div>
                 </div>
+              </div>
 
-                {/* Thẻ Thời gian chạy */}
-                <div className="col-6 col-sm-4 col-lg-4">
-                  <div
-                    className="border rounded text-center p-3 shadow d-flex flex-column justify-content-between bg-white"
-                    style={{ height: '120px' }}
-                  >
-                    <p
-                      className="fw-semibold mb-2"
-                      style={{ fontSize: '14px', color: 'rgba(32, 64, 154, 1)' }}
-                    >
-                      Tổng thời gian chạy (giờ)
-                    </p>
-                    <h5 className="m-0 text-dark">
+              <div className="col-4">
+                <div className="border rounded text-center p-2 shadow d-flex flex-column bg-white" style={{ height: '120px' }}>
+                  <p className="fw-semibold mb-0" style={{ fontSize: 'clamp(15px, 2vw, 16px)', color: 'rgba(32, 64, 154, 1)' }}>
+                    Tổng thời gian chạy (giờ)
+                  </p>
+                  <div className="flex-grow-1 d-flex align-items-center justify-content-center">
+                    <h5 className="m-0 text-dark" style={{ fontSize: 'clamp(16px, 3vw, 20px)' }}>
                       {paramMachine ? `${totalTimeOn}` : 'N/A'}
                     </h5>
                   </div>
                 </div>
               </div>
 
-            </div>  
+            </div>
+          </div>  
 
-
-            <div className="col-12 col-lg-5 mb-0">
-              <div className="card shadow p-3 rounded mt-0" style={{ height: '228px', overflow: 'hidden' }}>
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h6 className="text-danger fw-bold mb-0" style={{ fontSize: '18px' }}>
-                    DANH SÁCH CẢNH BÁO
-                  </h6>
-                  <i
-                    className="bi bi-eye-fill text-secondary"
-                    style={{ cursor: 'pointer', fontSize: '18px' }}
-                    title="Xem tất cả"
-                    onClick={() => setShowAnalysisError(true)}
-                  />
-                </div>
-
-                <div className="d-flex justify-content-center align-items-center gap-2 mb-0 flex-wrap" style={{ minHeight: '0px' }}>
-                {showAnalysisError && (
-                  <div
-                    style={{
-                      position: 'fixed',
-                      top: 0,
-                      left: 0,
-                      width: '100vw',
-                      height: '100vh',
-                      backgroundColor: 'rgba(0,0,0,0.4)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      zIndex: 1050,
-                    }}
-                  >
-                    <div
-                      style={{
-                        backgroundColor: '#fff',
-                        padding: '2.5rem',
-                        borderRadius: '1rem',
-                        width: '90%',
-                        maxWidth: '800px',
-                        height: '80%',
-                        maxHeight: '500px',
-                        boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                        fontSize: '1rem',
-                        overflowY: 'auto', // ✅ thêm scroll nếu biểu đồ cao
-                      }}
-                    >
-                      {/* Tiêu đề & nút đóng */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h5 style={{ margin: 0, color: '#203E9A', fontWeight: '600' }}>Phân tích</h5>
-                        <button
-                          className="btn-close"
-                          onClick={() => setShowAnalysisError(false)}
-                          style={{ fontSize: '0.9rem' }}
-                        />
-                      </div>
-
-                      <hr style={{ margin: '6px 0' }}/>
-
-                      {/* Grid layout */}
-                      <div
-                        className="mt-1"
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '120px 1fr',
-                          rowGap: '16px',
-                          columnGap: '12px',
-                          alignItems: 'center',
-                        }}
-                      >
-                        {/* Có thể đặt các item phân tích theo grid ở đây */}
-                      </div>
-
-                      {/* ✅ Biểu đồ thống kê lỗi */}
-                      <div style={{ height: '400px', marginTop: '0rem' }}>
-                        <BarChart_Error
-                          labels={labelsChartErr}
-                          dataValues={dataValuesChartErr}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+          {/* Cột danh sách cảnh báo */}
+          <div className="col-12 col-lg-5">
+            <div className="card shadow p-2 rounded" style={{ 
+              height: '227px', 
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div className="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
+                <h6 className="text-danger fw-bold mb-0" style={{ fontSize: 'clamp(14px, 2.5vw, 18px)' }}>
+                  DANH SÁCH CẢNH BÁO
+                </h6>
+                <i
+                  className="bi bi-eye-fill text-secondary"
+                  style={{ cursor: 'pointer', fontSize: '18px' }}
+                  title="Xem tất cả"
+                  onClick={() => setShowAnalysisError(true)}
+                />
               </div>
 
-
-                <div className="table-responsive" style={{ maxHeight: '240px', overflowY: 'auto' }}>
-                  <table className="table table-sm table-bordered">
-                    <thead className="table-light">
-                      <tr>                       
-                        <th style={{ fontSize: '13px' }}>Mã</th>
-                        <th style={{ fontSize: '13px' }}>Mô tả</th>
-                        <th style={{ fontSize: '13px' }}>Thời điểm</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {errorsMachine?.length > 0 ? (
-                        errorsMachine.map((err) => (
-                          <tr key={err.id}>                           
-                            <td style={{ fontSize: '13px' }}>{err.alarm_id}</td>
-                            <td style={{ fontSize: '13px' }}>{err.alarm_name}</td>
-                            <td style={{ fontSize: '13px' }}>{new Date(err.timestamp).toLocaleString()}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="3" className="text-center text-muted" style={{ fontSize: '13px' }}>
-                            Không có lỗi
-                          </td>
+              <div className="flex-grow-1" style={{ overflowY: 'auto', overflowX: 'auto' }}>
+                <table className="table table-sm table-bordered mb-0">
+                  <thead className="table-light" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                    <tr>                       
+                      <th style={{ fontSize: 'clamp(12px, 2vw, 15px)', minWidth: '60px' }}>Mã</th>
+                      <th style={{ fontSize: 'clamp(12px, 2vw, 15px)', minWidth: '150px' }}>Mô tả</th>
+                      <th style={{ fontSize: 'clamp(12px, 2vw, 15px)', minWidth: '110px' }}>Thời điểm</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {errorsMachine?.length > 0 ? (
+                      errorsMachine.map((err) => (
+                        <tr key={err.id}>                           
+                          <td style={{ fontSize: 'clamp(12px, 2vw, 15px)' }}>{err.alarm_id}</td>
+                          <td style={{ fontSize: 'clamp(12px, 2vw, 15px)' }}>{err.alarm_name}</td>
+                          <td style={{ fontSize: 'clamp(12px, 2vw, 15px)' }}>{new Date(err.timestamp).toLocaleString()}</td>
                         </tr>
-                      )}
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className="text-center text-muted" style={{ fontSize: 'clamp(11px, 2vw, 13px)' }}>
+                          Không có lỗi
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>             
+        </div>
+
+        {/* Phần biểu đồ - FIXED */}
+        <div className="row g-1 flex-grow-1" style={{ 
+          minHeight: '400px',
+          marginBottom: '8px'
+        }}>
+          {/* Chart 1 - Sản lượng */}
+          <div className="col-12 col-xl-6 mb-0 mb-xl-0">
+            <div className="card p-2 shadow d-flex flex-column h-100" style={{ 
+              minHeight: '350px'
+            }}>
+              <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap flex-shrink-0" style={{ 
+                color: '#203E9A', 
+                fontWeight: 'bold', 
+                fontSize: 'clamp(15px, 2.5vw, 18px)',
+                gap: '8px'
+              }}>
+                <div>BIỂU ĐỒ SẢN LƯỢNG</div>
+                <div
+                  style={{ 
+                    cursor: 'pointer', 
+                    color: '#000080', 
+                    fontWeight: '500', 
+                    fontSize: 'clamp(15px, 2vw, 18px)',
+                    textAlign: 'right'
+                  }}
+                  onClick={() => setShowTimeWindowChart1(true)}
+                >
+                  Thời gian: {fromDateChart1 && toDateChart1
+                    ? `${fromDateChart1.toLocaleDateString('vi-VN')} → ${toDateChart1.toLocaleDateString('vi-VN')}`
+                    : 'Chọn thời gian'}
+                </div>
+              </div>
+
+              <div style={{ 
+                flexGrow: 1, 
+                minHeight: 0, 
+                position: 'relative',
+                width: '100%'
+              }}>
+                <div style={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  left: 0, 
+                  right: 0, 
+                  bottom: 0,
+                  padding: '4px'
+                }}>
+                  {viewModeChart1 === 'month' ? (
+                    <BarChart labels={monthLabels} dataValues={productivityMonthDataValues}/>
+                  ) : (
+                    <BarChart labels={yearLabels} dataValues={productivityYearDataValues}/>
+                  )}
+                </div>
+              </div>
+
+              <div className="d-flex justify-content-between mt-2 flex-wrap flex-shrink-0" style={{ 
+                fontSize: 'clamp(11px, 2vw, 14px)', 
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <div style={{ fontWeight: 'bold', color: '#203E9A' }}>Sản lượng (cái)</div>
+                <div className="d-flex gap-2 flex-wrap" style={{ color: 'orangered', fontWeight: 600 }}>
+                  <div>min: {minValueProductivity.toFixed(1)}</div>
+                  <div>max: {maxValueProductivity.toFixed(1)}</div>
+                  <div>avg: {avgValueProductivity.toFixed(1)}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Chart 2 & 3 */}
+          <div className="col-12 col-xl-6">
+            <div className="d-flex flex-column h-100" style={{ gap: '4px' }}>
+              {/* Chart 2 - Thời gian */}
+              <div className="card p-2 shadow d-flex flex-column" style={{ 
+                flex: '1 1 55%',
+                minHeight: '250px',
+                maxHeight: width < 1200 ? '350px' : 'none'
+              }}>
+                <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap flex-shrink-0" style={{ 
+                  color: '#203E9A', 
+                  fontWeight: 'bold', 
+                  fontSize: 'clamp(15px, 2.5vw, 18px)',
+                  gap: '8px'
+                }}>
+                  <div>BIỂU ĐỒ THỜI GIAN</div>
+                  <div
+                    style={{ 
+                      cursor: 'pointer', 
+                      color: '#000080', 
+                      fontWeight: '500', 
+                      fontSize: 'clamp(15px, 2vw, 18px)',
+                      textAlign: 'right'
+                    }}
+                    onClick={() => setShowTimeWindowChart2(true)}
+                  >
+                    Thời gian: {fromDateChart2 && toDateChart2
+                      ? `${fromDateChart2.toLocaleDateString('vi-VN')} → ${toDateChart2.toLocaleDateString('vi-VN')}`
+                      : 'Chọn thời gian'}
+                  </div>
+                </div>
+
+                <div style={{ 
+                  flexGrow: 1, 
+                  minHeight: 0, 
+                  position: 'relative',
+                  width: '100%'
+                }}>
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    right: 0, 
+                    bottom: 0,
+                    padding: '4px'
+                  }}>
+                    {viewModeChart2 === 'month' ? (
+                      <BarLineChart_Sanluong labels={monthLabelsChart2} line1={timeErrorMonthDataValues} line2={timeStopMonthDataValues} line3={timeRunMonthDataValues}/>
+                    ) : (
+                      <BarLineChart_Sanluong labels={yearLabelsChart2} line1={timerErrorYearDataValues} line2={timerStopYearDataValues} line3={timerRunYearDataValues}/>
+                    )}
+                  </div>
+                </div>
+
+                <div className="d-flex justify-content-between mt-1 flex-wrap flex-shrink-0" style={{ 
+                  fontSize: 'clamp(11px, 2vw, 14px)', 
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <div style={{ fontWeight: 'bold', color: '#203E9A' }}>Thời gian chạy (giờ)</div>
+                  <div className="d-flex gap-2 flex-wrap" style={{ color: 'orangered', fontWeight: 600 }}>
+                    <div>min: {minValueTimeRun.toFixed(1)}</div>
+                    <div>max: {maxValueTimeRun.toFixed(1)}</div>
+                    <div>avg: {avgValueTimeRun.toFixed(1)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart 3 - Trạng thái */}
+              <div className="card p-2 shadow d-flex flex-column" style={{ 
+                flex: '1 1 43%',
+                minHeight: '158px',
+                maxHeight: width < 1200 ? '300px' : 'none'
+              }}>
+                <div className="d-flex justify-content-between align-items-center mb-1 flex-shrink-0" style={{ 
+                  color: '#203E9A', 
+                  fontWeight: 'bold', 
+                  fontSize: 'clamp(14px, 2.5vw, 18px)'
+                }}>
+                  <div>BIỂU ĐỒ TRẠNG THÁI</div>
+                </div>
+
+                <div style={{ 
+                  flexGrow: 1, 
+                  minHeight: 0, 
+                  position: 'relative',
+                  width: '100%'
+                }}>
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    right: 0, 
+                    bottom: 0,
+                    padding: '4px'
+                  }}>
+                    <BarChartStatus labels={labelsChart3} line1={statusDataValuesChart3}/>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>   
+    </div>
+
+    {/* Modal thông tin máy */}
+    {showInforMachine && (
+      <div style={{
+        position: 'fixed',
+        top: 0, left: 0, width: '100vw', height: '100vh',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1050,
+        padding: '1rem',
+        overflowY: 'auto',
+      }}>
+        <div style={{
+          backgroundColor: '#fff',
+          padding: '1.5rem',
+          borderRadius: '1rem',
+          width: '100%',
+          maxWidth: '500px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          fontSize: '0.95rem',
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}>
+          <div className="d-flex justify-content-between align-items-center">
+            <h5 style={{ margin: 0, color: '#203E9A', fontWeight: '600' }}>Thông tin máy</h5>
+            <button className="btn-close" onClick={() => setShowInforMachine(false)} />
+          </div>
+
+          <hr />
+
+          <div className="mt-1">
+            <div className="row g-0 align-items-center">
+              <div className="col-12 mb-3">
+                <div className="fw-semibold mb-2">ID máy:</div>
+                <div className="bg-light px-3 py-2 border rounded fw-normal">
+                  {machineInfor.machine_id}
+                </div>
+              </div>
+
+              {/* Trạng thái kết nối */}
+              <div className="col-12 mb-3">
+                <div className="fw-semibold mb-2">Trạng thái kết nối Wifi:</div>
+                <div className="px-3 py-2 border rounded fw-normal d-flex align-items-center gap-2" style={{
+                  backgroundColor: isConnected(machineInfor.last_updated) ? '#d1e7dd' : '#f8d7da',
+                }}>
+                  <span style={{
+                    color: isConnected(machineInfor.last_updated) ? '#198754' : '#dc3545',
+                    fontWeight: '500'
+                  }}>
+                    {isConnected(machineInfor.last_updated) ? '🟢 Đang kết nối' : '🔴 Mất kết nối'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="col-12">
+                <div className="fw-semibold mb-2">Thông tin khác:</div>
+                <div className="bg-light px-3 py-2 border rounded text-start fw-normal" style={{
+                  minHeight: '80px',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                }}>
+                  <table className="table table-sm table-bordered mb-0">
+                    <tbody>
+                      {machineInfor.information?.split("\n").filter(line => line.trim()).map((line, index) => {
+                        const [key, value] = line.split(":");
+                        return (
+                          <tr key={index}>
+                            <td className="fw-semibold" style={{ width: "40%" }}>{key?.trim()}</td>
+                            <td>{value?.trim()}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               </div>
-            </div>             
-          </div>         
-      </div>
-
-      {/* Biều đồ */}
-
-      <div className="row g-0 mt-1">
-        <div className="col-md-6 gx-2 text-center">
-          <div className="card p-3 shadow mt-0 mb-1 d-flex flex-column" style={{ height: '450px' }}>
-            <div className="d-flex justify-content-between align-items-center mb-0 px-3 flex-wrap" style={{ color: '#203E9A', fontWeight: 'bold', fontSize: '18px' }}>
-              <div>BIỂU ĐỒ SẢN LƯỢNG</div>
-              <div
-                style={{ cursor: 'pointer', color: '#000080', fontWeight: '500', fontSize: '14px' }}
-                onClick={() => setShowTimeWindowChart1(true)}
-              >
-                Thời gian: {fromDateChart1 && toDateChart1
-                  ? `${fromDateChart1.toLocaleDateString('vi-VN')} → ${toDateChart1.toLocaleDateString('vi-VN')}`
-                  : 'Chọn thời gian'}
-              </div>
-            </div>
-            <div className="d-flex justify-content-center align-items-center gap-2 mb-0 flex-wrap" style={{ minHeight: '0px' }}>                    
-              {showTimeWindowChart1 && (
-                <div style={{
-                  position: 'fixed',
-                  top: 0, left: 0, width: '100vw', height: '100vh',
-                  backgroundColor: 'rgba(0,0,0,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  zIndex: 1050
-                }}>
-                  <div style={{
-                    backgroundColor: '#fff',
-                    padding: '2rem',
-                    borderRadius: '1rem',
-                    width: '90%',
-                    maxWidth: '480px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h5 style={{ margin: 0, color: '#203E9A' }}>🕒 Chọn khoảng thời gian</h5>
-                      <button
-                        className="btn-close"
-                        onClick={() => setShowTimeWindowChart1(false)}
-                        style={{ fontSize: '0.9rem' }}
-                      />
-                    </div>
-
-                    <hr />
-
-                    <div className="mt-3">
-                      <label className="form-label fw-semibold">Từ ngày:</label>
-                      <DatePicker
-                        selected={tempFromDateChart1}
-                        onChange={(date) => setTempFromDateChart1(date)}
-                        dateFormat="dd/MM/yyyy"
-                        className="form-control"
-                        placeholderText="Chọn ngày bắt đầu"
-                      />
-                    </div>
-
-                    <div className="mt-3">
-                      <label className="form-label fw-semibold">Đến ngày:</label>
-                      <DatePicker
-                        selected={tempToDateChart1}
-                        onChange={(date) => setTempToDate(date)}
-                        dateFormat="dd/MM/yyyy"
-                        className="form-control"
-                        placeholderText="Chọn ngày kết thúc"
-                      />
-                    </div>
-
-                    <div className="mt-3">
-                      <label className="form-label fw-semibold">Hiển thị:</label>
-                      <select
-                        className="form-select"
-                        value={tempViewModeChart1}
-                        onChange={(e) => setTempViewModeChart1(e.target.value)}
-                      >
-                        <option value="month">Từng ngày</option>
-                        <option value="year">Từng tháng</option>
-                      </select>
-                    </div>
-
-                    <div className="d-flex justify-content-end mt-4 gap-2">
-                      <button className="btn btn-outline-secondary" onClick={() => {
-                        handleCancelTimeChart1()
-                        setShowTimeWindowChart1(false)}}>Huỷ</button>
-                      <button className="btn btn-primary" onClick={() => {
-                        handleUpdateTimeChart1()
-                        setShowTimeWindowChart1(false)}}>Cập nhật</button>
-                    </div>
-                  </div>
-                </div>
-
-              )}
-              
-            </div>
-
-            {/* Biểu đồ */}
-            <div style={{ flexGrow: 1, overflow: 'hidden' }}>
-              {viewModeChart1 === 'month' ? (
-                <BarChart labels={monthLabels} dataValues={productivityMonthDataValues}/>
-              ) : (
-                <BarChart labels={yearLabels} dataValues={productivityYearDataValues}/>
-              )}
-            </div>
-
-            <div className="d-flex justify-content-between mt-2 px-3" style={{ fontSize: '14px', alignItems: 'center' }}>
-              <div style={{ fontWeight: 'bold', color: '#203E9A' }}>Sản lượng (cái)</div>
-              <div className="d-flex gap-3" style={{ color: 'orangered', fontWeight: 600 }}>
-                <div>min: {minValueProductivity.toFixed(1)}</div>
-                <div>max: {maxValueProductivity.toFixed(1)}</div>
-                <div>avg: {avgValueProductivity.toFixed(1)}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Biểu đồ thời gian */}
-        <div className="col-md-6 mt-0 gx-2 text-center">
-          <div className="card p-3 shadow d-flex flex-column" style={{ height: window.innerWidth < 768 ? '450px' : '250px' }}>
-            <div className="d-flex justify-content-between align-items-center mb-2 px-3 flex-wrap" style={{ color: '#203E9A', fontWeight: 'bold', fontSize: '18px' }}>
-              <div>BIỂU ĐỒ THỜI GIAN</div>
-
-              <div
-                style={{ cursor: 'pointer', color: '#000080', fontWeight: '500', fontSize: '14px' }}
-                onClick={() => setShowTimeWindowChart2(true)}
-              >
-                Thời gian: {fromDateChart2 && toDateChart2
-                  ? `${fromDateChart2.toLocaleDateString('vi-VN')} → ${toDateChart2.toLocaleDateString('vi-VN')}`
-                  : 'Chọn thời gian'}
-              </div>
-            </div>
-
-            <div className="d-flex justify-content-center align-items-center gap-2 mb-0 flex-wrap" style={{ minHeight: '0px' }}>
-                   
-              {showTimeWindowChart2 && (
-                <div style={{
-                  position: 'fixed',
-                  top: 0, left: 0, width: '100vw', height: '100vh',
-                  backgroundColor: 'rgba(0,0,0,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  zIndex: 1050
-                }}>
-                  <div style={{
-                    backgroundColor: '#fff',
-                    padding: '2rem',
-                    borderRadius: '1rem',
-                    width: '90%',
-                    maxWidth: '480px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h5 style={{ margin: 0, color: '#203E9A' }}>🕒 Chọn khoảng thời gian</h5>
-                      <button
-                        className="btn-close"
-                        onClick={() => setShowTimeWindowChart2(false)}
-                        style={{ fontSize: '0.9rem' }}
-                      />
-                    </div>
-
-                    <hr />
-
-                    <div className="mt-3">
-                      <label className="form-label fw-semibold">Từ ngày:</label>
-                      <DatePicker
-                        selected={tempFromDateChart2}
-                        onChange={(date) => setTempFromDateChart2(date)}
-                        dateFormat="dd/MM/yyyy"
-                        className="form-control"
-                        placeholderText="Chọn ngày bắt đầu"
-                      />
-                    </div>
-
-                    <div className="mt-3">
-                      <label className="form-label fw-semibold">Đến ngày:</label>
-                      <DatePicker
-                        selected={tempToDateChart2}
-                        onChange={(date) => setTempToDateChart2(date)}
-                        dateFormat="dd/MM/yyyy"
-                        className="form-control"
-                        placeholderText="Chọn ngày kết thúc"
-                      />
-                    </div>
-
-                    <div className="mt-3">
-                      <label className="form-label fw-semibold">Hiển thị:</label>
-                      <select
-                        className="form-select"
-                        value={tempViewModeChart2}
-                        onChange={(e) => setTempViewModeChart2(e.target.value)}
-                      >
-                        <option value="month">Từng ngày</option>
-                        <option value="year">Từng tháng</option>
-                      </select>
-                    </div>
-
-                    <div className="d-flex justify-content-end mt-4 gap-2">
-                      <button className="btn btn-outline-secondary" onClick={() => {
-                        handleCancelTimeChart2()
-                        setShowTimeWindowChart2(false)}}>Huỷ</button>
-                      <button className="btn btn-primary" onClick={() => {
-                        handleUpdateTimeChart2()
-                        setShowTimeWindowChart2(false)}}>Cập nhật</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-            </div>
-
-            {/* Biểu đồ */}
-            <div style={{ flexGrow: 1, overflow: 'hidden' }}>
-              {viewModeChart2 === 'month' ? (
-                <BarLineChart_Sanluong labels={monthLabelsChart2} line1={timeErrorMonthDataValues} line2={timeStopMonthDataValues} line3={timeRunMonthDataValues}/>
-              ) : (
-                <BarLineChart_Sanluong labels={yearLabelsChart2} line1={timerErrorYearDataValues} line2={timerStopYearDataValues} line3={timerRunYearDataValues}/>
-              )}
-            </div>
-            <div className="d-flex justify-content-between mt-2 px-3" style={{ fontSize: '14px', alignItems: 'center' }}>
-              <div style={{ fontWeight: 'bold', color: '#203E9A' }}>Thời gian chạy (giờ)</div>
-              <div className="d-flex gap-3" style={{ color: 'orangered', fontWeight: 600 }}>
-                <div>min: {minValueTimeRun.toFixed(1)}</div>
-                <div>max: {maxValueTimeRun.toFixed(1)}</div>
-                <div>avg: {avgValueTimeRun.toFixed(1)}</div>
-              </div>
             </div>
           </div>
 
-          <div className="card p-3 shadow mt-1 d-flex flex-column" style={{ height: window.innerWidth < 768 ? '400px' : '196px' }}>
-            <div className="d-flex justify-content-between align-items-center mb-2 px-3 flex-wrap" style={{ color: '#203E9A', fontWeight: 'bold', fontSize: '18px' }}>
-              <div>BIỂU ĐỒ TRẠNG THÁI</div>
-
-              {/* <div
-                style={{ cursor: 'pointer', color: '#000080', fontWeight: '500', fontSize: '14px' }}
-                onClick={() => setShowTimeWindowChart3(true)}
-              >
-                Thời gian: {fromDateChart3 && toDateChart3
-                  ? `${fromDateChart3.toLocaleDateString('vi-VN', {hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'})} → ${toDateChart3.toLocaleDateString('vi-VN', {hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric'})}`
-                  : 'Chọn thời gian'}
-              </div> */}
-            </div>
-
-            <div className="d-flex justify-content-center align-items-center gap-2 mb-0 flex-wrap" style={{ minHeight: '0px' }}>
-                   
-              {showTimeWindowChart3 && (
-                <div style={{
-                  position: 'fixed',
-                  top: 0, left: 0, width: '100vw', height: '100vh',
-                  backgroundColor: 'rgba(0,0,0,0.4)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  zIndex: 1050
-                }}>
-                  <div style={{
-                    backgroundColor: '#fff',
-                    padding: '2rem',
-                    borderRadius: '1rem',
-                    width: '90%',
-                    maxWidth: '480px',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h5 style={{ margin: 0, color: '#203E9A' }}>🕒 Chọn khoảng thời gian</h5>
-                      <button
-                        className="btn-close"
-                        onClick={() => setShowTimeWindowChart3(false)}
-                        style={{ fontSize: '0.9rem' }}
-                      />
-                    </div>
-
-                    <hr />
-
-                    <div className="mt-3">
-                      <label className="form-label fw-semibold">Từ ngày:</label>
-                      <DatePicker
-                        selected={tempFromDateChart3}
-                        onChange={(date) => setTempFromDateChart3(date)}
-                        dateFormat="dd/MM/yyyy HH:mm"
-                        showTimeSelect
-                        timeFormat="HH:mm"
-                        timeIntervals={15}
-                        className="form-control"
-                        placeholderText="Chọn ngày bắt đầu"
-                      />
-                    </div>
-
-                    <div className="mt-3">
-                      <label className="form-label fw-semibold">Đến ngày:</label>
-                      <DatePicker
-                        selected={tempToDateChart3}
-                        onChange={(date) => setTempToDateChart3(date)}
-                        dateFormat="dd/MM/yyyy HH:mm"
-                        showTimeSelect
-                        timeFormat="HH:mm"
-                        timeIntervals={15}
-                        className="form-control"
-                        placeholderText="Chọn ngày kết thúc"
-                      />
-                    </div>
-
-                    <div className="d-flex justify-content-end mt-4 gap-2">
-                      <button className="btn btn-outline-secondary" onClick={() => {
-                        handleCancelTimeChart3();
-                        setShowTimeWindowChart3(false)}}>Huỷ</button>
-                      <button className="btn btn-primary" onClick={() => {
-                        handleUpdateTimeChart3();
-                        setShowTimeWindowChart3(false)}}>Cập nhật</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-            </div>
-
-            {/* Biểu đồ */}
-            <div style={{ flexGrow: 1, overflow: 'hidden' }}>
-
-              <BarChartStatus labels={labelsChart3} line1={statusDataValuesChart3}/>
-
-            </div>
+          <div className="d-flex justify-content-end mt-4 gap-2 flex-wrap">
+            <button
+              className="btn px-3 text-white fw-semibold"
+              style={{ backgroundColor: 'rgba(32, 64, 154, 1)' }}
+              onClick={() => handleBootData()}
+            >
+              🚀 Boot
+            </button>
+            <button className="btn btn-secondary px-4" onClick={() => setShowInforMachine(false)}>
+              Đóng
+            </button>
           </div>
         </div>
       </div>
-    </div>   
+    )}
 
-    {width <1200 && (
+    {/* Modal phân tích lỗi */}
+    {showAnalysisError && (
+      <div style={{
+        position: 'fixed',
+        top: 0, left: 0, width: '100vw', height: '100vh',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1050,
+        padding: '1rem'
+      }}>
+        <div style={{
+          backgroundColor: '#fff',
+          padding: '2rem',
+          borderRadius: '1rem',
+          width: '90%',
+          maxWidth: '800px',
+          maxHeight: '80vh',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+          overflowY: 'auto',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h5 style={{ margin: 0, color: '#203E9A', fontWeight: '600' }}>Phân tích</h5>
+            <button className="btn-close" onClick={() => setShowAnalysisError(false)} />
+          </div>
+
+          <hr style={{ margin: '12px 0' }}/>
+
+          <div style={{ height: '400px', minHeight: '300px' }}>
+            <BarChart_Error labels={labelsChartErr} dataValues={dataValuesChartErr} />
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal chọn thời gian Chart 1 */}
+    {showTimeWindowChart1 && (
+      <div style={{
+        position: 'fixed',
+        top: 0, left: 0, width: '100vw', height: '100vh',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1050,
+        padding: '1rem'
+      }}>
+        <div style={{
+          backgroundColor: '#fff',
+          padding: '2rem',
+          borderRadius: '1rem',
+          width: '90%',
+          maxWidth: '480px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h5 style={{ margin: 0, color: '#203E9A' }}>🕒 Chọn khoảng thời gian</h5>
+            <button className="btn-close" onClick={() => setShowTimeWindowChart1(false)} />
+          </div>
+
+          <hr />
+
+          <div className="mt-3">
+            <label className="form-label fw-semibold">Từ ngày:</label>
+            <DatePicker
+              selected={tempFromDateChart1}
+              onChange={(date) => setTempFromDateChart1(date)}
+              dateFormat="dd/MM/yyyy"
+              className="form-control"
+              placeholderText="Chọn ngày bắt đầu"
+            />
+          </div>
+
+          <div className="mt-3">
+            <label className="form-label fw-semibold">Đến ngày:</label>
+            <DatePicker
+              selected={tempToDateChart1}
+              onChange={(date) => setTempToDateChart1(date)}
+              dateFormat="dd/MM/yyyy"
+              className="form-control"
+              placeholderText="Chọn ngày kết thúc"
+            />
+          </div>
+
+          <div className="mt-3">
+            <label className="form-label fw-semibold">Hiển thị:</label>
+            <select className="form-select" value={tempViewModeChart1} onChange={(e) => handleViewModeChart1Change(e.target.value)}>
+              <option value="month">Từng ngày</option>
+              <option value="year">Từng tháng</option>
+            </select>
+          </div>
+
+          <div className="d-flex justify-content-end mt-4 gap-2 flex-wrap">
+            <button className="btn btn-outline-secondary" onClick={() => {
+              handleCancelTimeChart1();
+              setShowTimeWindowChart1(false);
+            }}>Huỷ</button>
+            <button className="btn btn-primary" onClick={() => {
+              handleUpdateTimeChart1();
+              setShowTimeWindowChart1(false);
+            }}>Cập nhật</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal chọn thời gian Chart 2 */}
+    {showTimeWindowChart2 && (
+      <div style={{
+        position: 'fixed',
+        top: 0, left: 0, width: '100vw', height: '100vh',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1050,
+        padding: '1rem'
+      }}>
+        <div style={{
+          backgroundColor: '#fff',
+          padding: '2rem',
+          borderRadius: '1rem',
+          width: '90%',
+          maxWidth: '480px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h5 style={{ margin: 0, color: '#203E9A' }}>🕒 Chọn khoảng thời gian</h5>
+            <button className="btn-close" onClick={() => setShowTimeWindowChart2(false)} />
+          </div>
+
+          <hr />
+
+          <div className="mt-3">
+            <label className="form-label fw-semibold">Từ ngày:</label>
+            <DatePicker
+              selected={tempFromDateChart2}
+              onChange={(date) => setTempFromDateChart2(date)}
+              dateFormat="dd/MM/yyyy"
+              className="form-control"
+              placeholderText="Chọn ngày bắt đầu"
+            />
+          </div>
+
+          <div className="mt-3">
+            <label className="form-label fw-semibold">Đến ngày:</label>
+            <DatePicker
+              selected={tempToDateChart2}
+              onChange={(date) => setTempToDateChart2(date)}
+              dateFormat="dd/MM/yyyy"
+              className="form-control"
+              placeholderText="Chọn ngày kết thúc"
+            />
+          </div>
+
+          <div className="mt-3">
+            <label className="form-label fw-semibold">Hiển thị:</label>
+            <select className="form-select" value={tempViewModeChart2} onChange={(e) => handleViewModeChart2Change(e.target.value)}>
+              <option value="month">Từng ngày</option>
+              <option value="year">Từng tháng</option>
+            </select>
+          </div>
+
+          <div className="d-flex justify-content-end mt-4 gap-2 flex-wrap">
+            <button className="btn btn-outline-secondary" onClick={() => {
+              handleCancelTimeChart2();
+              setShowTimeWindowChart2(false);
+            }}>Huỷ</button>
+            <button className="btn btn-primary" onClick={() => {
+              handleUpdateTimeChart2();
+              setShowTimeWindowChart2(false);
+            }}>Cập nhật</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Modal chọn thời gian Chart 3 */}
+    {showTimeWindowChart3 && (
+      <div style={{
+        position: 'fixed',
+        top: 0, left: 0, width: '100vw', height: '100vh',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1050,
+        padding: '1rem'
+      }}>
+        <div style={{
+          backgroundColor: '#fff',
+          padding: '2rem',
+          borderRadius: '1rem',
+          width: '90%',
+          maxWidth: '480px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h5 style={{ margin: 0, color: '#203E9A' }}>🕒 Chọn khoảng thời gian</h5>
+            <button className="btn-close" onClick={() => setShowTimeWindowChart3(false)} />
+          </div>
+
+          <hr />
+
+          <div className="mt-3">
+            <label className="form-label fw-semibold">Từ ngày:</label>
+            <DatePicker
+              selected={tempFromDateChart3}
+              onChange={(date) => setTempFromDateChart3(date)}
+              dateFormat="dd/MM/yyyy HH:mm"
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
+              className="form-control"
+              placeholderText="Chọn ngày bắt đầu"
+            />
+          </div>
+
+          <div className="mt-3">
+            <label className="form-label fw-semibold">Đến ngày:</label>
+            <DatePicker
+              selected={tempToDateChart3}
+              onChange={(date) => setTempToDateChart3(date)}
+              dateFormat="dd/MM/yyyy HH:mm"
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
+              className="form-control"
+              placeholderText="Chọn ngày kết thúc"
+            />
+          </div>
+
+          <div className="d-flex justify-content-end mt-4 gap-2 flex-wrap">
+            <button className="btn btn-outline-secondary" onClick={() => {
+              handleCancelTimeChart3();
+              setShowTimeWindowChart3(false);
+            }}>Huỷ</button>
+            <button className="btn btn-primary" onClick={() => {
+              handleUpdateTimeChart3();
+              setShowTimeWindowChart3(false);
+            }}>Cập nhật</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Offcanvas cho mobile */}
+    {width < 1200 && (
       <div
         className="offcanvas offcanvas-start"
         tabIndex="-1"
         id="offcanvasMachinesList"
         ref={offcanvasRef}
+        style={{ width: '265px' }}
         aria-labelledby="offcanvasMachinesListLabel"
+        data-bs-backdrop="static" 
+        data-bs-keyboard="false"
       >
-        <div className="offcanvas-header mt-2">
-          <h5 className="offcanvas-title" id="offcanvasMachinesListLabel" style={{
-                        fontSize: '20px',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        color: 'rgba(32, 64, 154, 1)',
-                        fontWeight: 'bold',
-                      }}>
-            {`Danh sách máy tại ${machineInfor?.location || '---'}`}
-          </h5>
+        {/* Header: thu nhỏ khoảng cách */}
+        <div
+          className="offcanvas-header py-1 px-2 mt-1"
+          style={{ marginBottom: '-8px' }}
+        >
           <button
             type="button"
-            className="btn-close"
+            className="btn-close ms-auto"
             data-bs-dismiss="offcanvas"
             aria-label="Close"
+            style={{
+              scale: '0.9', // nút nhỏ gọn hơn
+            }}
           ></button>
         </div>
 
-        <div className="offcanvas-body px-3 pt-3">
-          {machines && machines.length > 0 ? (
-            <ul className="list-unstyled m-0" >
-              {machines
-                .filter((loc) => loc.location === machineInfor.location)
-                .map((loc, index) => (
-                  <li
-                    key={index}
-                    className="mb-1 animate-fadein"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <button
-                      className="w-100 text-start d-block px-3 py-2 rounded border-0 bg-transparent menu-item"
-                      onClick={() => {
-                        navigate(`/machines/${loc.machine_id}`);
-                        window.location.reload();
-                      }}
-                    >
-                      {loc.machine_name}
-                    </button>
-                  </li>
-                ))}
-            </ul>
-          ) : (
-            <p className="text-muted px-3">Không có máy nào tại vị trí này.</p>
-          )}
+        {/* Body: sát lên hơn */}
+        <div className="offcanvas-body px-2 pt-1" >
+          <MachineTreeSidebarMobile
+            machines={allLocations}
+            machineInfor={machineInfor}
+            navigate={navigate}
+            width={width}
+            selectedMachineId={machineInfor?.machine_id}
+            dtGroup={dtGroup}
+            nonDtGroup={nonDtGroup}
+          />
         </div>
       </div>
     )}
 
+    {isLoading && (
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+        }}
+      >
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    )}
 
-    </div>
-    
-
+  </div>
     
   );
 }

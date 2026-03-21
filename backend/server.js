@@ -14,7 +14,7 @@ import locationRoutes from "./routes/locationRoutes.js";
 import errorMachineRoutes from "./routes/errorMachineRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import pushDataFromPLCRoutes from "./routes/pushDataFromPLCRoutes.js";
-
+import deleteDataToBoot from "./routes/bootDataRoutes.js";
 
 dotenv.config();
 
@@ -23,11 +23,22 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
-
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "http://171.244.142.231");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204); // No Content
+  }
+  next();
+});
 
 app.use(express.json());
+
 app.use(cors());
+
+
+
 app.use(helmet()); //helmet is a security middleware that helps you protect your app by setting various HTTP headers
 app.use(morgan("dev")); //log the requests
 
@@ -39,6 +50,7 @@ app.use("/api/status", statusRoutes);
 app.use("/api/errorsmachine", errorMachineRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/pushData", pushDataFromPLCRoutes);
+app.use("/api/boot", deleteDataToBoot);
 
 //app.use("/api/pushdata",pushDataFromPLCRoutes);
 

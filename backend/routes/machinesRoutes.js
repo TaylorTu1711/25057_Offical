@@ -3,6 +3,7 @@
   import path from 'path';
   import { fileURLToPath } from 'url';
   import { addMachine, getMachinesByLocation,deleteMachine, getMachineByID, updateMachineByID } from '../controllers/machinesController.js';
+  import { authenticate, authorizeRoles} from "../middleware/authMiddleware.js";
 
   const machinesRoutes = express.Router();
 
@@ -24,12 +25,12 @@
   const upload = multer({ storage });
 
   // Route thêm máy mới với ảnh
-  machinesRoutes.post('/', upload.single('image_url'), addMachine);
+  machinesRoutes.post('/', authenticate, authorizeRoles('admin'), upload.single('image_url'), addMachine);
 
   machinesRoutes.get("/", getMachinesByLocation);
-  machinesRoutes.delete("/:id", deleteMachine);
+  machinesRoutes.delete("/:id",authenticate, authorizeRoles('admin'), deleteMachine);
   machinesRoutes.get("/:id", getMachineByID)
-  machinesRoutes.put("/:id", updateMachineByID)
+  machinesRoutes.put("/:id",authenticate, authorizeRoles('admin'), updateMachineByID)
 
 
   export default machinesRoutes;

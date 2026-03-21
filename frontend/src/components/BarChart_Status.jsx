@@ -57,7 +57,7 @@ const BarChartStatus = ({ labels, line1}) => {
       datalabels: {
         display: false, 
       },
-      legend: { display: true, },
+      legend: { display: false, },
       title: { display: false },
       zoom: {
         pan: {
@@ -90,7 +90,7 @@ const BarChartStatus = ({ labels, line1}) => {
           return labels[value] ?? value;
         }
       },
-      min: 0,
+      min: 1,
       max: 2,
     }
   }
