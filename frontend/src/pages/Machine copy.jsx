@@ -1098,7 +1098,7 @@ function Machine() {
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <div style={{ fontWeight: 'bold', color: '#203E9A' }}>Sản lượng (cái)</div>
+                <div style={{ fontWeight: 'bold', color: '#203E9A' }}>Sản lượng</div>
                 <div className="d-flex gap-2 flex-wrap" style={{ color: 'orangered', fontWeight: 600 }}>
                   <div>min: {minValueProductivity.toFixed(1)}</div>
                   <div>max: {maxValueProductivity.toFixed(1)}</div>
