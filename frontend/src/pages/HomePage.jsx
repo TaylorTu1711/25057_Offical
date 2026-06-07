@@ -410,15 +410,7 @@ function HomePage() {
                       <col style={{ width: tableColWidths.status }} />
                       <col style={{ width: tableColWidths.actions }} />
                     </colgroup>
-                    <thead
-                      className="table-light text-center"
-                      style={{
-                        position: 'sticky',
-                        top: 0,
-                        zIndex: 2,
-                        backgroundColor: '#f8f9fa',
-                      }}
-                    >
+                    <thead className="table-light text-center home-machine-table__thead">
                       <tr>
                         <ResizableTableHeader
                           columnKey="name"

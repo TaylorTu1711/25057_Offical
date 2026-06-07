@@ -2,13 +2,18 @@ import React, { useMemo } from 'react';
 import { Chart } from 'react-chartjs-2';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import useTheme from '../hooks/useTheme';
+import useSyncChartTheme from '../hooks/useSyncChartTheme';
 import useChartZoomPreserve from '../hooks/useChartZoomPreserve';
 import {
   chartStableRenderOptions,
   getCategoryXAxisTickOptions,
   getChartLegendOptions,
   formatChartTooltipTitle,
+  PRODUCTION_CHART_COLORS,
+  createProductionBarGradient,
+  createProductionBarHoverGradient,
   themedScale,
+  themedXScale,
 } from '../utils/chartTheme';
 import {
   Chart as ChartJS,
@@ -43,11 +48,20 @@ const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month', category
         {
           label: 'Số lần lỗi',
           data: dataValues,
-          backgroundColor: 'rgba(32, 64, 154, 0.8)',
-          borderColor: 'rgba(32, 64, 154, 1)',
+          backgroundColor: (context) => {
+            const { chart } = context;
+            const { ctx, chartArea } = chart;
+            return createProductionBarGradient(ctx, chartArea);
+          },
+          borderColor: PRODUCTION_CHART_COLORS.bar.border,
           borderWidth: 1,
-          hoverBackgroundColor: 'rgba(32, 64, 154, 0.55)',
-          hoverBorderColor: 'rgba(32, 64, 154, 1)',
+          borderRadius: { topLeft: 3, topRight: 3 },
+          hoverBackgroundColor: (context) => {
+            const { chart } = context;
+            const { ctx, chartArea } = chart;
+            return createProductionBarHoverGradient(ctx, chartArea);
+          },
+          hoverBorderColor: PRODUCTION_CHART_COLORS.bar.border,
           hoverBorderWidth: 2,
         },
       ],
@@ -82,28 +96,36 @@ const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month', category
             },
           },
         },
-        legend: getChartLegendOptions(),
+        legend: getChartLegendOptions({}, theme),
         title: { display: false },
         zoom: zoomPluginOptions,
       },
       layout: { padding: 0 },
       scales: {
-        x: themedScale(
+        x: themedXScale(
           {
             ticks: getCategoryXAxisTickOptions(labelCount, viewMode),
           },
           undefined,
           'category',
+          theme,
         ),
-        y: themedScale({
-          beginAtZero: true,
-          position: 'left',
-          ticks: { stepSize: 1, precision: 0, padding: 4 },
-        }),
+        y: themedScale(
+          {
+            beginAtZero: true,
+            position: 'left',
+            ticks: { stepSize: 1, precision: 0, padding: 4 },
+          },
+          undefined,
+          'linear',
+          theme,
+        ),
       },
     }),
-    [labelCount, labels, categoryPrefix, viewMode, zoomPluginOptions],
+    [labelCount, labels, categoryPrefix, viewMode, zoomPluginOptions, theme],
   );
+
+  useSyncChartTheme(chartRef, theme, options);
 
   return (
     <div style={{ height: '100%', width: '100%' }}>

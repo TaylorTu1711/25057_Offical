@@ -2,8 +2,19 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chart } from 'react-chartjs-2';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import useTheme from '../hooks/useTheme';
+import useSyncChartTheme from '../hooks/useSyncChartTheme';
 import useChartZoomPreserve from '../hooks/useChartZoomPreserve';
-import { getChartThemeColors, themedScale, chartStableRenderOptions } from '../utils/chartTheme';
+import {
+  getChartThemeColors,
+  themedScale,
+  themedXScale,
+  chartStableRenderOptions,
+  NEON_ERROR_BAR,
+  NEON_PALETTE,
+  createErrorBarGradient,
+  createErrorBarHoverGradient,
+  getHorizontalAxisTickColor,
+} from '../utils/chartTheme';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,10 +25,9 @@ import {
   Legend,
 } from 'chart.js';
 
-const BAR_FILL = 'rgba(255, 182, 193, 0.95)';
-const BAR_BORDER = 'rgba(255, 140, 160, 1)';
-const GRID_COLOR = 'rgba(0, 0, 0, 0.1)';
-const LABEL_COLOR = '#1a1a1a';
+const ERROR_BAR_PALETTE = NEON_ERROR_BAR.palette;
+const GRID_COLOR = 'rgba(108, 122, 184, 0.12)';
+const LABEL_COLOR = NEON_PALETTE.pointBorder;
 
 function getXTickStep(maxVal) {
   const paddedMax = maxVal <= 0 ? 7 : Math.ceil(maxVal * 1.08);
@@ -69,7 +79,7 @@ const inBarCategoryLabelsPlugin = {
 
     const ctx = chart.ctx;
     ctx.save();
-    ctx.fillStyle = LABEL_COLOR;
+    ctx.fillStyle = pluginOptions?.labelColor ?? LABEL_COLOR;
     ctx.font = `${fontSize}px system-ui, -apple-system, "Segoe UI", sans-serif`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
@@ -132,7 +142,7 @@ function BarChart_ErrorCore({
   yCategoryWindow = null,
 }) {
   const { theme } = useTheme();
-  const { brand } = getChartThemeColors();
+  const { brand } = getChartThemeColors(theme);
   const categoryLabels = displayLabels?.length ? displayLabels : labels;
   const maxCategoryIndex = Math.max(0, categoryLabels.length - 1);
   const yWindow = useMemo(
@@ -156,15 +166,26 @@ function BarChart_ErrorCore({
       datasets: [
         {
           data: dataValues,
-          backgroundColor: BAR_FILL,
-          borderColor: BAR_BORDER,
+          backgroundColor: (context) => {
+            const { chart } = context;
+            const { ctx, chartArea } = chart;
+            return createErrorBarGradient(ctx, chartArea);
+          },
+          borderColor: ERROR_BAR_PALETTE.border,
           borderWidth: 1,
           barThickness: 'flex',
           maxBarThickness: embedded ? 26 : 30,
           categoryPercentage: 0.88,
           barPercentage: 0.82,
-          borderRadius: 0,
+          borderRadius: { topRight: 3, bottomRight: 3 },
           borderSkipped: false,
+          hoverBackgroundColor: (context) => {
+            const { chart } = context;
+            const { ctx, chartArea } = chart;
+            return createErrorBarHoverGradient(ctx, chartArea);
+          },
+          hoverBorderColor: ERROR_BAR_PALETTE.border,
+          hoverBorderWidth: 2,
         },
       ],
     }),
@@ -204,13 +225,14 @@ function BarChart_ErrorCore({
         inBarCategoryLabels: {
           labels: categoryLabels,
           embedded,
+          labelColor: getHorizontalAxisTickColor(theme) ?? LABEL_COLOR,
         },
       },
       layout: {
         padding: { left: 0, right: 8, top: 0 },
       },
       scales: {
-        x: themedScale({
+        x: themedXScale({
           beginAtZero: true,
           title: embedded
             ? { display: false }
@@ -228,7 +250,7 @@ function BarChart_ErrorCore({
             padding: embedded ? 2 : undefined,
           },
           grid: { display: true, color: GRID_COLOR },
-        }),
+        }, undefined, 'linear', theme),
         y: {
           ...themedScale(
             {
@@ -244,13 +266,16 @@ function BarChart_ErrorCore({
             },
             undefined,
             'category',
+            theme,
           ),
           grid: { display: true, color: GRID_COLOR },
         },
       },
     }),
-    [brand, categoryLabels, embedded, labels, tooltipLabels, xTickStep, yWindow, zoomPluginOptions],
+    [brand, categoryLabels, embedded, labels, tooltipLabels, xTickStep, yWindow, zoomPluginOptions, theme],
   );
+
+  useSyncChartTheme(chartRef, theme, options);
 
   return (
     <div className={`bar-chart-analysis-error${embedded ? ' bar-chart-analysis-error--embedded' : ''}`}>

@@ -4,10 +4,20 @@
 }
 
 .machine-card {
-  background-color: #ffffff;
-  border: 1px solid #dee2e6;
   border-radius: 0.75rem;
-  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.1);
+}
+
+[data-theme='light'] .machine-card {
+  background: linear-gradient(
+    168deg,
+    var(--app-surface-glow) 0%,
+    var(--app-surface) 42%,
+    var(--app-surface-deep) 100%
+  ) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow:
+    var(--card-shadow),
+    inset 0 1px 0 var(--neon-highlight-top);
 }
 
 .machine-card h5 {
@@ -65,11 +75,16 @@
   transition: all 0.2s ease;
 }
 
+[data-theme='dark'] .machine-card {
+  background-color: var(--app-surface) !important;
+  border-color: var(--app-border) !important;
+}
+
 [data-theme='dark'] .machine-title,
 [data-theme='dark'] .machine-card h5,
 [data-theme='dark'] .machine-label,
 [data-theme='dark'] .offcanvas-title {
-  color: #ffffff !important;
+  color: var(--brand-color) !important;
 }
 
 [data-theme='dark'] .menu-item {
@@ -199,8 +214,13 @@
 }
 
 .machine-top-panel__status-icon--stopped {
-  background-color: #fff;
-  border-color: rgba(32, 64, 154, 0.2);
+  background: linear-gradient(
+    168deg,
+    var(--app-surface-glow, #ffffff) 0%,
+    var(--app-surface-muted, #e6edf9) 55%,
+    var(--app-surface-deep, #d5e0f2) 100%
+  );
+  border-color: rgba(220, 38, 38, 0.35);
 }
 
 .machine-status-animated {
@@ -299,6 +319,10 @@
   animation: machine-status-blink 1.8s ease-in-out infinite;
 }
 
+.machine-status-animated__stop-x {
+  filter: drop-shadow(0 0 4px rgba(220, 38, 38, 0.55));
+}
+
 .machine-top-panel__stat-box {
   height: var(--machine-top-stat-h);
   padding: 0.35rem !important;
@@ -308,6 +332,10 @@
   font-size: clamp(9px, 1.25vw, 11px) !important;
   line-height: 1.15;
   margin-bottom: 0.1rem !important;
+}
+
+[data-theme='dark'] .machine-top-panel__stat-box .text-brand {
+  color: #ffffff !important;
 }
 
 .machine-top-panel__stat-box--performance .fw-semibold {
@@ -374,15 +402,19 @@
 }
 
 [data-theme='dark'] .machine-runtime-display__value {
-  color: var(--accent-blue, #5dade2);
+  color: #7dd4fc;
+  text-shadow:
+    0 0 8px rgba(56, 189, 248, 0.55),
+    0 0 20px rgba(37, 99, 235, 0.25);
 }
 
 [data-theme='dark'] .machine-runtime-display__label {
-  color: var(--text-muted, #95a5a6);
+  color: rgba(125, 212, 252, 0.55);
 }
 
 [data-theme='dark'] .machine-runtime-display__sep {
-  color: rgba(93, 173, 226, 0.4);
+  color: rgba(56, 189, 248, 0.45);
+  text-shadow: 0 0 6px rgba(56, 189, 248, 0.35);
 }
 
 .machine-top-panel__perf-inner {
@@ -413,14 +445,26 @@
 .machine-top-panel__alarms--list {
   min-width: 0;
   padding: 0.3rem 0.35rem !important;
-  background: linear-gradient(180deg, #ffffff 0%, #f8f9fc 100%);
 }
 
 .machine-top-panel__alarms--time {
   min-width: 0;
   padding: 0.25rem 0.28rem !important;
-  background: linear-gradient(180deg, #ffffff 0%, #f8f9fc 100%);
   container-type: inline-size;
+}
+
+[data-theme='light'] .machine-top-panel__alarms--list,
+[data-theme='light'] .machine-top-panel__alarms--time {
+  background: linear-gradient(
+    168deg,
+    var(--app-surface-glow) 0%,
+    var(--app-surface) 38%,
+    var(--app-surface-deep) 100%
+  ) !important;
+  border: 1px solid var(--app-border) !important;
+  box-shadow:
+    var(--card-shadow),
+    inset 0 1px 0 var(--neon-highlight-top);
 }
 
 .machine-time-range-panel {
@@ -699,39 +743,101 @@
 [data-theme='dark'] .machine-top-panel__alarms--list,
 [data-theme='dark'] .machine-top-panel__alarms--time {
   background: linear-gradient(
-    180deg,
-    var(--app-surface) 0%,
-    var(--app-surface-muted) 100%
+    168deg,
+    var(--app-surface-glow, rgba(22, 68, 130, 0.88)) 0%,
+    var(--app-surface) 38%,
+    var(--app-surface-deep, #0a2248) 100%
   ) !important;
   border: 1px solid var(--app-border) !important;
   color: var(--app-text);
+  box-shadow:
+    var(--card-shadow),
+    inset 0 1px 0 var(--neon-highlight-top, rgba(125, 212, 252, 0.14));
 }
 
+[data-theme='light'] .machine-chart-card,
 [data-theme='dark'] .machine-chart-card {
   border: 1px solid var(--app-border) !important;
+  box-shadow:
+    var(--card-shadow),
+    inset 0 1px 0 var(--neon-highlight-top);
+}
+
+[data-theme='light'] .machine-chart-card.bg-white,
+[data-theme='light'] .machine-chart-card.border.bg-white {
+  background: linear-gradient(
+    168deg,
+    var(--app-surface-glow) 0%,
+    var(--app-surface) 40%,
+    var(--app-surface-deep) 100%
+  ) !important;
 }
 
 [data-theme='dark'] .machine-view-mode-segment,
 [data-theme='dark'] .machine-view-mode-range__granularity {
-  background: rgba(52, 152, 219, 0.12);
+  background: rgba(56, 189, 248, 0.12);
   border: 1px solid var(--app-border);
 }
 
-[data-theme='dark'] .machine-top-panel__alarms .text-secondary {
-  color: var(--app-text-muted) !important;
-}
-
+[data-theme='light'] .machine-top-panel__alarms--list .machine-alarm-table,
 [data-theme='dark'] .machine-top-panel__alarms--list .machine-alarm-table {
   --bs-table-bg: var(--app-surface);
   --bs-table-color: var(--app-text);
   --bs-table-border-color: var(--app-border);
   --bs-table-striped-bg: var(--app-surface-muted);
-  --bs-table-hover-bg: rgba(52, 152, 219, 0.12);
+  --bs-table-striped-color: var(--app-text);
+  --bs-table-hover-bg: var(--app-surface-muted);
+  --bs-table-hover-color: var(--app-text);
+  color: var(--app-text);
+  border-color: var(--app-border);
+  background-color: transparent;
 }
 
+[data-theme='light'] .machine-top-panel__alarms--list .machine-alarm-table {
+  --bs-table-hover-bg: rgba(32, 64, 154, 0.08);
+}
+
+[data-theme='dark'] .machine-top-panel__alarms--list .machine-alarm-table {
+  --bs-table-hover-bg: rgba(56, 189, 248, 0.12);
+}
+
+[data-theme='light'] .machine-top-panel__alarms--list .machine-alarm-table thead.table-light,
 [data-theme='dark'] .machine-top-panel__alarms--list .machine-alarm-table thead.table-light {
   --bs-table-bg: var(--app-surface-muted);
   --bs-table-color: var(--app-text);
+}
+
+[data-theme='light'] .machine-top-panel__alarms--list .machine-alarm-table > :not(caption) > * > *,
+[data-theme='dark'] .machine-top-panel__alarms--list .machine-alarm-table > :not(caption) > * > * {
+  background-color: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+  box-shadow: none;
+}
+
+[data-theme='light'] .machine-top-panel__alarms--list .machine-alarm-table thead th,
+[data-theme='light'] .machine-top-panel__alarms--list .machine-alarm-table thead td,
+[data-theme='dark'] .machine-top-panel__alarms--list .machine-alarm-table thead th,
+[data-theme='dark'] .machine-top-panel__alarms--list .machine-alarm-table thead td {
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+[data-theme='light'] .machine-top-panel__alarms--list .machine-alarm-table tbody tr:hover > *,
+[data-theme='dark'] .machine-top-panel__alarms--list .machine-alarm-table tbody tr:hover > * {
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme='light'] .machine-top-panel__alarms--list .machine-alarm-table .text-muted,
+[data-theme='dark'] .machine-top-panel__alarms--list .machine-alarm-table .text-muted {
+  color: var(--app-text-muted) !important;
+}
+
+[data-theme='light'] .machine-top-panel__alarms .text-secondary,
+[data-theme='dark'] .machine-top-panel__alarms .text-secondary {
+  color: var(--app-text-muted) !important;
 }
 
 [data-theme='dark'] .machine-view-mode-segment__btn,
@@ -744,16 +850,18 @@
   .machine-view-mode-range__granularity-btn:hover:not(
     .machine-view-mode-range__granularity-btn--active
   ) {
-  background: rgba(52, 152, 219, 0.2);
+  background: rgba(56, 189, 248, 0.2);
   color: var(--app-text);
 }
 
 [data-theme='dark'] .machine-view-mode-segment__btn--active,
 [data-theme='dark'] .machine-view-mode-range__granularity-btn--active {
-  background: var(--accent-blue, #3498db);
+  background: linear-gradient(180deg, #5cc8fa 0%, var(--accent-blue) 55%, #1d8fd4 100%);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 0 14px rgba(56, 189, 248, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 [data-theme='dark'] .machine-view-mode-picker__caption,
@@ -775,14 +883,15 @@
 }
 
 [data-theme='dark'] .machine-view-mode-chip:hover:not(.machine-view-mode-chip--active) {
-  background: rgba(52, 152, 219, 0.18);
-  border-color: var(--accent-blue, #3498db);
+  background: rgba(56, 189, 248, 0.18);
+  border-color: var(--accent-blue);
 }
 
 [data-theme='dark'] .machine-view-mode-chip--active {
-  background: var(--accent-blue, #3498db);
-  border-color: var(--accent-blue, #3498db);
+  background: linear-gradient(180deg, #5cc8fa 0%, var(--accent-blue) 55%, #1d8fd4 100%);
+  border-color: var(--accent-blue);
   color: #fff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
 }
 
 [data-theme='dark'] .machine-view-mode-range__input {
@@ -792,8 +901,8 @@
 }
 
 [data-theme='dark'] .machine-view-mode-range__input:focus {
-  border-color: var(--accent-blue, #3498db) !important;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+  border-color: var(--accent-blue) !important;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.28);
 }
 
 [data-theme='dark'] .machine-view-mode-range__input::-webkit-calendar-picker-indicator {
@@ -801,11 +910,25 @@
 }
 
 [data-theme='dark'] .machine-view-mode-body--scroll {
-  scrollbar-color: rgba(52, 152, 219, 0.45) transparent;
+  scrollbar-color: rgba(56, 189, 248, 0.45) transparent;
 }
 
 [data-theme='dark'] .machine-view-mode-body--scroll::-webkit-scrollbar-thumb {
-  background: rgba(52, 152, 219, 0.45);
+  background: rgba(56, 189, 248, 0.45);
+}
+
+[data-theme='dark'] .machine-chart-card.bg-white,
+[data-theme='dark'] .machine-chart-card.border.bg-white {
+  background: linear-gradient(
+    168deg,
+    var(--app-surface-glow, rgba(22, 68, 130, 0.88)) 0%,
+    var(--app-surface) 40%,
+    var(--app-surface-deep, #0a2248) 100%
+  ) !important;
+}
+
+[data-theme='dark'] .machine-chart-head {
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
 }
 
 .machine-top-panel__alarms .card-header-row,

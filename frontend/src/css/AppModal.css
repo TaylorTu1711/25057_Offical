@@ -11,7 +11,43 @@
 }
 
 [data-theme='dark'] .app-modal-overlay {
-  background-color: rgba(0, 0, 0, 0.72);
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 20%, rgba(37, 99, 235, 0.18) 0%, transparent 60%),
+    rgba(6, 20, 42, 0.75);
+}
+
+[data-theme='dark'] .app-modal-panel {
+  background: linear-gradient(
+    168deg,
+    var(--app-surface-glow, rgba(22, 68, 130, 0.92)) 0%,
+    var(--app-surface) 42%,
+    var(--app-surface-deep, #0a2248) 100%
+  ) !important;
+  box-shadow:
+    0 0 1px rgba(56, 189, 248, 0.4),
+    0 0 32px rgba(37, 99, 235, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(125, 212, 252, 0.14) !important;
+}
+
+[data-theme='light'] .app-modal-overlay {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 20%, rgba(32, 64, 154, 0.1) 0%, transparent 60%),
+    rgba(205, 216, 235, 0.72);
+}
+
+[data-theme='light'] .app-modal-panel {
+  background: linear-gradient(
+    168deg,
+    var(--app-surface-glow) 0%,
+    var(--app-surface) 42%,
+    var(--app-surface-deep) 100%
+  ) !important;
+  box-shadow:
+    0 0 1px rgba(32, 64, 154, 0.16),
+    0 0 24px rgba(32, 64, 154, 0.1),
+    0 8px 28px rgba(32, 64, 154, 0.14),
+    inset 0 1px 0 var(--neon-highlight-top) !important;
 }
 
 .app-modal-panel {
@@ -410,9 +446,9 @@
 
 [data-theme='dark'] .app-modal .form-control[type='file']::file-selector-button,
 [data-theme='dark'] .app-modal .form-control[type='file']::-webkit-file-upload-button {
-  background-color: #1c3354 !important;
-  color: #e8eef5 !important;
-  border-color: #2a5078 !important;
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
 }
 
 [data-theme='dark'] .app-modal .form-control[type='file']:hover::file-selector-button,
@@ -421,8 +457,8 @@
 [data-theme='dark'] .app-modal .form-control[type='file']:active::-webkit-file-upload-button,
 [data-theme='dark'] .app-modal .form-control[type='file']:focus::file-selector-button,
 [data-theme='dark'] .app-modal .form-control[type='file']:focus::-webkit-file-upload-button {
-  background-color: #2a4a6e !important;
-  color: #e8eef5 !important;
-  border-color: #3a6088 !important;
+  background-color: var(--nav-hover-bg) !important;
+  color: var(--app-text) !important;
+  border-color: var(--accent-blue) !important;
 }
 

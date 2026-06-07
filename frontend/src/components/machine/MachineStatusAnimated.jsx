@@ -83,19 +83,19 @@ const MachineStatusStoppedSvg = () => (
     aria-hidden="true"
     focusable="false"
   >
-    <g opacity="0.45">
-      <rect x="56" y="50" width="18" height="38" rx="3" fill="#555" stroke="#666" strokeWidth="0.5" />
-      <rect x="52" y="50" width="26" height="7" rx="2" fill="#666" />
+    <g opacity="0.55">
+      <rect x="56" y="50" width="18" height="38" rx="3" fill="#8a8a8a" stroke="#9ca3af" strokeWidth="0.5" />
+      <rect x="52" y="50" width="26" height="7" rx="2" fill="#9ca3af" />
     </g>
 
-    <rect x="28" y="82" width="164" height="94" rx="7" fill="#252525" stroke="#333" strokeWidth="0.5" />
-    <rect x="42" y="96" width="136" height="64" rx="5" fill="#1e1e1e" stroke="#2e2e2e" strokeWidth="0.5" />
+    <rect x="28" y="82" width="164" height="94" rx="7" fill="#6b7280" stroke="#9ca3af" strokeWidth="0.5" />
+    <rect x="42" y="96" width="136" height="64" rx="5" fill="#9ca3af" stroke="#d1d5db" strokeWidth="0.5" />
 
-    <g opacity="0.35">
-      <circle cx="88" cy="116" r="18" fill="none" stroke="#555" strokeWidth="3" />
-      <circle cx="88" cy="116" r="11" fill="#333" stroke="#555" strokeWidth="1.2" />
-      <circle cx="88" cy="116" r="4" fill="#222" />
-      <g stroke="#555" strokeWidth="3" strokeLinecap="round">
+    <g opacity="0.5">
+      <circle cx="88" cy="116" r="18" fill="none" stroke="#6b7280" strokeWidth="3" />
+      <circle cx="88" cy="116" r="11" fill="#9ca3af" stroke="#6b7280" strokeWidth="1.2" />
+      <circle cx="88" cy="116" r="4" fill="#6b7280" />
+      <g stroke="#6b7280" strokeWidth="3" strokeLinecap="round">
         <line x1="88" y1="96" x2="88" y2="100" />
         <line x1="88" y1="132" x2="88" y2="136" />
         <line x1="68" y1="116" x2="72" y2="116" />
@@ -105,18 +105,18 @@ const MachineStatusStoppedSvg = () => (
         <line x1="101" y1="103" x2="98" y2="106" />
         <line x1="75" y1="126" x2="78" y2="123" />
       </g>
-      <g stroke="#444" strokeWidth="1.5">
+      <g stroke="#6b7280" strokeWidth="1.5">
         <line x1="88" y1="105" x2="88" y2="127" />
         <line x1="77" y1="110" x2="99" y2="122" />
         <line x1="99" y1="110" x2="77" y2="122" />
       </g>
     </g>
 
-    <g opacity="0.35">
-      <circle cx="138" cy="128" r="30" fill="none" stroke="#555" strokeWidth="3" />
-      <circle cx="138" cy="128" r="20" fill="#333" stroke="#555" strokeWidth="1.2" />
-      <circle cx="138" cy="128" r="6" fill="#222" />
-      <g stroke="#555" strokeWidth="3" strokeLinecap="round">
+    <g opacity="0.5">
+      <circle cx="138" cy="128" r="30" fill="none" stroke="#6b7280" strokeWidth="3" />
+      <circle cx="138" cy="128" r="20" fill="#9ca3af" stroke="#6b7280" strokeWidth="1.2" />
+      <circle cx="138" cy="128" r="6" fill="#6b7280" />
+      <g stroke="#6b7280" strokeWidth="3" strokeLinecap="round">
         <line x1="138" y1="96" x2="138" y2="102" />
         <line x1="138" y1="154" x2="138" y2="160" />
         <line x1="106" y1="128" x2="112" y2="128" />
@@ -126,22 +126,28 @@ const MachineStatusStoppedSvg = () => (
         <line x1="160" y1="106" x2="156" y2="111" />
         <line x1="116" y1="145" x2="120" y2="140" />
       </g>
-      <g stroke="#444" strokeWidth="1.5">
+      <g stroke="#6b7280" strokeWidth="1.5">
         <line x1="138" y1="108" x2="138" y2="148" />
         <line x1="120" y1="118" x2="156" y2="138" />
         <line x1="156" y1="118" x2="120" y2="138" />
       </g>
     </g>
 
-    <circle cx="58" cy="166" r="5" fill="#4a1a1a" />
-    <circle className="machine-status-animated__light-blink" cx="58" cy="166" r="5" fill="#e05050" />
+    <circle cx="58" cy="166" r="5" fill="#7f1d1d" />
+    <circle className="machine-status-animated__light-blink" cx="58" cy="166" r="5" fill="#ef4444" />
 
-    <rect x="70" y="163" width="34" height="4" rx="2" fill="#555" opacity="0.3" />
-    <rect x="70" y="170" width="22" height="3" rx="2" fill="#444" opacity="0.3" />
+    <rect x="70" y="163" width="34" height="4" rx="2" fill="#9ca3af" opacity="0.45" />
+    <rect x="70" y="170" width="22" height="3" rx="2" fill="#6b7280" opacity="0.4" />
 
-    <rect x="18" y="174" width="184" height="12" rx="4" fill="#2e2e2e" stroke="#444" strokeWidth="0.5" />
-    <rect x="46" y="184" width="18" height="18" rx="2" fill="#282828" />
-    <rect x="156" y="184" width="18" height="18" rx="2" fill="#282828" />
+    <rect x="18" y="174" width="184" height="12" rx="4" fill="#6b7280" stroke="#9ca3af" strokeWidth="0.5" />
+    <rect x="46" y="184" width="18" height="18" rx="2" fill="#9ca3af" />
+    <rect x="156" y="184" width="18" height="18" rx="2" fill="#9ca3af" />
+
+    <g className="machine-status-animated__stop-x">
+      <circle cx="110" cy="128" r="34" fill="rgba(255,255,255,0.28)" stroke="rgba(239,68,68,0.45)" strokeWidth="2" />
+      <line x1="90" y1="108" x2="130" y2="148" stroke="#dc2626" strokeWidth="8" strokeLinecap="round" />
+      <line x1="130" y1="108" x2="90" y2="148" stroke="#dc2626" strokeWidth="8" strokeLinecap="round" />
+    </g>
   </svg>
 );
 

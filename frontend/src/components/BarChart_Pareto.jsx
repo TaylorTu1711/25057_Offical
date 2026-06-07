@@ -2,8 +2,18 @@ import React, { useMemo } from 'react';
 import { Chart } from 'react-chartjs-2';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import useTheme from '../hooks/useTheme';
+import useSyncChartTheme from '../hooks/useSyncChartTheme';
 import useChartZoomPreserve from '../hooks/useChartZoomPreserve';
-import { getChartThemeColors, themedScale, chartStableRenderOptions } from '../utils/chartTheme';
+import {
+  getChartThemeColors,
+  getChartLegendOptions,
+  themedScale,
+  themedXScale,
+  chartStableRenderOptions,
+  PRODUCTION_CHART_COLORS,
+  createProductionBarGradient,
+  getParetoLineStyle,
+} from '../utils/chartTheme';
 import { formatErrorLabel } from '../utils/errorStats';
 import {
   Chart as ChartJS,
@@ -61,7 +71,8 @@ function buildParetoData(labels, dataValues, maxItems, tooltipLabels) {
 
 const BarChart_Pareto = ({ labels, dataValues, tooltipLabels, maxItems = MAX_ITEMS }) => {
   const { theme } = useTheme();
-  const { brand } = getChartThemeColors();
+  const { brand } = getChartThemeColors(theme);
+  const paretoLine = useMemo(() => getParetoLineStyle(), []);
 
   const pareto = useMemo(
     () => buildParetoData(labels, dataValues, maxItems, tooltipLabels),
@@ -82,9 +93,14 @@ const BarChart_Pareto = ({ labels, dataValues, tooltipLabels, maxItems = MAX_ITE
           label: 'Số lần lỗi',
           data: pareto.counts,
           yAxisID: 'y',
-          backgroundColor: 'rgba(32, 64, 154, 0.8)',
-          borderColor: 'rgba(32, 64, 154, 1)',
+          backgroundColor: (context) => {
+            const { chart } = context;
+            const { ctx, chartArea } = chart;
+            return createProductionBarGradient(ctx, chartArea);
+          },
+          borderColor: PRODUCTION_CHART_COLORS.bar.border,
           borderWidth: 1,
+          borderRadius: { topLeft: 3, topRight: 3 },
           order: 2,
         },
         {
@@ -92,18 +108,19 @@ const BarChart_Pareto = ({ labels, dataValues, tooltipLabels, maxItems = MAX_ITE
           label: 'Lũy kế (%)',
           data: pareto.cumulativePct,
           yAxisID: 'y1',
-          borderColor: 'rgba(255, 159, 64, 1)',
-          backgroundColor: 'rgba(255, 159, 64, 0.15)',
+          borderColor: paretoLine.borderColor,
+          backgroundColor: paretoLine.backgroundColor,
           borderWidth: 2,
           pointRadius: 3,
-          pointBackgroundColor: 'rgba(255, 159, 64, 1)',
-          tension: 0.25,
+          pointBackgroundColor: paretoLine.pointBackgroundColor,
+          pointBorderColor: paretoLine.pointBorderColor,
+          tension: 0.35,
           fill: false,
           order: 1,
         },
       ],
     }),
-    [pareto.axisLabels, pareto.counts, pareto.cumulativePct],
+    [pareto.axisLabels, pareto.counts, pareto.cumulativePct, paretoLine],
   );
 
   const options = useMemo(
@@ -113,11 +130,7 @@ const BarChart_Pareto = ({ labels, dataValues, tooltipLabels, maxItems = MAX_ITE
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: { boxWidth: 12, font: { size: 10 } },
-        },
+        legend: getChartLegendOptions({ labels: { font: { size: 10 } } }, theme),
         title: { display: false },
         tooltip: {
           callbacks: {
@@ -130,7 +143,7 @@ const BarChart_Pareto = ({ labels, dataValues, tooltipLabels, maxItems = MAX_ITE
         zoom: zoomPluginOptions,
       },
       scales: {
-        x: themedScale(
+        x: themedXScale(
           {
             ticks: {
               maxRotation: 55,
@@ -141,18 +154,24 @@ const BarChart_Pareto = ({ labels, dataValues, tooltipLabels, maxItems = MAX_ITE
           },
           undefined,
           'category',
+          theme,
         ),
-        y: themedScale({
-          position: 'left',
-          beginAtZero: true,
-          title: {
-            display: true,
-            color: brand,
-            text: 'Số lần',
-            font: { size: 11, weight: 'bold' },
+        y: themedScale(
+          {
+            position: 'left',
+            beginAtZero: true,
+            title: {
+              display: true,
+              color: brand,
+              text: 'Số lần',
+              font: { size: 11, weight: 'bold' },
+            },
+            ticks: { stepSize: 1, precision: 0 },
           },
-          ticks: { stepSize: 1, precision: 0 },
-        }),
+          undefined,
+          'linear',
+          theme,
+        ),
         y1: themedScale(
           {
             position: 'right',
@@ -161,7 +180,7 @@ const BarChart_Pareto = ({ labels, dataValues, tooltipLabels, maxItems = MAX_ITE
             grid: { drawOnChartArea: false },
             title: {
               display: true,
-              color: 'rgba(255, 159, 64, 1)',
+              color: paretoLine.axisColor,
               text: 'Lũy kế (%)',
               font: { size: 11, weight: 'bold' },
             },
@@ -169,12 +188,16 @@ const BarChart_Pareto = ({ labels, dataValues, tooltipLabels, maxItems = MAX_ITE
               callback: (value) => `${value}%`,
             },
           },
-          'rgba(255, 159, 64, 1)',
+          paretoLine.axisColor,
+          'linear',
+          theme,
         ),
       },
     }),
-    [brand, pareto.fullLabels, zoomPluginOptions],
+    [brand, pareto.fullLabels, paretoLine, zoomPluginOptions, theme],
   );
+
+  useSyncChartTheme(chartRef, theme, options);
 
   if (pareto.counts.length === 0) {
     return (

@@ -7,13 +7,16 @@ import './css/AppModal.css'
 import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom'
 import { applyTheme, getSavedTheme } from './utils/theme'
+import { ThemeProvider } from './hooks/useTheme'
 
 applyTheme(getSavedTheme())
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </ThemeProvider>
   </StrictMode>,
 )

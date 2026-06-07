@@ -61,7 +61,7 @@
 
 [data-theme='dark'] .resizable-table-col-resizer:hover::after,
 [data-theme='dark'] .resizable-table-col-resizer--active::after {
-  background: rgba(52, 152, 219, 0.75);
+  background: rgba(56, 189, 248, 0.75);
 }
 
 body.resizable-table-col-resizing {

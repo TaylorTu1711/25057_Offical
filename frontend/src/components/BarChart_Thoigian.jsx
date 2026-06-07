@@ -5,12 +5,16 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import useTheme from '../hooks/useTheme';
 import useChartZoomPreserve from '../hooks/useChartZoomPreserve';
+import useSyncChartTheme from '../hooks/useSyncChartTheme';
 import {
   getPerformanceLineStyle,
   getStandardProductivityLineStyle,
   getOutputRateLineStyle,
-  getTimeChartBarStyle,
+  createTimeBarGradient,
+  createTimeBarHoverGradient,
+  NEON_BAR_GRADIENTS,
   themedScale,
+  themedXScale,
   chartStableRenderOptions,
   getCategoryXAxisTickOptions,
   getChartLegendOptions,
@@ -51,7 +55,7 @@ const LineChart_TimeOn = ({
 }) => {
   const { theme } = useTheme();
   const performanceLine = useMemo(() => getPerformanceLineStyle(), []);
-  const timeBar = useMemo(() => getTimeChartBarStyle(), []);
+  const timeBarPalette = NEON_BAR_GRADIENTS.neonPink;
   const outputRateLine = useMemo(() => getOutputRateLineStyle(), []);
   const standardLine = useMemo(() => getStandardProductivityLineStyle(), []);
   const labelCount = labels?.length ?? 0;
@@ -86,11 +90,20 @@ const LineChart_TimeOn = ({
         label: 'Thời gian chạy (giờ)',
         data: line3,
         yAxisID: 'y',
-        backgroundColor: timeBar.background,
-        borderColor: timeBar.border,
+        backgroundColor: (context) => {
+          const { chart } = context;
+          const { ctx, chartArea } = chart;
+          return createTimeBarGradient(ctx, chartArea);
+        },
+        borderColor: timeBarPalette.border,
         borderWidth: 1,
-        hoverBackgroundColor: timeBar.hoverBackground,
-        hoverBorderColor: timeBar.hoverBorder,
+        borderRadius: { topLeft: 3, topRight: 3 },
+        hoverBackgroundColor: (context) => {
+          const { chart } = context;
+          const { ctx, chartArea } = chart;
+          return createTimeBarHoverGradient(ctx, chartArea);
+        },
+        hoverBorderColor: timeBarPalette.border,
         hoverBorderWidth: 2,
         order: 3,
       },
@@ -106,7 +119,7 @@ const LineChart_TimeOn = ({
         backgroundColor: outputRateLine.backgroundColor,
         borderWidth: outputRateLine.borderWidth,
         borderDash: [],
-        tension: 0,
+        tension: 0.35,
         fill: false,
         clip: false,
         spanGaps: true,
@@ -143,7 +156,7 @@ const LineChart_TimeOn = ({
         borderColor: performanceLine.borderColor,
         backgroundColor: performanceLine.backgroundColor,
         borderWidth: performanceLine.borderWidth,
-        tension: 0,
+        tension: 0.35,
         fill: false,
         clip: false,
         pointRadius: 0,
@@ -167,7 +180,7 @@ const LineChart_TimeOn = ({
     hasPerformance,
     hasOutputRate,
     performanceLine,
-    timeBar,
+    timeBarPalette,
     outputRateLine,
     standardLine,
     standardProductivity,
@@ -215,7 +228,7 @@ const LineChart_TimeOn = ({
             );
           },
         },
-        legend: getChartLegendOptions(),
+        legend: getChartLegendOptions({}, theme),
         title: { display: false },
         zoom: zoomPluginOptions,
       },
@@ -223,26 +236,32 @@ const LineChart_TimeOn = ({
         padding: 0,
       },
       scales: {
-        x: themedScale(
+        x: themedXScale(
           {
             ticks: getCategoryXAxisTickOptions(labelCount, xTickMode),
           },
           undefined,
           'category',
+          theme,
         ),
-        y: themedScale({
-          beginAtZero: true,
-          position: 'left',
-          title: {
-            display: false,
-            text: 'Thời gian (giờ)',
-            font: {
-              size: 14,
-              weight: 'bold',
+        y: themedScale(
+          {
+            beginAtZero: true,
+            position: 'left',
+            title: {
+              display: false,
+              text: 'Thời gian (giờ)',
+              font: {
+                size: 14,
+                weight: 'bold',
+              },
             },
+            ticks: { padding: 4 },
           },
-          ticks: { padding: 4 },
-        }),
+          undefined,
+          'linear',
+          theme,
+        ),
         ...(hasPerformance || hasOutputRate
           ? {
               y1: themedScale(
@@ -264,6 +283,8 @@ const LineChart_TimeOn = ({
                   },
                 },
                 rightAxisStyle.axisColor,
+                'linear',
+                theme,
               ),
             }
           : {}),
@@ -280,8 +301,11 @@ const LineChart_TimeOn = ({
       zoomPluginOptions,
       y1Max,
       rightAxisStyle.axisColor,
+      theme,
     ],
   );
+
+  useSyncChartTheme(chartRef, theme, options);
 
   return (
     <div style={{ height: '100%', width: '100%' }}>

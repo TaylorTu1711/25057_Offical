@@ -458,7 +458,7 @@ function Machine() {
                       className={`border rounded shadow w-100 machine-top-panel__status-icon${
                         machineIsRunning
                           ? ' machine-top-panel__status-icon--running'
-                          : ' bg-white machine-top-panel__status-icon--stopped'
+                          : ' machine-top-panel__status-icon--stopped'
                       }`}
                     >
                       <MachineStatusAnimated

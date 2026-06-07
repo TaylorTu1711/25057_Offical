@@ -107,12 +107,15 @@ import { Chart } from 'react-chartjs-2';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import useTheme from '../hooks/useTheme';
+import useSyncChartTheme from '../hooks/useSyncChartTheme';
 import useChartZoomPreserve from '../hooks/useChartZoomPreserve';
 import {
   themedScale,
+  themedXScale,
   chartDenseAnimationOptions,
   getCategoryXAxisTickOptions,
   getCategoryTooltipTitleCallback,
+  getStatusLineStyle,
 } from '../utils/chartTheme';
 import {
   Chart as ChartJS,
@@ -140,6 +143,7 @@ const statusLabels = ['Maint', 'Stop', 'Run'];
 
 const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
   const { theme } = useTheme();
+  const statusLine = useMemo(() => getStatusLineStyle(), []);
   const labelCount = labels?.length ?? 0;
   const { chartRef, zoomPluginOptions } = useChartZoomPreserve([labels, line1], 'x');
 
@@ -150,12 +154,13 @@ const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
         {
           label: 'Trạng thái',
           data: line1,
-          borderColor: 'rgba(255, 99, 132, 1)',
-          backgroundColor: 'rgba(255, 99, 132, 0.2)',
-          tension: 0.4,
+          borderColor: statusLine.borderColor,
+          backgroundColor: statusLine.backgroundColor,
+          tension: 0.35,
           fill: false,
           pointRadius: 1,
-          pointBackgroundColor: 'rgba(255, 99, 132, 1)',
+          pointBackgroundColor: statusLine.pointBackgroundColor,
+          pointBorderColor: statusLine.pointBorderColor,
           stepped: true,
           spanGaps: false,
         },
@@ -194,27 +199,35 @@ const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
         padding: { top: 28, bottom: 0, left: 0, right: 0 },
       },
       scales: {
-        x: themedScale(
+        x: themedXScale(
           {
             ticks: getCategoryXAxisTickOptions(labelCount, 'year'),
           },
           undefined,
           'category',
+          theme,
         ),
-        y: themedScale({
-          ticks: {
-            stepSize: 1,
-            padding: 4,
-            font: { size: 9 },
-            callback: (value) => statusLabels[value] ?? value,
+        y: themedScale(
+          {
+            ticks: {
+              stepSize: 1,
+              padding: 4,
+              font: { size: 9 },
+              callback: (value) => statusLabels[value] ?? value,
+            },
+            min: 1,
+            max: 2,
           },
-          min: 1,
-          max: 2,
-        }),
+          undefined,
+          'linear',
+          theme,
+        ),
       },
     }),
-    [labelCount, labels, categoryPrefix, zoomPluginOptions],
+    [labelCount, labels, categoryPrefix, statusLine, zoomPluginOptions, theme],
   );
+
+  useSyncChartTheme(chartRef, theme, options);
 
   return (
     <div style={{ height: '100%', width: '100%' }}>

@@ -5,12 +5,18 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import useTheme from '../hooks/useTheme';
 import useChartZoomPreserve from '../hooks/useChartZoomPreserve';
+import useSyncChartTheme from '../hooks/useSyncChartTheme';
 import {
   themedScale,
+  themedXScale,
   chartStableRenderOptions,
   getCategoryXAxisTickOptions,
   getCategoryTooltipTitleCallback,
   getChartLegendOptions,
+  PRODUCTION_CHART_COLORS,
+  createProductionBarGradient,
+  createProductionBarHoverGradient,
+  getProductionLineStyle,
 } from '../utils/chartTheme';
 import {
   Chart as ChartJS,
@@ -49,6 +55,8 @@ const BarLineChart_Sanluong = ({
 }) => {
   const { theme } = useTheme();
   const labelCount = labels?.length ?? 0;
+  const productionLine = useMemo(() => getProductionLineStyle(), []);
+  const showLinePoints = labelCount <= 24;
   const { chartRef, zoomPluginOptions } = useChartZoomPreserve(
     [labels, dataValues, lineValues, showOutputBar, showInputLine],
     'x',
@@ -63,11 +71,20 @@ const BarLineChart_Sanluong = ({
         label: barLabel,
         data: dataValues,
         yAxisID: 'y',
-        backgroundColor: 'rgba(54, 162, 235, 1)',
-        borderColor: 'rgba(54, 162, 235, 1)',
+        backgroundColor: (context) => {
+          const { chart } = context;
+          const { ctx, chartArea } = chart;
+          return createProductionBarGradient(ctx, chartArea);
+        },
+        borderColor: PRODUCTION_CHART_COLORS.bar.border,
         borderWidth: 1,
-        hoverBackgroundColor: 'rgba(54, 162, 235, 0.75)',
-        hoverBorderColor: 'rgba(54, 162, 235, 1)',
+        borderRadius: { topLeft: 3, topRight: 3 },
+        hoverBackgroundColor: (context) => {
+          const { chart } = context;
+          const { ctx, chartArea } = chart;
+          return createProductionBarHoverGradient(ctx, chartArea);
+        },
+        hoverBorderColor: PRODUCTION_CHART_COLORS.bar.border,
         hoverBorderWidth: 2,
         order: 2,
       });
@@ -79,18 +96,18 @@ const BarLineChart_Sanluong = ({
         label: lineLabel,
         data: lineValues,
         yAxisID: showOutputBar ? 'y1' : 'y',
-        borderColor: 'rgba(255, 193, 7, 1)',
-        backgroundColor: 'rgba(255, 193, 7, 0.12)',
+        borderColor: productionLine.borderColor,
+        backgroundColor: productionLine.backgroundColor,
         borderWidth: 2,
-        tension: 0,
+        tension: 0.35,
         fill: false,
         clip: false,
-        pointRadius: 0,
+        pointRadius: showLinePoints ? 3 : 0,
         pointHoverRadius: 5,
         pointHitRadius: 12,
-        pointBackgroundColor: 'rgba(255, 193, 7, 1)',
-        pointHoverBackgroundColor: 'rgba(255, 193, 7, 1)',
-        pointBorderColor: 'rgba(255, 193, 7, 1)',
+        pointBackgroundColor: productionLine.pointBackgroundColor,
+        pointHoverBackgroundColor: productionLine.pointBackgroundColor,
+        pointBorderColor: productionLine.pointBorderColor,
         pointHoverBorderColor: '#fff',
         pointHoverBorderWidth: 2,
         order: 1,
@@ -98,7 +115,17 @@ const BarLineChart_Sanluong = ({
     }
 
     return { labels, datasets };
-  }, [labels, dataValues, lineValues, barLabel, lineLabel, showOutputBar, showInputLine]);
+  }, [
+    labels,
+    dataValues,
+    lineValues,
+    barLabel,
+    lineLabel,
+    showOutputBar,
+    showInputLine,
+    productionLine,
+    showLinePoints,
+  ]);
 
   const options = useMemo(
     () => ({
@@ -125,24 +152,30 @@ const BarLineChart_Sanluong = ({
         datalabels: {
           display: false,
         },
-        legend: getChartLegendOptions(),
+        legend: getChartLegendOptions({}, theme),
         title: { display: false },
         zoom: zoomPluginOptions,
       },
       layout: { padding: 0 },
       scales: {
-        x: themedScale(
+        x: themedXScale(
           {
             ticks: getCategoryXAxisTickOptions(labelCount, xTickMode),
           },
           undefined,
           'category',
+          theme,
         ),
-        y: themedScale({
-          beginAtZero: true,
-          position: 'left',
-          ticks: { padding: 4 },
-        }),
+        y: themedScale(
+          {
+            beginAtZero: true,
+            position: 'left',
+            ticks: { padding: 4 },
+          },
+          undefined,
+          'linear',
+          theme,
+        ),
         ...(showOutputBar && showInputLine
           ? {
               y1: themedScale(
@@ -151,14 +184,28 @@ const BarLineChart_Sanluong = ({
                   position: 'right',
                   grid: { drawOnChartArea: false },
                 },
-                'rgba(255, 193, 7, 1)',
+                productionLine.axisColor,
+                'linear',
+                theme,
               ),
             }
           : {}),
       },
     }),
-    [labelCount, labels, categoryPrefix, xTickMode, zoomPluginOptions, showOutputBar, showInputLine],
+    [
+      labelCount,
+      labels,
+      categoryPrefix,
+      xTickMode,
+      zoomPluginOptions,
+      showOutputBar,
+      showInputLine,
+      productionLine.axisColor,
+      theme,
+    ],
   );
+
+  useSyncChartTheme(chartRef, theme, options);
 
   return (
     <div style={{ height: '100%', width: '100%' }}>

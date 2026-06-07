@@ -1,21 +1,42 @@
-// PerformanceChart.jsx
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { NEON_PALETTE, isDarkChartTheme } from '../utils/chartTheme';
+import useTheme from '../hooks/useTheme';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const PerformanceChart = ({ performance }) => {
-  const data = {
-    labels: ['Hiệu suất', 'Phần còn lại'],
-    datasets: [
-      {
-        data: [performance, 100 - performance],
-        backgroundColor: ['#20409A', '#E0E0E0'],
-        borderWidth: 0,
-      },
-    ],
-  };
+  const { theme } = useTheme();
+  const isDark = isDarkChartTheme(theme);
+  const remainderColor = isDark ? NEON_PALETTE.remainderDark : NEON_PALETTE.remainder;
+  const labelColor = isDark ? '#ffffff' : '#000000';
+
+  const data = useMemo(
+    () => ({
+      labels: ['Hiệu suất', 'Phần còn lại'],
+      datasets: [
+        {
+          data: [performance, 100 - performance],
+          backgroundColor: (context) => {
+            if (context.dataIndex !== 0) return remainderColor;
+            const { chart } = context;
+            const { ctx, chartArea } = chart;
+            if (!chartArea) return NEON_PALETTE.cyanBright;
+            const cx = (chartArea.left + chartArea.right) / 2;
+            const cy = (chartArea.top + chartArea.bottom) / 2;
+            const r = Math.min(chartArea.width, chartArea.height) / 2;
+            const gradient = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
+            gradient.addColorStop(0, NEON_PALETTE.cyan);
+            gradient.addColorStop(1, NEON_PALETTE.blue);
+            return gradient;
+          },
+          borderWidth: 0,
+        },
+      ],
+    }),
+    [performance, remainderColor],
+  );
 
   const options = {
     cutout: '70%',
@@ -40,9 +61,9 @@ const PerformanceChart = ({ performance }) => {
         position: 'relative',
       }}
     >
-      <Doughnut data={data} options={options} />
+      <Doughnut key={theme} data={data} options={options} />
       <div
-        key={performance}
+        key={`${performance}-${theme}`}
         className="notranslate"
         translate="no"
         style={{
@@ -50,9 +71,9 @@ const PerformanceChart = ({ performance }) => {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          fontSize: '14px',
+          fontSize: '11px',
           fontWeight: 'bold',
-          color: 'var(--brand-color, #20409A)',
+          color: labelColor,
           zIndex: 2,
         }}
       >
