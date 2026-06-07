@@ -38,7 +38,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
       args:
-        VITE_API_BASE_URL: http://171.244.142.231:3000
+        VITE_API_BASE_URL: ""
     container_name: plenma-frontend
     restart: unless-stopped
     depends_on:
