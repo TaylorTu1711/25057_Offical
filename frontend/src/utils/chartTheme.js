@@ -212,7 +212,7 @@ export function getStatusLineStyle(theme) {
     backgroundColor: 'transparent',
     pointBackgroundColor: brand,
     pointBorderColor: brand,
-    borderWidth: 1.5,
+    borderWidth: 2.5,
   };
 }
 
