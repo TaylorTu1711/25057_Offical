@@ -431,7 +431,7 @@ function Machine() {
             <div className="row g-1 machine-top-panel__main-row">
               {/* Thông số máy — bên trái */}
               <div className="col-8 machine-top-panel__stats-col">
-                <div className="row g-1 mb-1">
+                <div className="row g-1 machine-top-panel__stats-grid-row machine-top-panel__name-row">
                   <div className="col-8">
                     <div
                       className="border bg-white rounded text-center fw-semibold shadow d-flex flex-column justify-content-center text-brand machine-top-panel__name"
@@ -471,35 +471,39 @@ function Machine() {
                   </div>
                 </div>
 
-                <div className="row g-1">
-                  <div className="col-4">
-                    <div className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box machine-top-panel__stat-box--performance">
-                      <p className="fw-semibold mb-0 text-brand">HIỆU SUẤT SỬ DỤNG</p>
-                      {selectedMachineData ? (
-                        <div className="d-flex justify-content-center align-items-center machine-top-panel__perf-inner">
-                          <PerformanceChart key={machine_id} performance={performanceMachine} />
+                <div className="row g-1 machine-top-panel__stats-grid-row machine-top-panel__stat-row">
+                  <div className="col-8 machine-top-panel__stat-pair">
+                    <div className="row g-1 machine-top-panel__stat-pair-inner">
+                      <div className="col-6">
+                        <div className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box machine-top-panel__stat-box--performance">
+                          <p className="fw-semibold mb-0 text-brand">HIỆU SUẤT SỬ DỤNG</p>
+                          {selectedMachineData ? (
+                            <div className="d-flex justify-content-center align-items-center machine-top-panel__perf-inner">
+                              <PerformanceChart key={machine_id} performance={performanceMachine} />
+                            </div>
+                          ) : (
+                            <h5 className="m-0 text-dark">N/A</h5>
+                          )}
                         </div>
-                      ) : (
-                        <h5 className="m-0 text-dark">N/A</h5>
-                      )}
-                    </div>
-                  </div>
+                      </div>
 
-                  <div className="col-4">
-                    <div className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box">
-                      <p className="fw-semibold mb-0 text-brand">
-                        {machineInfo?.output_unit === 'tấn' ? 'SẢN LƯỢNG LŨY KẾ' : 'SHOOT'}
-                      </p>
-                      <div className="flex-grow-1 d-flex align-items-center justify-content-center">
-                        <h5 className="m-0 machine-top-panel__stat-value">
-                          {selectedMachineData
-                            ? `${shootMachine.toLocaleString('en-US')}${
-                                machineInfo?.output_unit?.trim().toLowerCase() === 'tấn'
-                                  ? ` ${machineInfo.output_unit}`
-                                  : ''
-                              }`
-                            : 'N/A'}
-                        </h5>
+                      <div className="col-6">
+                        <div className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box">
+                          <p className="fw-semibold mb-0 text-brand">
+                            {machineInfo?.output_unit === 'tấn' ? 'SẢN LƯỢNG LŨY KẾ' : 'SHOOT'}
+                          </p>
+                          <div className="flex-grow-1 d-flex align-items-center justify-content-center">
+                            <h5 className="m-0 machine-top-panel__stat-value">
+                              {selectedMachineData
+                                ? `${shootMachine.toLocaleString('en-US')}${
+                                    machineInfo?.output_unit?.trim().toLowerCase() === 'tấn'
+                                      ? ` ${machineInfo.output_unit}`
+                                      : ''
+                                  }`
+                                : 'N/A'}
+                            </h5>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
