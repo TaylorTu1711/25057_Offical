@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './utils/registerChartJs'
 import './index.css'
 import './css/ResizableTable.css'
 import './css/AppModal.css'
