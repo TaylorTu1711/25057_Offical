@@ -7,6 +7,12 @@ import { Menu, X, Home, LogOut, Moon, Sun } from 'lucide-react';
 import flagVI from '../assets/flag-vi.png';
 import flagEN from '../assets/flag-en.webp';
 import useTheme from '../hooks/useTheme';
+import {
+  applyGoogleTranslation,
+  clearGoogTransCookie,
+  getGoogTransTargetLang,
+  setGoogTransCookie,
+} from '../utils/googleTranslate';
 //import '../css/translate.css'
 
 const Navbar = () => {
@@ -28,17 +34,7 @@ const Navbar = () => {
   const getSavedLanguage = () => {
     const savedLang = localStorage.getItem('app_lang');
     if (savedLang === 'vi' || savedLang === 'en') return savedLang;
-
-    const googtransCookie = document.cookie
-      .split('; ')
-      .find((item) => item.startsWith('googtrans='));
-
-    if (!googtransCookie) return 'vi';
-
-    const cookieValue = decodeURIComponent(googtransCookie.split('=')[1] || '');
-    if (cookieValue.endsWith('/en')) return 'en';
-    if (cookieValue.endsWith('/vi')) return 'vi';
-    return 'vi';
+    return getGoogTransTargetLang() || 'vi';
   };
 
   const handleLogout = () => {
@@ -46,18 +42,14 @@ const Navbar = () => {
     navigate('/login');
   };
 
-  const applyGoogleTranslation = (lng) => {
+  const triggerGoogleTranslation = (lng) => {
     if (lng === 'vi') return;
 
     const now = Date.now();
     if (now - lastApplyAtRef.current < 300) return;
-
-    const combo = document.querySelector('.goog-te-combo');
-    if (!combo) return;
-
-    combo.value = lng;
-    combo.dispatchEvent(new Event('change'));
-    lastApplyAtRef.current = now;
+    if (applyGoogleTranslation(lng)) {
+      lastApplyAtRef.current = now;
+    }
   };
 
   // 👉 Google translate
@@ -69,9 +61,15 @@ const Navbar = () => {
       return;
     }
 
-    // Reliable switching: persist desired language then reload once.
-    document.cookie = `googtrans=/auto/${lng};path=/`;
     localStorage.setItem('app_lang', lng);
+
+    // Tiếng Việt gốc: xóa cookie googtrans (không set /auto/vi — sẽ không hoạt động trên HTTPS).
+    if (lng === 'vi') {
+      clearGoogTransCookie();
+    } else {
+      setGoogTransCookie(lng);
+    }
+
     setLang(lng);
     setLangOpenDesktop(false);
     setLangOpenMobile(false);
@@ -86,7 +84,7 @@ const Navbar = () => {
   useEffect(() => {
     if (lang === 'vi') return;
     if (!location.pathname.startsWith('/machines/')) return;
-    const timer = setTimeout(() => applyGoogleTranslation(lang), 200);
+    const timer = setTimeout(() => triggerGoogleTranslation(lang), 200);
     return () => clearTimeout(timer);
   }, [lang, location.pathname]);
 
