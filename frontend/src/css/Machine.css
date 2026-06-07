@@ -204,8 +204,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  width: 100%;
+  padding: 3px;
   overflow: hidden;
+}
+
+.machine-top-panel__stats-col > .row > .col-4 {
+  display: flex;
+}
+
+.machine-top-panel__stats-col > .row > .col-4 > .machine-top-panel__status-icon {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .machine-top-panel__status-icon--running {
@@ -224,7 +234,7 @@
 }
 
 .machine-status-animated {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   align-self: stretch;
   width: 100%;
   height: 100%;
@@ -236,14 +246,19 @@
   padding: 0;
 }
 
-.machine-status-animated svg {
-  display: block;
+.machine-status-animated .three-gears {
   width: 100%;
   height: 100%;
-  min-width: 100%;
-  min-height: 100%;
-  transform: scale(0.92);
-  transform-origin: center center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.machine-status-animated svg,
+.machine-status-animated .three-gears__canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .machine-status-animated--offline {
