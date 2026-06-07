@@ -6,23 +6,16 @@ const pad2 = (n) => String(n).padStart(2, '0');
 const CumulativeRuntimeDisplay = ({ totalSeconds }) => {
   const { hours, minutes, seconds } = parseRuntimeSeconds(totalSeconds);
   const label = formatCumulativeRuntime(totalSeconds);
-  const hoursText = String(hours);
-  const hoursSizeClass =
-    hoursText.length >= 4
-      ? 'machine-runtime-display__value--xl'
-      : hoursText.length >= 3
-        ? 'machine-runtime-display__value--lg'
-        : '';
 
   return (
     <div
-      className={`machine-runtime-display${hoursText.length >= 3 ? ' machine-runtime-display--wide-hours' : ''}`}
+      className="machine-runtime-display"
       role="group"
       aria-label={label}
       title={label}
     >
       <div className="machine-runtime-display__unit">
-        <span className={`machine-runtime-display__value ${hoursSizeClass}`.trim()}>{hours}</span>
+        <span className="machine-runtime-display__value">{hours}</span>
         <span className="machine-runtime-display__label">Giờ</span>
       </div>
       <span className="machine-runtime-display__sep" aria-hidden="true">

@@ -471,8 +471,8 @@ function Machine() {
                   </div>
                 </div>
 
-                <div className="row g-1 machine-top-panel__stats-row">
-                  <div className="col-4 machine-top-panel__stat-col machine-top-panel__stat-col--performance">
+                <div className="row g-1">
+                  <div className="col-4">
                     <div className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box machine-top-panel__stat-box--performance">
                       <p className="fw-semibold mb-0 text-brand">HIỆU SUẤT SỬ DỤNG</p>
                       {selectedMachineData ? (
@@ -485,7 +485,7 @@ function Machine() {
                     </div>
                   </div>
 
-                  <div className="col-4 machine-top-panel__stat-col machine-top-panel__stat-col--output">
+                  <div className="col-4">
                     <div className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box">
                       <p className="fw-semibold mb-0 text-brand">
                         {machineInfo?.output_unit === 'tấn' ? 'SẢN LƯỢNG LŨY KẾ' : 'SHOOT'}
@@ -504,8 +504,8 @@ function Machine() {
                     </div>
                   </div>
 
-                  <div className="col-4 machine-top-panel__stat-col machine-top-panel__stat-col--runtime">
-                    <div className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box machine-top-panel__stat-box--runtime">
+                  <div className="col-4">
+                    <div className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box">
                       <p className="fw-semibold mb-0 text-brand">THỜI GIAN CHẠY LŨY KẾ</p>
                       <div className="flex-grow-1 d-flex align-items-center justify-content-center px-1">
                         {selectedMachineData ? (
