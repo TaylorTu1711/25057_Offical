@@ -7,6 +7,7 @@ import {
   chartStableRenderOptions,
   getCategoryXAxisTickOptions,
   getChartLegendOptions,
+  formatChartTooltipTitle,
   themedScale,
 } from '../utils/chartTheme';
 import {
@@ -29,7 +30,7 @@ ChartJS.register(
   zoomPlugin,
 );
 
-const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month' }) => {
+const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month', categoryPrefix = '' }) => {
   const { theme } = useTheme();
   const labelCount = labels?.length ?? 0;
 
@@ -72,7 +73,8 @@ const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month' }) => {
           callbacks: {
             title: (items) => {
               const hit = items?.find((i) => Number(i.raw) > 0);
-              return hit ? labels[hit.dataIndex] ?? '' : '';
+              if (!hit) return '';
+              return formatChartTooltipTitle(categoryPrefix, labels[hit.dataIndex]);
             },
             label: (context) => {
               const value = Number(context.parsed?.y ?? context.raw);
@@ -100,7 +102,7 @@ const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month' }) => {
         }),
       },
     }),
-    [labelCount, labels, viewMode, zoomPluginOptions],
+    [labelCount, labels, categoryPrefix, viewMode, zoomPluginOptions],
   );
 
   return (

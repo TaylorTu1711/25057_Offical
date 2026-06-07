@@ -195,6 +195,21 @@ export const chartDenseAnimationOptions = {
 /** @deprecated alias — dùng chartSmoothAnimationOptions */
 export const chartStableRenderOptions = chartSmoothAnimationOptions;
 
+/** Tiêu đề tooltip cột/trục category — vd. "Ngày: 15", "Tháng: T3". */
+export function formatChartTooltipTitle(categoryPrefix, label) {
+  const text = label == null ? '' : String(label);
+  if (!text) return '';
+  if (!categoryPrefix) return text;
+  return `${categoryPrefix}: ${text}`;
+}
+
+export function getCategoryTooltipTitleCallback(labels, categoryPrefix) {
+  return (items) => {
+    const index = items[0]?.dataIndex;
+    return formatChartTooltipTitle(categoryPrefix, labels?.[index]);
+  };
+}
+
 /** Legend: ô vuông tô đặc màu (không viền + nền nhạt). */
 export function getChartLegendOptions(overrides = {}) {
   const { labels: labelOverrides, ...restOverrides } = overrides;

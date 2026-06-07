@@ -5,7 +5,13 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import useTheme from '../hooks/useTheme';
 import useChartZoomPreserve from '../hooks/useChartZoomPreserve';
-import { themedScale, chartStableRenderOptions, getCategoryXAxisTickOptions, getChartLegendOptions } from '../utils/chartTheme';
+import {
+  themedScale,
+  chartStableRenderOptions,
+  getCategoryXAxisTickOptions,
+  getCategoryTooltipTitleCallback,
+  getChartLegendOptions,
+} from '../utils/chartTheme';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -39,6 +45,7 @@ const BarLineChart_Sanluong = ({
   showOutputBar = true,
   showInputLine = true,
   xTickMode = 'month',
+  categoryPrefix = '',
 }) => {
   const { theme } = useTheme();
   const labelCount = labels?.length ?? 0;
@@ -105,7 +112,7 @@ const BarLineChart_Sanluong = ({
       plugins: {
         tooltip: {
           callbacks: {
-            title: (items) => labels[items[0]?.dataIndex] ?? '',
+            title: getCategoryTooltipTitleCallback(labels, categoryPrefix),
             label: (context) => {
               const raw = Number(context.raw);
               const value = Number.isFinite(raw)
@@ -150,7 +157,7 @@ const BarLineChart_Sanluong = ({
           : {}),
       },
     }),
-    [labelCount, labels, xTickMode, zoomPluginOptions, showOutputBar, showInputLine],
+    [labelCount, labels, categoryPrefix, xTickMode, zoomPluginOptions, showOutputBar, showInputLine],
   );
 
   return (

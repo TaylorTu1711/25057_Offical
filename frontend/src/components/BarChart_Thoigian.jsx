@@ -14,6 +14,7 @@ import {
   chartStableRenderOptions,
   getCategoryXAxisTickOptions,
   getChartLegendOptions,
+  getCategoryTooltipTitleCallback,
 } from '../utils/chartTheme';
 import {
   Chart as ChartJS,
@@ -46,6 +47,7 @@ const LineChart_TimeOn = ({
   outputRateValues,
   standardProductivity,
   xTickMode = 'month',
+  categoryPrefix = '',
 }) => {
   const { theme } = useTheme();
   const performanceLine = useMemo(() => getPerformanceLineStyle(), []);
@@ -187,16 +189,8 @@ const LineChart_TimeOn = ({
           display: false,
         },
         tooltip: {
-          filter: (item) => {
-            const dsLabel = item.dataset.label ?? '';
-            if (dsLabel.includes('Năng suất chuẩn')) return false;
-            return (
-              item.dataset.yAxisID === 'y' ||
-              dsLabel.includes('Năng suất thực tế') ||
-              dsLabel === 'Năng suất (%)'
-            );
-          },
           callbacks: {
+            title: getCategoryTooltipTitleCallback(labels, categoryPrefix),
             label: (context) => {
               const raw = context.raw;
               if (raw == null || raw === '') return null;
@@ -210,6 +204,15 @@ const LineChart_TimeOn = ({
               }
               return `${dsLabel}: ${num.toFixed(2)}`;
             },
+          },
+          filter: (item) => {
+            const dsLabel = item.dataset.label ?? '';
+            if (dsLabel.includes('Năng suất chuẩn')) return false;
+            return (
+              item.dataset.yAxisID === 'y' ||
+              dsLabel.includes('Năng suất thực tế') ||
+              dsLabel === 'Năng suất (%)'
+            );
           },
         },
         legend: getChartLegendOptions(),
@@ -271,6 +274,8 @@ const LineChart_TimeOn = ({
       hasOutputRate,
       hasStandard,
       labelCount,
+      labels,
+      categoryPrefix,
       xTickMode,
       zoomPluginOptions,
       y1Max,

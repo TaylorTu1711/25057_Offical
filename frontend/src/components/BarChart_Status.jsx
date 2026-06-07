@@ -108,7 +108,12 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import useTheme from '../hooks/useTheme';
 import useChartZoomPreserve from '../hooks/useChartZoomPreserve';
-import { themedScale, chartDenseAnimationOptions, getCategoryXAxisTickOptions } from '../utils/chartTheme';
+import {
+  themedScale,
+  chartDenseAnimationOptions,
+  getCategoryXAxisTickOptions,
+  getCategoryTooltipTitleCallback,
+} from '../utils/chartTheme';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -133,7 +138,7 @@ ChartJS.register(
 
 const statusLabels = ['Maint', 'Stop', 'Run'];
 
-const BarChartStatus = ({ labels, line1 }) => {
+const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
   const { theme } = useTheme();
   const labelCount = labels?.length ?? 0;
   const { chartRef, zoomPluginOptions } = useChartZoomPreserve([labels, line1], 'x');
@@ -164,9 +169,22 @@ const BarChartStatus = ({ labels, line1 }) => {
       ...chartDenseAnimationOptions,
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
       plugins: {
         datalabels: {
           display: false,
+        },
+        tooltip: {
+          callbacks: {
+            title: getCategoryTooltipTitleCallback(labels, categoryPrefix),
+            label: (context) => {
+              const value = context.parsed?.y ?? context.raw;
+              return `Trạng thái: ${statusLabels[value] ?? value ?? '—'}`;
+            },
+          },
         },
         legend: { display: false },
         title: { display: false },
@@ -195,7 +213,7 @@ const BarChartStatus = ({ labels, line1 }) => {
         }),
       },
     }),
-    [labelCount, zoomPluginOptions],
+    [labelCount, labels, categoryPrefix, zoomPluginOptions],
   );
 
   return (

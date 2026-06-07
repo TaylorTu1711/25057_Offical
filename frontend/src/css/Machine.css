@@ -322,50 +322,150 @@
   font-size: clamp(13px, 2.2vw, 17px) !important;
 }
 
+.machine-top-panel__stat-box--runtime {
+  container-type: inline-size;
+  container-name: runtime-stat;
+}
+
 .machine-runtime-display {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: clamp(2px, 0.4vw, 4px);
+  gap: clamp(2px, 0.5cqi, 6px);
   width: 100%;
   max-width: 100%;
+  min-width: 0;
+  padding: 0 2px;
+  box-sizing: border-box;
 }
 
 .machine-runtime-display__unit {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   min-width: 0;
   flex: 1 1 0;
-  max-width: 2.75rem;
 }
 
 .machine-runtime-display__value {
-  font-size: clamp(14px, 2.1vw, 18px);
+  font-size: clamp(11px, 5.5cqi, 18px);
   font-weight: 700;
   color: var(--brand-color, rgba(32, 64, 154, 1));
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.machine-runtime-display__value--lg {
+  font-size: clamp(9px, 4.8cqi, 15px);
+}
+
+.machine-runtime-display__value--xl {
+  font-size: clamp(8px, 4.2cqi, 13px);
 }
 
 .machine-runtime-display__label {
-  font-size: clamp(7px, 0.85vw, 8px);
+  font-size: clamp(6px, 2.2cqi, 8px);
   font-weight: 600;
   color: #6c757d;
   line-height: 1.1;
   margin-top: 2px;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .machine-runtime-display__sep {
-  flex-shrink: 0;
-  font-size: clamp(13px, 1.9vw, 16px);
+  flex: 0 0 auto;
+  font-size: clamp(10px, 4.8cqi, 16px);
   font-weight: 700;
   color: rgba(32, 64, 154, 0.35);
   line-height: 1;
   padding-bottom: 0.65rem;
   user-select: none;
+}
+
+/* Hàng thẻ thông số — mobile: thời gian chạy full width, tránh chồng số */
+@media (max-width: 767.98px) {
+  .machine-top-panel {
+    --machine-top-stack-h: calc(
+      var(--machine-top-name-h) + var(--machine-top-row-gap) +
+        var(--machine-top-stat-h) * 2 + var(--machine-top-row-gap)
+    );
+  }
+
+  .machine-top-panel__stats-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.25rem;
+    margin-left: 0;
+    margin-right: 0;
+    --bs-gutter-x: 0;
+  }
+
+  .machine-top-panel__stats-row > .machine-top-panel__stat-col {
+    flex: none;
+    width: auto;
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+    min-width: 0;
+  }
+
+  .machine-top-panel__stats-row > .machine-top-panel__stat-col > .machine-top-panel__stat-box {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .machine-top-panel__stats-row > .machine-top-panel__stat-col--performance {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .machine-top-panel__stats-row > .machine-top-panel__stat-col--output {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .machine-top-panel__stats-row > .machine-top-panel__stat-col--runtime {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .machine-top-panel__stat-box--runtime {
+    --machine-top-stat-h: 68px;
+  }
+}
+
+@container runtime-stat (max-width: 120px) {
+  .machine-runtime-display {
+    gap: 1px;
+  }
+
+  .machine-runtime-display__sep {
+    padding-bottom: 0.55rem;
+  }
+}
+
+@container runtime-stat (max-width: 92px) {
+  .machine-runtime-display {
+    align-items: center;
+  }
+
+  .machine-runtime-display__unit {
+    flex-direction: row;
+    gap: 1px;
+  }
+
+  .machine-runtime-display__label {
+    display: none;
+  }
+
+  .machine-runtime-display__sep {
+    padding-bottom: 0;
+    align-self: center;
+  }
 }
 
 [data-theme='dark'] .machine-runtime-display__value {

@@ -554,6 +554,22 @@ export function buildErrorSeries(allErrors, viewMode, selection = {}) {
   };
 }
 
+/** Nhãn loại cột cho tooltip biểu đồ theo chế độ xem. */
+export function getChartCategoryPrefix(viewMode, selection = {}) {
+  switch (viewMode) {
+    case CHART_VIEW_MODES.day:
+      return 'Ngày';
+    case CHART_VIEW_MODES.month:
+      return 'Tháng';
+    case CHART_VIEW_MODES.year:
+      return 'Năm';
+    case CHART_VIEW_MODES.range:
+      return isRangeByMonth(selection) ? 'Tháng' : 'Ngày';
+    default:
+      return '';
+  }
+}
+
 export const toErrorChartTickMode = (viewMode, selection = {}) => {
   if (viewMode === CHART_VIEW_MODES.day) return 'month';
   if (viewMode === CHART_VIEW_MODES.range) {
