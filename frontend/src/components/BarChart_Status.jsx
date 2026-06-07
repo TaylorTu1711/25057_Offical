@@ -143,7 +143,7 @@ const statusLabels = ['Maint', 'Stop', 'Run'];
 
 const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
   const { theme } = useTheme();
-  const statusLine = useMemo(() => getStatusLineStyle(), []);
+  const statusLine = useMemo(() => getStatusLineStyle(theme), [theme]);
   const labelCount = labels?.length ?? 0;
   const { chartRef, zoomPluginOptions } = useChartZoomPreserve([labels, line1], 'x');
 
@@ -156,17 +156,22 @@ const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
           data: line1,
           borderColor: statusLine.borderColor,
           backgroundColor: statusLine.backgroundColor,
-          tension: 0.35,
+          borderWidth: statusLine.borderWidth,
+          tension: 0,
           fill: false,
-          pointRadius: 1,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHitRadius: 8,
           pointBackgroundColor: statusLine.pointBackgroundColor,
           pointBorderColor: statusLine.pointBorderColor,
+          pointHoverBackgroundColor: statusLine.borderColor,
+          pointHoverBorderColor: statusLine.borderColor,
           stepped: true,
           spanGaps: false,
         },
       ],
     }),
-    [labels, line1],
+    [labels, line1, statusLine],
   );
 
   const options = useMemo(

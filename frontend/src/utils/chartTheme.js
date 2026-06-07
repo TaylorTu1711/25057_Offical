@@ -205,8 +205,15 @@ export function getProductionLineStyle() {
   return lineStyle(NEON_LINES.yellow);
 }
 
-export function getStatusLineStyle() {
-  return { ...lineStyle(NEON_LINES.green), borderWidth: 1.5 };
+export function getStatusLineStyle(theme) {
+  const { brand } = getChartThemeColors(theme);
+  return {
+    borderColor: brand,
+    backgroundColor: 'transparent',
+    pointBackgroundColor: brand,
+    pointBorderColor: brand,
+    borderWidth: 1.5,
+  };
 }
 
 export function getParetoLineStyle() {
