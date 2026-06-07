@@ -206,7 +206,7 @@ export function getProductionLineStyle() {
 }
 
 export function getStatusLineStyle() {
-  return { ...lineStyle(NEON_LINES.cyan), borderWidth: 1.5 };
+  return { ...lineStyle(NEON_LINES.green), borderWidth: 1.5 };
 }
 
 export function getParetoLineStyle() {
