@@ -1,0 +1,238 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root,
+[data-theme='light'] {
+  --app-bg: #e5e5e5;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f8f9fa;
+  --app-text: #212529;
+  --app-text-muted: #6c757d;
+  --app-border: #dee2e6;
+  --navbar-bg: #ffffff;
+  --brand-color: rgba(32, 64, 154, 1);
+  --nav-hover-bg: rgba(32, 64, 154, 0.08);
+  --card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+[data-theme='dark'] {
+  /* Tông xanh navy kiểu SCADA / ThingsBoard */
+  --app-bg: #0b1d35;
+  --app-surface: #152942;
+  --app-surface-muted: #1c3354;
+  --app-text: #e8eef5;
+  --app-text-muted: #8fa8c3;
+  --app-border: #2a5078;
+  --navbar-bg: #0f2540;
+  --brand-color: #ffffff;
+  --nav-hover-bg: rgba(52, 152, 219, 0.14);
+  --card-shadow: 0 0.125rem 0.35rem rgba(0, 0, 0, 0.45);
+  --accent-blue: #3498db;
+}
+
+.text-brand {
+  color: var(--brand-color) !important;
+}
+
+/* Chữ xanh inline → trắng ở dark mode */
+[data-theme='dark'] [style*="color: 'rgba(32, 64, 154"],
+[data-theme='dark'] [style*='color: "rgba(32, 64, 154'],
+[data-theme='dark'] [style*="color: '#203E9A'"],
+[data-theme='dark'] [style*='color: "#203E9A"'],
+[data-theme='dark'] [style*="color: '#20409a'"],
+[data-theme='dark'] [style*='color: "#20409a"'],
+[data-theme='dark'] [style*="color: '#20409A'"],
+[data-theme='dark'] [style*='color: "#20409A"'] {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] [style*="color: '#000080'"],
+[data-theme='dark'] [style*='color: "#000080"'] {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .text-danger {
+  color: #ff8a80 !important;
+}
+
+.chart-title-brand {
+  color: var(--brand-color);
+}
+
+.chart-time-range {
+  color: var(--brand-color);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+html,
+body {
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.app-shell,
+.app-page-bg {
+  background-color: var(--app-bg) !important;
+}
+
+[data-theme='dark'] .bg-white,
+[data-theme='dark'] .card,
+[data-theme='dark'] .modal-content {
+  background-color: var(--app-surface) !important;
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .bg-light {
+  background-color: var(--app-surface-muted) !important;
+}
+
+[data-theme='dark'] .table-light {
+  --bs-table-bg: var(--app-surface-muted);
+  --bs-table-color: var(--app-text);
+  --bs-table-border-color: var(--app-border);
+}
+
+[data-theme='dark'] .table,
+[data-theme='dark'] .table.table-bordered,
+[data-theme='dark'] .table.table-sm {
+  --bs-table-bg: var(--app-surface);
+  --bs-table-color: var(--app-text);
+  --bs-table-border-color: var(--app-border);
+  --bs-table-striped-bg: var(--app-surface-muted);
+  --bs-table-striped-color: var(--app-text);
+  --bs-table-hover-bg: var(--app-surface-muted);
+  --bs-table-hover-color: var(--app-text);
+  --bs-table-active-bg: var(--app-surface-muted);
+  --bs-table-active-color: var(--app-text);
+  color: var(--app-text);
+  border-color: var(--app-border);
+  background-color: var(--app-surface);
+}
+
+[data-theme='dark'] .table > :not(caption) > * > * {
+  background-color: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .table thead,
+[data-theme='dark'] .table thead.table-light,
+[data-theme='dark'] .table .table-light {
+  --bs-table-bg: var(--app-surface-muted);
+  --bs-table-color: var(--app-text);
+}
+
+[data-theme='dark'] .table thead th,
+[data-theme='dark'] .table thead td,
+[data-theme='dark'] .table .table-light th,
+[data-theme='dark'] .table .table-light td {
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+[data-theme='dark'] .table-hover > tbody > tr:hover > * {
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme='dark'] thead[style*='background-color'],
+[data-theme='dark'] thead[style*='backgroundColor'] {
+  background-color: var(--app-surface-muted) !important;
+}
+
+[data-theme='dark'] .text-dark {
+  color: var(--app-text) !important;
+}
+
+[data-theme='dark'] .text-muted {
+  color: var(--app-text-muted) !important;
+}
+
+[data-theme='dark'] .border,
+[data-theme='dark'] .table-bordered {
+  border-color: var(--app-border) !important;
+}
+
+/* Thẻ/panel chưa có viền rõ — bổ sung viền trong dark mode */
+[data-theme='dark'] .card:not(.border-0) {
+  border: 1px solid var(--app-border) !important;
+}
+
+[data-theme='dark'] .bg-white.border,
+[data-theme='dark'] .border.bg-white,
+[data-theme='dark'] .machine-top-panel__image-wrap,
+[data-theme='dark'] .machine-top-panel__name,
+[data-theme='dark'] .machine-top-panel__status-icon--stopped,
+[data-theme='dark'] .machine-top-panel__stat-box {
+  border: 1px solid var(--app-border) !important;
+}
+
+[data-theme='dark'] .shadow,
+[data-theme='dark'] .shadow-sm,
+[data-theme='dark'] .shadow-lg {
+  box-shadow: var(--card-shadow) !important;
+}
+
+[data-theme='dark'] .list-group-item {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .offcanvas {
+  background-color: var(--tree-bg) !important;
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .offcanvas-header {
+  background-color: var(--app-surface-muted);
+  border-color: var(--app-border) !important;
+}
+
+/* Bootstrap form trong dark mode (ngoài modal) */
+[data-theme='dark'] .form-control,
+[data-theme='dark'] .form-select {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .form-control:focus,
+[data-theme='dark'] .form-select:focus {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text);
+  border-color: var(--accent-blue, #3498db);
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.2);
+}
+
+[data-theme='dark'] .form-label {
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .btn-primary {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .btn-primary:hover {
+  background-color: var(--nav-hover-bg);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .btn-outline-secondary {
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .btn-outline-secondary:hover {
+  background-color: var(--nav-hover-bg);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}

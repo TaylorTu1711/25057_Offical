@@ -1,0 +1,428 @@
+.app-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='dark'] .app-modal-overlay {
+  background-color: rgba(0, 0, 0, 0.72);
+}
+
+.app-modal-panel {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  width: 100%;
+  box-shadow: var(--card-shadow);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 0.95rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.app-modal-panel--md {
+  max-width: 500px;
+  padding: 1.5rem;
+}
+
+.app-modal-panel--lg {
+  max-width: 800px;
+  padding: 2rem;
+}
+
+.app-modal-panel--time {
+  max-width: 480px;
+  padding: 2rem;
+}
+
+.app-modal-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--brand-color);
+}
+
+.app-modal-label {
+  display: block;
+  font-weight: 600;
+  color: var(--app-text);
+  margin-bottom: 0.5rem;
+}
+
+.app-modal-field {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.app-modal-status {
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--app-border);
+}
+
+.app-modal-status--connected {
+  background-color: rgba(25, 135, 84, 0.12);
+  border-color: rgba(25, 135, 84, 0.35);
+  color: #198754;
+}
+
+.app-modal-status--disconnected {
+  background-color: rgba(220, 53, 69, 0.12);
+  border-color: rgba(220, 53, 69, 0.35);
+  color: #dc3545;
+}
+
+[data-theme='dark'] .app-modal-status--connected {
+  background-color: rgba(117, 183, 152, 0.18);
+  border-color: rgba(117, 183, 152, 0.45);
+  color: #75b798;
+}
+
+[data-theme='dark'] .app-modal-status--disconnected {
+  background-color: rgba(255, 138, 128, 0.15);
+  border-color: rgba(255, 138, 128, 0.4);
+  color: #ff8a80;
+}
+
+.app-modal-info-box {
+  background-color: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  min-height: 80px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.app-modal hr {
+  border-color: var(--app-border);
+  opacity: 1;
+}
+
+.app-modal .btn-close {
+  opacity: 0.65;
+}
+
+[data-theme='dark'] .app-modal .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+  opacity: 0.85;
+}
+
+/* Input / select */
+.app-modal .app-modal-input,
+.app-modal .form-control,
+.app-modal .form-select {
+  width: 100%;
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+.app-modal .app-modal-input::placeholder,
+.app-modal .form-control::placeholder {
+  color: var(--app-text-muted);
+  opacity: 1;
+}
+
+.app-modal .app-modal-input:focus,
+.app-modal .form-control:focus,
+.app-modal .form-select:focus {
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+  border-color: var(--brand-color) !important;
+  box-shadow: 0 0 0 0.2rem rgba(32, 64, 154, 0.15);
+}
+
+[data-theme='dark'] .app-modal .app-modal-input:focus,
+[data-theme='dark'] .app-modal .form-control:focus,
+[data-theme='dark'] .app-modal .form-select:focus {
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.app-modal .form-select option {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+}
+
+/* Buttons */
+.app-modal-btn-primary {
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.app-modal-btn-primary:not(:disabled) {
+  background-color: var(--brand-color) !important;
+  color: #ffffff !important;
+  border-color: var(--brand-color) !important;
+  opacity: 1;
+}
+
+.app-modal-btn-primary:not(:disabled):hover {
+  filter: brightness(0.92);
+  color: #ffffff !important;
+}
+
+.app-modal-btn-primary:disabled {
+  background-color: transparent !important;
+  color: var(--app-text-muted) !important;
+  border-color: var(--app-border) !important;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+[data-theme='dark'] .app-modal-btn-primary:not(:disabled) {
+  background-color: var(--accent-blue, #3498db) !important;
+  color: #ffffff !important;
+  border-color: var(--accent-blue, #3498db) !important;
+}
+
+[data-theme='dark'] .app-modal-btn-primary:not(:disabled):hover {
+  filter: brightness(0.92);
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .app-modal-btn-primary:disabled {
+  background-color: transparent !important;
+  color: var(--app-text-muted) !important;
+  border-color: var(--app-border) !important;
+}
+
+.app-modal-btn-outline {
+  color: var(--app-text);
+  border-color: var(--app-border);
+  background-color: transparent;
+}
+
+.app-modal-btn-outline:hover {
+  background-color: var(--nav-hover-bg);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .app-modal .btn-secondary {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .app-modal .btn-secondary:hover {
+  background-color: var(--nav-hover-bg);
+  color: var(--app-text);
+}
+
+.app-modal-chart-wrap {
+  height: 400px;
+  min-height: 300px;
+}
+
+.app-modal-panel--analysis {
+  max-width: min(96vw, 1100px);
+  width: 100%;
+  padding: 1.25rem 1.5rem 1.5rem;
+  max-height: min(94vh, 920px);
+  overflow-y: auto;
+}
+
+.app-modal-chart-wrap--analysis-main {
+  min-height: 380px;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.bar-chart-analysis-error {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.bar-chart-analysis-error__labels {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.bar-chart-analysis-error__label {
+  position: absolute;
+  margin: 0;
+  font: 11px/1.2 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.bar-chart-analysis-error__label--embedded {
+  font-size: 9px;
+  line-height: 1.15;
+}
+
+[data-theme='dark'] .bar-chart-analysis-error__label {
+  color: #1a1a1a;
+}
+
+/* Bảng trong modal */
+.app-modal .table {
+  color: var(--app-text);
+}
+
+.app-modal .table td {
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+.app-modal .table td.fw-semibold {
+  color: var(--app-text-muted);
+}
+
+/* react-datepicker popup */
+[data-theme='dark'] .react-datepicker {
+  background-color: var(--app-surface);
+  border-color: var(--app-border);
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .react-datepicker__header {
+  background-color: var(--app-surface-muted);
+  border-bottom-color: var(--app-border);
+}
+
+[data-theme='dark'] .react-datepicker__current-month,
+[data-theme='dark'] .react-datepicker-time__header,
+[data-theme='dark'] .react-datepicker-year-header {
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .react-datepicker__day-name,
+[data-theme='dark'] .react-datepicker__day,
+[data-theme='dark'] .react-datepicker__time-name {
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .react-datepicker__day:hover,
+[data-theme='dark'] .react-datepicker__month-text:hover,
+[data-theme='dark'] .react-datepicker__quarter-text:hover,
+[data-theme='dark'] .react-datepicker__year-text:hover {
+  background-color: var(--nav-hover-bg);
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .react-datepicker__day--selected,
+[data-theme='dark'] .react-datepicker__day--keyboard-selected,
+[data-theme='dark'] .react-datepicker__month-text--selected,
+[data-theme='dark'] .react-datepicker__quarter-text--selected,
+[data-theme='dark'] .react-datepicker__year-text--selected {
+  background-color: var(--nav-hover-bg);
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .react-datepicker__day--disabled,
+[data-theme='dark'] .react-datepicker__day--outside-month {
+  color: var(--app-text-muted);
+}
+
+[data-theme='dark'] .react-datepicker__navigation-icon::before {
+  border-color: var(--app-text);
+}
+
+[data-theme='dark'] .react-datepicker__triangle {
+  display: none;
+}
+
+[data-theme='dark'] .react-datepicker__time-container {
+  border-left-color: var(--app-border);
+}
+
+[data-theme='dark'] .react-datepicker__time-container .react-datepicker__time {
+  background-color: var(--app-surface);
+}
+
+[data-theme='dark'] .react-datepicker__time-container .react-datepicker__time-box ul.react-datepicker__time-list li.react-datepicker__time-list-item {
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .app-modal .form-check-input {
+  background-color: var(--app-surface-muted);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .app-modal .form-check-input:checked {
+  background-color: var(--accent-blue, #3498db);
+  border-color: var(--accent-blue, #3498db);
+}
+
+.app-modal .form-check-label {
+  color: var(--app-text);
+}
+
+.app-modal-panel--create {
+  max-width: 500px;
+  padding: 2rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* File input — ghi đè nút mặc định trình duyệt (Chrome/Edge) */
+.app-modal .form-control[type='file'] {
+  padding: 0.375rem 0.75rem;
+}
+
+.app-modal .form-control[type='file']::file-selector-button,
+.app-modal .form-control[type='file']::-webkit-file-upload-button {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+  border: 1px solid var(--app-border) !important;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  margin-right: 0.75rem;
+  margin-inline-end: 0.75rem;
+  cursor: pointer;
+  font: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+[data-theme='light'] .app-modal .form-control[type='file']:hover::file-selector-button,
+[data-theme='light'] .app-modal .form-control[type='file']:hover::-webkit-file-upload-button,
+:root:not([data-theme='dark']) .app-modal .form-control[type='file']:hover::file-selector-button,
+:root:not([data-theme='dark']) .app-modal .form-control[type='file']:hover::-webkit-file-upload-button {
+  background-color: #dee2e6 !important;
+  color: var(--app-text) !important;
+  border-color: #ced4da !important;
+}
+
+[data-theme='dark'] .app-modal .form-control[type='file']::file-selector-button,
+[data-theme='dark'] .app-modal .form-control[type='file']::-webkit-file-upload-button {
+  background-color: #1c3354 !important;
+  color: #e8eef5 !important;
+  border-color: #2a5078 !important;
+}
+
+[data-theme='dark'] .app-modal .form-control[type='file']:hover::file-selector-button,
+[data-theme='dark'] .app-modal .form-control[type='file']:hover::-webkit-file-upload-button,
+[data-theme='dark'] .app-modal .form-control[type='file']:active::file-selector-button,
+[data-theme='dark'] .app-modal .form-control[type='file']:active::-webkit-file-upload-button,
+[data-theme='dark'] .app-modal .form-control[type='file']:focus::file-selector-button,
+[data-theme='dark'] .app-modal .form-control[type='file']:focus::-webkit-file-upload-button {
+  background-color: #2a4a6e !important;
+  color: #e8eef5 !important;
+  border-color: #3a6088 !important;
+}
+
