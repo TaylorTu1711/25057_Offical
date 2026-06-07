@@ -1,4 +1,5 @@
 const GOOGTRANS_COOKIE = 'googtrans';
+const APP_LANG_KEY = 'app_lang';
 const PAGE_LANGUAGE = 'vi';
 
 function getCookieDomains() {
@@ -7,7 +8,14 @@ function getCookieDomains() {
 
   if (isLocalhost) return [''];
 
-  return ['', hostname, `.${hostname}`];
+  const domains = new Set(['', hostname, `.${hostname}`]);
+  const parts = hostname.split('.');
+
+  if (parts.length > 2) {
+    domains.add(`.${parts.slice(-2).join('.')}`);
+  }
+
+  return [...domains];
 }
 
 function buildCookieParts(domain) {
@@ -23,6 +31,7 @@ export function clearGoogTransCookie() {
   getCookieDomains().forEach((domain) => {
     const { secure, domainPart } = buildCookieParts(domain);
     document.cookie = `${GOOGTRANS_COOKIE}=;expires=${expired};path=/${domainPart}${secure}`;
+    document.cookie = `${GOOGTRANS_COOKIE}=;max-age=0;path=/${domainPart}${secure}`;
   });
 }
 
@@ -39,6 +48,16 @@ export function setGoogTransCookie(targetLang) {
   });
 }
 
+export function getSavedAppLanguage() {
+  const savedLang = localStorage.getItem(APP_LANG_KEY);
+  if (savedLang === 'vi' || savedLang === 'en') return savedLang;
+  return getGoogTransTargetLang() || PAGE_LANGUAGE;
+}
+
+export function shouldLoadGoogleTranslate() {
+  return getSavedAppLanguage() === 'en';
+}
+
 export function getGoogTransTargetLang() {
   const googtransCookie = document.cookie
     .split('; ')
@@ -50,6 +69,52 @@ export function getGoogTransTargetLang() {
   if (!cookieValue || cookieValue === '/auto/vi' || cookieValue.endsWith('/vi')) return null;
   if (cookieValue.endsWith('/en')) return 'en';
   return null;
+}
+
+/** Gỡ class/dấu vết Google Translate khi về tiếng Việt gốc. */
+export function resetGoogleTranslateArtifacts() {
+  clearGoogTransCookie();
+
+  document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
+  document.documentElement.removeAttribute('lang');
+
+  if (document.body) {
+    document.body.classList.remove('translated-ltr', 'translated-rtl');
+    document.body.style.top = '0';
+  }
+
+  document.querySelectorAll('font[style*="vertical-align"]').forEach((node) => {
+    const parent = node.parentNode;
+    if (!parent) return;
+    while (node.firstChild) {
+      parent.insertBefore(node.firstChild, node);
+    }
+    parent.removeChild(node);
+  });
+}
+
+export function loadGoogleTranslateScript() {
+  if (window.__googleTranslateScriptLoading || window.google?.translate?.TranslateElement) {
+    return;
+  }
+
+  window.__googleTranslateScriptLoading = true;
+
+  window.googleTranslateElementInit = () => {
+    new window.google.translate.TranslateElement(
+      {
+        pageLanguage: PAGE_LANGUAGE,
+        includedLanguages: 'vi,en',
+        autoDisplay: false,
+      },
+      'google_translate_element',
+    );
+  };
+
+  const script = document.createElement('script');
+  script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+  script.async = true;
+  document.head.appendChild(script);
 }
 
 export function applyGoogleTranslation(targetLang) {

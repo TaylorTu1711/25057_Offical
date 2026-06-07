@@ -9,8 +9,9 @@ import flagEN from '../assets/flag-en.webp';
 import useTheme from '../hooks/useTheme';
 import {
   applyGoogleTranslation,
-  clearGoogTransCookie,
-  getGoogTransTargetLang,
+  getSavedAppLanguage,
+  loadGoogleTranslateScript,
+  resetGoogleTranslateArtifacts,
   setGoogTransCookie,
 } from '../utils/googleTranslate';
 //import '../css/translate.css'
@@ -31,25 +32,21 @@ const Navbar = () => {
   const { isDark, toggleTheme } = useTheme();
   const toggleSidebar = () => setIsOpen(!isOpen);
 
-  const getSavedLanguage = () => {
-    const savedLang = localStorage.getItem('app_lang');
-    if (savedLang === 'vi' || savedLang === 'en') return savedLang;
-    return getGoogTransTargetLang() || 'vi';
-  };
-
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
   const triggerGoogleTranslation = (lng) => {
-    if (lng === 'vi') return;
+    if (lng === 'vi') return false;
 
     const now = Date.now();
-    if (now - lastApplyAtRef.current < 300) return;
-    if (applyGoogleTranslation(lng)) {
+    if (now - lastApplyAtRef.current < 300) return false;
+    const applied = applyGoogleTranslation(lng);
+    if (applied) {
       lastApplyAtRef.current = now;
     }
+    return applied;
   };
 
   // 👉 Google translate
@@ -65,7 +62,7 @@ const Navbar = () => {
 
     // Tiếng Việt gốc: xóa cookie googtrans (không set /auto/vi — sẽ không hoạt động trên HTTPS).
     if (lng === 'vi') {
-      clearGoogTransCookie();
+      resetGoogleTranslateArtifacts();
     } else {
       setGoogTransCookie(lng);
     }
@@ -77,15 +74,39 @@ const Navbar = () => {
   };
 
   useEffect(() => {
-    setLang(getSavedLanguage());
+    const saved = getSavedAppLanguage();
+    setLang(saved);
+
+    if (saved === 'vi') {
+      resetGoogleTranslateArtifacts();
+      return;
+    }
+
+    loadGoogleTranslateScript();
   }, []);
 
   // Re-apply translation only when navigating to a machine detail page.
   useEffect(() => {
-    if (lang === 'vi') return;
+    if (lang !== 'en') return;
     if (!location.pathname.startsWith('/machines/')) return;
-    const timer = setTimeout(() => triggerGoogleTranslation(lang), 200);
-    return () => clearTimeout(timer);
+
+    loadGoogleTranslateScript();
+
+    let attempts = 0;
+    let timerId = null;
+
+    const tryApply = () => {
+      if (triggerGoogleTranslation(lang)) return;
+      attempts += 1;
+      if (attempts < 20) {
+        timerId = window.setTimeout(tryApply, 250);
+      }
+    };
+
+    timerId = window.setTimeout(tryApply, 200);
+    return () => {
+      if (timerId) window.clearTimeout(timerId);
+    };
   }, [lang, location.pathname]);
 
   // 👉 Click ngoài để đóng dropdown

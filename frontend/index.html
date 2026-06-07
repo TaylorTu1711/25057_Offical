@@ -12,21 +12,49 @@
 
     <div id="google_translate_element" style="display:none;"></div>
 
-    <script type="text/javascript">
-      function googleTranslateElementInit() {
-        new google.translate.TranslateElement(
-          {
-            pageLanguage: 'vi',
-            includedLanguages: 'vi,en',
-            autoDisplay: false,
-          },
-          'google_translate_element'
-        );
-      }
+    <!-- Chỉ load Google Translate khi user chọn EN — tránh tự dịch lại sau khi về VI -->
+    <script>
+      (function () {
+        var LANG_KEY = 'app_lang';
+        var GOOGTRANS = 'googtrans';
+        var saved = localStorage.getItem(LANG_KEY) || 'vi';
+
+        function cookieDomains() {
+          var host = location.hostname;
+          if (host === 'localhost' || host === '127.0.0.1') return [''];
+          var parts = host.split('.');
+          var domains = ['', host, '.' + host];
+          if (parts.length > 2) domains.push('.' + parts.slice(-2).join('.'));
+          return domains;
+        }
+
+        function clearGoogtrans() {
+          var secure = location.protocol === 'https:' ? ';Secure' : '';
+          var expired = 'Thu, 01 Jan 1970 00:00:00 GMT';
+          cookieDomains().forEach(function (domain) {
+            var dp = domain ? ';domain=' + domain : '';
+            document.cookie = GOOGTRANS + '=;expires=' + expired + ';path=/' + dp + secure;
+            document.cookie = GOOGTRANS + '=;max-age=0;path=/' + dp + secure;
+          });
+        }
+
+        window.googleTranslateElementInit = function () {
+          new google.translate.TranslateElement(
+            { pageLanguage: 'vi', includedLanguages: 'vi,en', autoDisplay: false },
+            'google_translate_element'
+          );
+        };
+
+        if (saved === 'en') {
+          var script = document.createElement('script');
+          script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+          script.async = true;
+          document.head.appendChild(script);
+        } else {
+          clearGoogtrans();
+        }
+      })();
     </script>
-
-    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
 
     <script type="module" src="/src/main.jsx"></script>
   </body>
