@@ -434,7 +434,7 @@ function Machine() {
                 <div className="row g-1 mb-1">
                   <div className="col-8">
                     <div
-                      className="border bg-white rounded text-center fw-semibold shadow d-flex flex-column justify-content-center text-dark machine-top-panel__name"
+                      className="border bg-white rounded text-center fw-semibold shadow d-flex flex-column justify-content-center text-brand machine-top-panel__name"
                       style={{
                         letterSpacing: '0.5px',
                         padding: '4px 8px',
@@ -491,7 +491,7 @@ function Machine() {
                         {machineInfo?.output_unit === 'tấn' ? 'SẢN LƯỢNG LŨY KẾ' : 'SHOOT'}
                       </p>
                       <div className="flex-grow-1 d-flex align-items-center justify-content-center">
-                        <h5 className="m-0 text-dark">
+                        <h5 className="m-0 machine-top-panel__stat-value">
                           {selectedMachineData
                             ? `${shootMachine.toLocaleString('en-US')}${
                                 machineInfo?.output_unit?.trim().toLowerCase() === 'tấn'

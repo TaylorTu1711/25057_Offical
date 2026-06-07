@@ -10,7 +10,6 @@ const PerformanceChart = ({ performance }) => {
   const { theme } = useTheme();
   const isDark = isDarkChartTheme(theme);
   const remainderColor = isDark ? NEON_PALETTE.remainderDark : NEON_PALETTE.remainder;
-  const labelColor = isDark ? '#ffffff' : '#000000';
 
   const data = useMemo(
     () => ({
@@ -64,16 +63,13 @@ const PerformanceChart = ({ performance }) => {
       <Doughnut key={theme} data={data} options={options} />
       <div
         key={`${performance}-${theme}`}
-        className="notranslate"
+        className="notranslate machine-top-panel__stat-value machine-top-panel__stat-value--perf"
         translate="no"
         style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          fontSize: '11px',
-          fontWeight: 'bold',
-          color: labelColor,
           zIndex: 2,
         }}
       >

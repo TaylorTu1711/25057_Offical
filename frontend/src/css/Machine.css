@@ -334,7 +334,9 @@
   margin-bottom: 0.1rem !important;
 }
 
-[data-theme='dark'] .machine-top-panel__stat-box .text-brand {
+[data-theme='dark'] .machine-top-panel__stat-box .text-brand,
+[data-theme='dark'] .machine-top-panel__name.text-brand,
+[data-theme='dark'] .machine-top-panel__name .auto-fit-machine-name__text {
   color: #ffffff !important;
 }
 
@@ -368,12 +370,24 @@
   max-width: 2.75rem;
 }
 
-.machine-runtime-display__value {
-  font-size: clamp(14px, 2.1vw, 18px);
+.machine-runtime-display__value,
+.machine-top-panel__stat-value {
   font-weight: 700;
   color: var(--brand-color, rgba(32, 64, 154, 1));
   line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+.machine-runtime-display__value {
+  font-size: clamp(14px, 2.1vw, 18px);
+}
+
+.machine-top-panel__stat-value {
+  font-size: clamp(13px, 2.2vw, 17px) !important;
+}
+
+.machine-top-panel__stat-value--perf {
+  font-size: 11px !important;
 }
 
 .machine-runtime-display__label {
@@ -401,8 +415,9 @@
   user-select: none;
 }
 
-[data-theme='dark'] .machine-runtime-display__value {
-  color: #7dd4fc;
+[data-theme='dark'] .machine-runtime-display__value,
+[data-theme='dark'] .machine-top-panel__stat-value {
+  color: #7dd4fc !important;
   text-shadow:
     0 0 8px rgba(56, 189, 248, 0.55),
     0 0 20px rgba(37, 99, 235, 0.25);
