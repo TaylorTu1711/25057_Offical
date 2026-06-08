@@ -377,11 +377,13 @@ export const chartDenseAnimationOptions = {
 /** @deprecated alias — dùng chartSmoothAnimationOptions */
 export const chartStableRenderOptions = chartSmoothAnimationOptions;
 
-/** Số nguyên trên trục / nhãn cột. */
+const CHART_NUMBER_LOCALE = 'en-US';
+
+/** Số nguyên trên trục / nhãn cột — vd. 1000 → 1,000. */
 export function formatChartInteger(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '0';
-  return Math.round(n).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+  return Math.round(n).toLocaleString(CHART_NUMBER_LOCALE, { maximumFractionDigits: 0 });
 }
 
 /** Tooltip — số nguyên giữ nguyên; có thập phân thì tối đa maxFractionDigits (mặc định 3). */
@@ -391,9 +393,9 @@ export function formatChartTooltipValue(value, maxFractionDigits = 3) {
   const scale = 10 ** maxFractionDigits;
   const rounded = Math.round(n * scale) / scale;
   if (Math.abs(rounded % 1) < 1e-9) {
-    return Math.round(rounded).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+    return Math.round(rounded).toLocaleString(CHART_NUMBER_LOCALE, { maximumFractionDigits: 0 });
   }
-  return rounded.toLocaleString('vi-VN', {
+  return rounded.toLocaleString(CHART_NUMBER_LOCALE, {
     minimumFractionDigits: 0,
     maximumFractionDigits: maxFractionDigits,
   });
