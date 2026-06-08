@@ -377,6 +377,28 @@ export const chartDenseAnimationOptions = {
 /** @deprecated alias — dùng chartSmoothAnimationOptions */
 export const chartStableRenderOptions = chartSmoothAnimationOptions;
 
+/** Số nguyên trên trục / nhãn cột. */
+export function formatChartInteger(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '0';
+  return Math.round(n).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+}
+
+/** Tooltip — số nguyên giữ nguyên; có thập phân thì tối đa maxFractionDigits (mặc định 3). */
+export function formatChartTooltipValue(value, maxFractionDigits = 3) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '0';
+  const scale = 10 ** maxFractionDigits;
+  const rounded = Math.round(n * scale) / scale;
+  if (Math.abs(rounded % 1) < 1e-9) {
+    return Math.round(rounded).toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+  }
+  return rounded.toLocaleString('vi-VN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxFractionDigits,
+  });
+}
+
 /** Tiêu đề tooltip cột/trục category — vd. "Ngày: 15", "Tháng: T3". */
 export function formatChartTooltipTitle(categoryPrefix, label) {
   const text = label == null ? '' : String(label);

@@ -13,6 +13,8 @@ import {
   getCategoryXAxisTickOptions,
   getCategoryTooltipTitleCallback,
   getChartLegendOptions,
+  formatChartInteger,
+  formatChartTooltipValue,
   PRODUCTION_CHART_COLORS,
   createProductionBarGradient,
   createProductionBarHoverGradient,
@@ -142,16 +144,12 @@ const BarLineChart_Sanluong = ({
             title: getCategoryTooltipTitleCallback(labels, categoryPrefix),
             label: (context) => {
               const raw = Number(context.raw);
-              const value = Number.isFinite(raw)
-                ? raw.toLocaleString('vi-VN', { maximumFractionDigits: 2 })
-                : '0';
+              const value = formatChartTooltipValue(raw, 3);
               return `${context.dataset.label}: ${value}`;
             },
           },
         },
-        datalabels: {
-          display: false,
-        },
+        datalabels: { display: false },
         legend: getChartLegendOptions({}, theme),
         title: { display: false },
         zoom: zoomPluginOptions,
@@ -170,7 +168,10 @@ const BarLineChart_Sanluong = ({
           {
             beginAtZero: true,
             position: 'left',
-            ticks: { padding: 4 },
+            ticks: {
+              padding: 4,
+              callback: (value) => formatChartInteger(value),
+            },
           },
           undefined,
           'linear',
@@ -183,6 +184,9 @@ const BarLineChart_Sanluong = ({
                   beginAtZero: true,
                   position: 'right',
                   grid: { drawOnChartArea: false },
+                  ticks: {
+                    callback: (value) => formatChartInteger(value),
+                  },
                 },
                 productionLine.axisColor,
                 'linear',
