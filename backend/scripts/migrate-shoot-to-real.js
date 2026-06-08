@@ -8,7 +8,17 @@ import { loadEnv } from '../utils/loadEnv.js';
 
 loadEnv();
 
-const { default: pool } = await import('../db.js');
+let pool;
+try {
+  ({ default: pool } = await import('../db.js'));
+} catch (err) {
+  if (err?.code === 'ERR_MODULE_NOT_FOUND') {
+    console.error('Thiếu package Node (vd. pg). Chạy một trong hai cách sau:\n');
+    console.error('  1) npm install && npm run migrate:shoot-real');
+    console.error('  2) psql -U postgres -d postgres -f backend/scripts/migrate-shoot-to-real.sql\n');
+  }
+  throw err;
+}
 
 const REAL_TYPES = new Set(['real', 'double precision', 'numeric']);
 

@@ -6,7 +6,8 @@
     "dev": "nodemon backend/server.js",
     "build": "npm install && npm install --prefix frontend && npm run build --prefix frontend",
     "start": "node backend/server.js",
-    "migrate:shoot-real": "node backend/scripts/migrate-shoot-to-real.js"
+    "migrate:shoot-real": "node backend/scripts/migrate-shoot-to-real.js",
+    "migrate:shoot-real:sql": "psql -U \"${DB_USER:-postgres}\" -d \"${DB_NAME:-postgres}\" -f backend/scripts/migrate-shoot-to-real.sql"
   },
   "keywords": [],
   "author": "",
