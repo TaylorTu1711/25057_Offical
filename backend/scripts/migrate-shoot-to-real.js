@@ -4,10 +4,11 @@
  * Chạy từ thư mục gốc project:
  *   npm run migrate:shoot-real
  */
-import dotenv from 'dotenv';
-import pool from '../db.js';
+import { loadEnv } from '../utils/loadEnv.js';
 
-dotenv.config();
+loadEnv();
+
+const { default: pool } = await import('../db.js');
 
 const REAL_TYPES = new Set(['real', 'double precision', 'numeric']);
 
