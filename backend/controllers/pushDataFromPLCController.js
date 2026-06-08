@@ -1,5 +1,5 @@
-import express from "express";
 import pool from "../db.js";
+import { parseShoot } from "../utils/numeric.js";
 
 export const pushDataFromPLC = async (req, res) => {
     const dataArray = req.body;
@@ -42,10 +42,17 @@ export const pushDataFromPLC = async (req, res) => {
                 );
             } else if (isProduction) {
                 const { nr, timestamp, shoot, cycle, time_on, time_off, check_get, product, status, input_material } = row;
+                const shootValue = parseShoot(shoot);
+
+                if (shootValue === null) {
+                    console.warn('shoot không hợp lệ, bỏ qua bản ghi:', row);
+                    continue;
+                }
+
                 await pool.query(
                     `INSERT INTO ${tableName} (nr, machine_id, timestamp, shoot, cycle, time_on, time_off, check_get, product, status, input_material)
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-                    [nr, machine_id, timestamp, shoot, cycle, time_on, time_off, check_get, product, status, input_material]
+                    [nr, machine_id, timestamp, shootValue, cycle, time_on, time_off, check_get, product, status, input_material]
                 );
                 await pool.query(
                     `UPDATE machines

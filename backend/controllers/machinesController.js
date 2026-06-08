@@ -99,7 +99,7 @@ export const addMachine = async (req, res) => {
         nr INTEGER,
         machine_id VARCHAR(255),
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        shoot INTEGER,
+        shoot REAL,
         cycle REAL,
         time_on REAL,
         time_off REAL,
