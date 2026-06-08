@@ -23,9 +23,17 @@ export const login = async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-  const token = jwt.sign({ id: user.id, email: user.email, role: user.role}, JWT_SECRET || 'secret_key', {
-  expiresIn: '15m',
-    }); 
+  const signOptions = {};
+  const expiresIn = process.env.JWT_EXPIRES_IN;
+  if (expiresIn) {
+    signOptions.expiresIn = expiresIn;
+  }
+
+  const token = jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    JWT_SECRET || 'secret_key',
+    signOptions,
+  );
   res.json({ token });
 };
 
@@ -54,9 +62,6 @@ export const logout = async (req, res) => {
     if (!authHeader) return res.status(400).json({ error: 'No token provided' });
 
     const token = authHeader.split(' ')[1];
-
-    // Lưu token vào blacklist trong 15 phút (900 giây)
-
 
     res.json({ message: 'Logged out successfully' });
   } catch (err) {
