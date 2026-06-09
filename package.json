@@ -7,7 +7,9 @@
     "build": "npm install && npm install --prefix frontend && npm run build --prefix frontend",
     "start": "node backend/server.js",
     "migrate:shoot-real": "node backend/scripts/migrate-shoot-to-real.js",
-    "migrate:shoot-real:sql": "psql -U \"${DB_USER:-postgres}\" -d \"${DB_NAME:-postgres}\" -f backend/scripts/migrate-shoot-to-real.sql"
+    "migrate:shoot-real:sql": "psql -U \"${DB_USER:-postgres}\" -d \"${DB_NAME:-postgres}\" -f backend/scripts/migrate-shoot-to-real.sql",
+    "migrate:product-real": "node backend/scripts/migrate-product-to-real.js",
+    "migrate:product-real:sql": "psql -U \"${DB_USER:-postgres}\" -d \"${DB_NAME:-postgres}\" -f backend/scripts/migrate-product-to-real.sql"
   },
   "keywords": [],
   "author": "",

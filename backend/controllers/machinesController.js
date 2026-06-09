@@ -104,7 +104,7 @@ export const addMachine = async (req, res) => {
         time_on REAL,
         time_off REAL,
         check_get BOOL,
-        product INTEGER,
+        product REAL,
         status INTEGER,
         input_material REAL
       );

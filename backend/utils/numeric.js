@@ -1,8 +1,8 @@
 /**
- * Chuẩn hóa shoot từ PLC — nhận integer, real hoặc chuỗi số.
+ * Chuẩn hóa số từ PLC — nhận integer, real hoặc chuỗi số.
  * @returns {number|null}
  */
-export function parseShoot(value) {
+export function parseReal(value) {
   if (value === null || value === undefined || value === '') {
     return null;
   }
@@ -17,3 +17,6 @@ export function parseShoot(value) {
   const n = Number(normalized);
   return Number.isFinite(n) ? n : null;
 }
+
+/** @deprecated alias — dùng parseReal */
+export const parseShoot = parseReal;
