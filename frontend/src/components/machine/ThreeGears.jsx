@@ -143,6 +143,12 @@ const ThreeGears = ({ isRunning = true }) => {
   const canvasRef = useRef(null);
   const tRef = useRef(0);
   const rafRef = useRef(null);
+  const isRunningRef = useRef(isRunning);
+  const canvasSizeRef = useRef({ width: 0, height: 0 });
+
+  useEffect(() => {
+    isRunningRef.current = isRunning;
+  }, [isRunning]);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -151,20 +157,30 @@ const ThreeGears = ({ isRunning = true }) => {
 
     const ctx = canvas.getContext('2d');
     const animSpeed = 0.016;
-    const gears = buildGears(isRunning);
-    const cluster = getGearClusterMetrics(gears);
+    let active = true;
 
     const draw = () => {
       const displayWidth = wrapper.clientWidth;
       const displayHeight = wrapper.clientHeight;
       if (!displayWidth || !displayHeight) return;
 
+      const running = isRunningRef.current;
+      const gears = buildGears(running);
+      const cluster = getGearClusterMetrics(gears);
       const dpr = window.devicePixelRatio || 1;
+      const pixelWidth = Math.round(displayWidth * dpr);
+      const pixelHeight = Math.round(displayHeight * dpr);
 
-      canvas.width = Math.round(displayWidth * dpr);
-      canvas.height = Math.round(displayHeight * dpr);
-      canvas.style.width = `${displayWidth}px`;
-      canvas.style.height = `${displayHeight}px`;
+      if (
+        canvasSizeRef.current.width !== pixelWidth
+        || canvasSizeRef.current.height !== pixelHeight
+      ) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+        canvas.style.width = `${displayWidth}px`;
+        canvas.style.height = `${displayHeight}px`;
+        canvasSizeRef.current = { width: pixelWidth, height: pixelHeight };
+      }
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, displayWidth, displayHeight);
@@ -194,29 +210,33 @@ const ThreeGears = ({ isRunning = true }) => {
         );
       });
 
-      drawStatusLabel(ctx, isRunning);
-
+      drawStatusLabel(ctx, running);
       ctx.restore();
     };
 
     const loop = () => {
+      if (!active) return;
       draw();
-      if (isRunning) {
+      if (isRunningRef.current) {
         tRef.current += 1;
-        rafRef.current = requestAnimationFrame(loop);
       }
+      rafRef.current = requestAnimationFrame(loop);
     };
 
-    loop();
+    rafRef.current = requestAnimationFrame(loop);
 
-    const observer = new ResizeObserver(() => draw());
+    const observer = new ResizeObserver(() => {
+      if (!active) return;
+      draw();
+    });
     observer.observe(wrapper);
 
     return () => {
+      active = false;
       observer.disconnect();
       cancelAnimationFrame(rafRef.current);
     };
-  }, [isRunning]);
+  }, []);
 
   return (
     <div ref={wrapperRef} className="three-gears">

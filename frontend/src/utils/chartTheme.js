@@ -109,6 +109,7 @@ export const NEON_ERROR_BAR = {
 export const PRODUCTION_CHART_COLORS = {
   bar: NEON_BAR_GRADIENTS.cyanBlue,
   line: NEON_LINES.yellow,
+  barDataLabel: '#FDE047',
 };
 
 /** Biểu đồ thời gian & năng suất */
@@ -117,6 +118,7 @@ export const TIME_CHART_COLORS = {
   outputRate: NEON_LINES.materialBlue,
   standard: NEON_LINES.green,
   performancePct: NEON_LINES.cyan,
+  barDataLabel: '#FDE047',
 };
 
 export function createNeonBarGradient(ctx, chartArea, palette = NEON_BAR_GRADIENTS.cyanBlue) {
@@ -399,6 +401,34 @@ export function formatChartTooltipValue(value, maxFractionDigits = 3) {
     minimumFractionDigits: 0,
     maximumFractionDigits: maxFractionDigits,
   });
+}
+
+/** Nhãn số giữa cột — cỡ chữ tự co theo chiều ngang cột. */
+export function getBarColumnDataLabelOptions(labelColor, maxFractionDigits = 1) {
+  return {
+    display: (ctx) => {
+      const v = Number(ctx.dataset.data[ctx.dataIndex]);
+      return Number.isFinite(v) && v !== 0;
+    },
+    anchor: 'center',
+    align: 'center',
+    offset: 0,
+    textAlign: 'center',
+    clip: true,
+    formatter: (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '';
+      return formatChartTooltipValue(n, maxFractionDigits);
+    },
+    color: labelColor,
+    font: (ctx) => {
+      const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex];
+      const w = Math.max(8, bar?.width ?? 24);
+      // Tỷ lệ theo độ rộng cột — zoom to thì cột rộng hơn → chữ lớn hơn
+      const size = Math.min(15, Math.max(8, Math.round(w * 0.38)));
+      return { size, weight: '600' };
+    },
+  };
 }
 
 /** Tiêu đề tooltip cột/trục category — vd. "Ngày: 15", "Tháng: T3". */

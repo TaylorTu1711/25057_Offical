@@ -19,6 +19,7 @@ import MachineTreeSidebarMobile from '../components/MachineTreeSidebarMobile';
 import useMachineData from '../hooks/useMachineData';
 import useLiveCumulativeRuntime from '../hooks/useLiveCumulativeRuntime';
 import useNow from '../hooks/useNow';
+import useStableMachineRunning from '../hooks/useStableMachineRunning';
 import { buildErrorStats } from '../utils/errorStats';
 import { POLL_INTERVALS } from '../config/polling';
 import {
@@ -45,7 +46,7 @@ import {
   getChartCategoryPrefix,
   getYearKeysFromData,
 } from '../utils/chartViewRange';
-import { parseStandardProductivity } from '../utils/parseStandardProductivity';
+import { parseStandardProductivity, parseHandoverDate } from '../utils/parseStandardProductivity';
 import { hasInputProductInfo, hasOutputProductInfo } from '../utils/machineProductInfo';
 
 const ALARM_TABLE_COLUMN_ORDER = ['code', 'description', 'timestamp'];
@@ -65,6 +66,11 @@ const ALARM_TABLE_MIN = {
 const ERROR_CHART_VIEWS = {
   timeline: 'timeline',
   byType: 'byType',
+};
+
+const ERROR_CHART_VIEW_LABELS = {
+  [ERROR_CHART_VIEWS.timeline]: 'Thống kê cảnh báo theo thời gian',
+  [ERROR_CHART_VIEWS.byType]: 'Thống kê cảnh báo theo loại',
 };
 
 const ERROR_DETAIL_TOP_N = 10;
@@ -170,6 +176,7 @@ function Machine() {
     now
   );
   const machineIsRunning = machineIsConnected && isMachineRunning(currentMachineStatus);
+  const machineIsRunningForIcon = useStableMachineRunning(machineIsRunning);
   const liveRuntimeSeconds = useLiveCumulativeRuntime(
     totalTimeOnSeconds,
     machineIsRunning,
@@ -249,6 +256,11 @@ function Machine() {
 
   const standardProductivity = useMemo(
     () => parseStandardProductivity(machineInfo?.information),
+    [machineInfo?.information],
+  );
+
+  const handoverDate = useMemo(
+    () => parseHandoverDate(machineInfo?.information),
     [machineInfo?.information],
   );
 
@@ -446,24 +458,29 @@ function Machine() {
                     >
                       <AutoFitMachineName
                         text={machineInfo?.machine_name}
-                        maxFontSize={24}
+                        maxFontSize={handoverDate ? 20 : 24}
                         minFontSize={11}
-                        style={{ width: '100%', height: '100%' }}
+                        style={{ width: '100%', flex: '1 1 auto', minHeight: 0 }}
                       />
+                      {handoverDate ? (
+                        <div className="machine-top-panel__handover-date" title={`Ngày bàn giao: ${handoverDate}`}>
+                          Ngày bàn giao: {handoverDate}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
                   <div className="col-4">
                     <div
                       className={`border rounded shadow w-100 machine-top-panel__status-icon${
-                        machineIsRunning
+                        machineIsRunningForIcon
                           ? ' machine-top-panel__status-icon--running'
                           : ' machine-top-panel__status-icon--stopped'
                       }`}
                     >
                       <MachineStatusAnimated
-                        key={`${machine_id}-${machineIsRunning ? 'run' : 'stop'}`}
-                        isRunning={machineIsRunning}
+                        key={machine_id}
+                        isRunning={machineIsRunningForIcon}
                         isConnected={machineIsConnected}
                         title={statusIconAlt}
                       />
@@ -542,16 +559,10 @@ function Machine() {
             <div className="row g-1 h-100 machine-top-panel__alarms-row">
               <div className="col-9 d-flex min-h-0">
                 <div className="card shadow rounded machine-top-panel__alarms machine-top-panel__alarms--list w-100">
-                  <div className="d-flex justify-content-between align-items-center mb-2 flex-shrink-0 card-header-row">
+                  <div className="d-flex align-items-center mb-2 flex-shrink-0 card-header-row">
                     <h6 className="text-danger fw-bold mb-0">
                       DANH SÁCH CẢNH BÁO
                     </h6>
-                    <i
-                      className="bi bi-eye-fill text-secondary"
-                      style={{ cursor: 'pointer', fontSize: '18px' }}
-                      title="Xem tất cả"
-                      onClick={() => setModals((prev) => ({ ...prev, errorAnalysis: true }))}
-                    />
                   </div>
 
                   <div className="flex-grow-1" style={{ overflowY: 'auto', overflowX: 'hidden', minWidth: 0 }}>
@@ -626,11 +637,6 @@ function Machine() {
                   onYearChange={setSelectedYear}
                   availableYears={availableChartYears}
                   pickerYear={selectedYear}
-                  rangeFrom={rangeFrom}
-                  rangeTo={rangeTo}
-                  onRangeApply={handleRangeApply}
-                  rangeDisplay={rangeDisplay}
-                  onRangeDisplayChange={setRangeDisplay}
                 />
               </div>
             </div>
@@ -700,38 +706,33 @@ function Machine() {
           <div className="col-12 col-xl-6 d-flex flex-column gap-1 machine-charts-stack machine-charts-stack--split machine-charts-stack--equal-pair h-100">
             <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--tall">
               <div className="chart-title-brand machine-chart-head machine-chart-head--detail">
-                <div className="machine-chart-head-row">
-                  <div className="machine-chart-head-title">THỐNG KÊ CẢNH BÁO</div>
-                  <div className="machine-chart-head-actions">
-                    <div
-                      className="machine-view-mode-segment machine-view-mode-segment--compact"
-                      role="tablist"
-                      aria-label="Chế độ thống kê cảnh báo"
-                    >
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={!showErrorByType}
-                      className={`machine-view-mode-segment__btn${
-                        !showErrorByType ? ' machine-view-mode-segment__btn--active' : ''
-                      }`}
-                      onClick={() => setErrorChartView(ERROR_CHART_VIEWS.timeline)}
-                    >
-                      Tất cả
-                    </button>
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={showErrorByType}
-                      className={`machine-view-mode-segment__btn${
-                        showErrorByType ? ' machine-view-mode-segment__btn--active' : ''
-                      }`}
-                      onClick={() => setErrorChartView(ERROR_CHART_VIEWS.byType)}
-                    >
-                      Chi tiết
-                    </button>
-                    </div>
-                  </div>
+                <div
+                  className="machine-view-mode-segment machine-view-mode-segment--compact machine-view-mode-segment--alarm-stats"
+                  role="tablist"
+                  aria-label="Chế độ thống kê cảnh báo"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={!showErrorByType}
+                    className={`machine-view-mode-segment__btn${
+                      !showErrorByType ? ' machine-view-mode-segment__btn--active' : ''
+                    }`}
+                    onClick={() => setErrorChartView(ERROR_CHART_VIEWS.timeline)}
+                  >
+                    {ERROR_CHART_VIEW_LABELS[ERROR_CHART_VIEWS.timeline]}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={showErrorByType}
+                    className={`machine-view-mode-segment__btn${
+                      showErrorByType ? ' machine-view-mode-segment__btn--active' : ''
+                    }`}
+                    onClick={() => setErrorChartView(ERROR_CHART_VIEWS.byType)}
+                  >
+                    {ERROR_CHART_VIEW_LABELS[ERROR_CHART_VIEWS.byType]}
+                  </button>
                 </div>
               </div>
 

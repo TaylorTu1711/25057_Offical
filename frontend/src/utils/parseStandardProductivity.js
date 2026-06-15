@@ -38,3 +38,29 @@ export function parseStandardProductivity(information) {
 
   return null;
 }
+
+/**
+ * Đọc ngày bàn giao từ ô "Thông tin khác" (mỗi dòng: "Tên: Giá trị").
+ * Ví dụ: "Ngày bàn giao: 15/6/2026," → "15/6/2026"
+ */
+export function parseHandoverDate(information) {
+  if (!information || typeof information !== 'string') return null;
+
+  const lines = information.split('\n');
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    const colonIdx = line.indexOf(':');
+    if (colonIdx < 0) continue;
+
+    const key = line.slice(0, colonIdx).trim();
+    if (!/ngày\s*bàn\s*giao/i.test(key)) continue;
+
+    const valueText = line.slice(colonIdx + 1).trim().replace(/,\s*$/, '');
+    return valueText || null;
+  }
+
+  return null;
+}

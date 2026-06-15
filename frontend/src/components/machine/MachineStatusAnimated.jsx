@@ -14,4 +14,4 @@ const MachineStatusAnimated = ({ isRunning, isConnected, title }) => (
   </div>
 );
 
-export default MachineStatusAnimated;
+export default React.memo(MachineStatusAnimated);

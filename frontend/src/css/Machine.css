@@ -233,6 +233,18 @@
   max-height: var(--machine-top-name-h);
 }
 
+.machine-top-panel__handover-date {
+  flex: 0 0 auto;
+  font-size: clamp(9px, 1.4vw, 12px);
+  font-weight: 500;
+  line-height: 1.2;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-top: 2px;
+}
+
 .machine-top-panel__status-icon {
   display: flex;
   align-items: center;
@@ -435,6 +447,10 @@
   color: #ffffff !important;
 }
 
+[data-theme='dark'] .machine-top-panel__handover-date {
+  color: #cbd5e1;
+}
+
 .machine-top-panel__stat-box--performance .fw-semibold {
   margin-bottom: 0.1rem !important;
 }
@@ -445,6 +461,16 @@
 
 .machine-top-panel__stat-box h5 {
   font-size: clamp(13px, 2.2vw, 17px) !important;
+}
+
+.machine-runtime-display-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  width: 100%;
+  max-width: 100%;
 }
 
 .machine-runtime-display {
@@ -510,6 +536,25 @@
   user-select: none;
 }
 
+.machine-runtime-display__days {
+  font-size: clamp(10px, 1.35vw, 12px);
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.machine-runtime-display__days-value {
+  font-weight: 700;
+  color: var(--brand-color, rgba(32, 64, 154, 1));
+  font-variant-numeric: tabular-nums;
+}
+
+.machine-runtime-display__days-unit {
+  font-weight: 600;
+  color: var(--brand-color, rgba(32, 64, 154, 1));
+  opacity: 0.9;
+}
+
 [data-theme='dark'] .machine-runtime-display__value,
 [data-theme='dark'] .machine-top-panel__stat-value {
   color: #7dd4fc !important;
@@ -525,6 +570,14 @@
 [data-theme='dark'] .machine-runtime-display__sep {
   color: rgba(56, 189, 248, 0.45);
   text-shadow: 0 0 6px rgba(56, 189, 248, 0.35);
+}
+
+[data-theme='dark'] .machine-runtime-display__days-value,
+[data-theme='dark'] .machine-runtime-display__days-unit {
+  color: #7dd4fc !important;
+  text-shadow:
+    0 0 8px rgba(56, 189, 248, 0.55),
+    0 0 20px rgba(37, 99, 235, 0.25);
 }
 
 .machine-top-panel__perf-inner {
@@ -1088,6 +1141,21 @@
   min-height: 0;
 }
 
+.machine-chart-card--tall .machine-chart-head {
+  margin-bottom: 0 !important;
+  padding-bottom: 0;
+  line-height: 1.1;
+}
+
+.machine-chart-card--tall .machine-chart-plot {
+  margin-top: -2px;
+}
+
+.machine-chart-card--tall .machine-chart-plot-inner {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 /* Hai thẻ biểu đồ trong cột chia đôi bằng nhau (trái: sản lượng + thời gian; phải: cảnh báo + trạng thái) */
 .machine-charts-stack--equal-pair.machine-charts-stack--split > .machine-chart-card {
   flex: 1 1 0 !important;
@@ -1171,6 +1239,20 @@
   flex: 0 1 auto;
   padding: 0.22rem 0.4rem;
   font-size: clamp(8px, 1.15vw, 10px);
+}
+
+.machine-view-mode-segment--alarm-stats {
+  width: 100%;
+}
+
+.machine-view-mode-segment--alarm-stats .machine-view-mode-segment__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+  font-size: clamp(8px, 1.05vw, 10px);
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
 }
 
 .machine-chart-head-actions {

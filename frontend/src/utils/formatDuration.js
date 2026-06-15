@@ -7,8 +7,19 @@ export const parseRuntimeSeconds = (totalSeconds) => {
   };
 };
 
+/** Số ngày thập phân — vd. 345.67 */
+export const formatRuntimeDays = (totalSeconds, fractionDigits = 2) => {
+  const total = Math.max(0, Number(totalSeconds) || 0);
+  const days = total / 86400;
+  return days.toLocaleString('en-US', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
+};
+
 /** Chuỗi đầy đủ — dùng cho aria-label, tooltip */
 export const formatCumulativeRuntime = (totalSeconds) => {
   const { hours, minutes, seconds } = parseRuntimeSeconds(totalSeconds);
-  return `${hours} giờ ${minutes} phút ${seconds} giây`;
+  const days = formatRuntimeDays(totalSeconds);
+  return `${hours} giờ ${minutes} phút ${seconds} giây (${days} ngày)`;
 };

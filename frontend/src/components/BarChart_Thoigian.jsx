@@ -19,7 +19,11 @@ import {
   getCategoryXAxisTickOptions,
   getChartLegendOptions,
   getCategoryTooltipTitleCallback,
+  formatChartTooltipValue,
+  getBarColumnDataLabelOptions,
+  TIME_CHART_COLORS,
 } from '../utils/chartTheme';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,6 +46,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   zoomPlugin,
+  ChartDataLabels,
 );
 
 const LineChart_TimeOn = ({
@@ -105,6 +110,7 @@ const LineChart_TimeOn = ({
         },
         hoverBorderColor: timeBarPalette.border,
         hoverBorderWidth: 2,
+        datalabels: getBarColumnDataLabelOptions(TIME_CHART_COLORS.barDataLabel),
         order: 3,
       },
     ];
@@ -128,6 +134,7 @@ const LineChart_TimeOn = ({
         pointHitRadius: 12,
         pointBackgroundColor: outputRateLine.borderColor,
         pointHoverBackgroundColor: outputRateLine.borderColor,
+        datalabels: { display: false },
         order: 1,
       });
 
@@ -145,6 +152,7 @@ const LineChart_TimeOn = ({
         clip: false,
         pointRadius: 0,
         pointHoverRadius: 0,
+        datalabels: { display: false },
         order: 0,
       });
     } else if (hasPerformance) {
@@ -167,6 +175,7 @@ const LineChart_TimeOn = ({
         pointBorderColor: performanceLine.borderColor,
         pointHoverBorderColor: '#fff',
         pointHoverBorderWidth: 1.5,
+        datalabels: { display: false },
         order: 1,
       });
     }
@@ -191,6 +200,15 @@ const LineChart_TimeOn = ({
   const options = useMemo(
     () => ({
       ...chartStableRenderOptions,
+      animation: {
+        ...chartStableRenderOptions.animation,
+        duration: 0,
+      },
+      animations: {
+        ...chartStableRenderOptions.animations,
+        y: { duration: 0 },
+        x: { duration: 0 },
+      },
       responsive: true,
       maintainAspectRatio: false,
       interaction: {
@@ -198,9 +216,7 @@ const LineChart_TimeOn = ({
         intersect: false,
       },
       plugins: {
-        datalabels: {
-          display: false,
-        },
+        datalabels: { clip: false },
         tooltip: {
           callbacks: {
             title: getCategoryTooltipTitleCallback(labels, categoryPrefix),

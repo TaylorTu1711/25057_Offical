@@ -1,5 +1,5 @@
 import pool from "../db.js";
-import { parseReal } from "../utils/numeric.js";
+import { saveProductionRow } from "../utils/productionPersistence.js";
 
 export const pushDataFromPLC = async (req, res) => {
     const dataArray = req.body;
@@ -41,25 +41,22 @@ export const pushDataFromPLC = async (req, res) => {
                     [nr, machine_id, timestamp, alarm_code, alarm_id, alarm_name, check_get]
                 );
             } else if (isProduction) {
-                const { nr, timestamp, shoot, cycle, time_on, time_off, check_get, product, status, input_material } = row;
-                const shootValue = parseReal(shoot);
-                const productValue = parseReal(product);
+                const { timestamp, status } = row;
 
-                if (shootValue === null) {
+                const result = await saveProductionRow(pool, tableName, machine_id, row);
+                if (result.reason === 'invalid_shoot') {
                     console.warn('shoot không hợp lệ, bỏ qua bản ghi:', row);
                     continue;
                 }
-
-                if (productValue === null) {
+                if (result.reason === 'invalid_product') {
                     console.warn('product không hợp lệ, bỏ qua bản ghi:', row);
                     continue;
                 }
+                if (result.reason === 'invalid_timestamp') {
+                    console.warn('timestamp không hợp lệ, bỏ qua bản ghi:', row);
+                    continue;
+                }
 
-                await pool.query(
-                    `INSERT INTO ${tableName} (nr, machine_id, timestamp, shoot, cycle, time_on, time_off, check_get, product, status, input_material)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-                    [nr, machine_id, timestamp, shootValue, cycle, time_on, time_off, check_get, productValue, status, input_material]
-                );
                 await pool.query(
                     `UPDATE machines
                      SET last_updated = $1,

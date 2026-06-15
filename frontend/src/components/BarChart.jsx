@@ -15,11 +15,13 @@ import {
   getChartLegendOptions,
   formatChartInteger,
   formatChartTooltipValue,
+  getBarColumnDataLabelOptions,
   PRODUCTION_CHART_COLORS,
   createProductionBarGradient,
   createProductionBarHoverGradient,
   getProductionLineStyle,
 } from '../utils/chartTheme';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,6 +44,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   zoomPlugin,
+  ChartDataLabels,
 );
 
 const BarLineChart_Sanluong = ({
@@ -88,6 +91,7 @@ const BarLineChart_Sanluong = ({
         },
         hoverBorderColor: PRODUCTION_CHART_COLORS.bar.border,
         hoverBorderWidth: 2,
+        datalabels: getBarColumnDataLabelOptions(PRODUCTION_CHART_COLORS.barDataLabel),
         order: 2,
       });
     }
@@ -112,6 +116,7 @@ const BarLineChart_Sanluong = ({
         pointBorderColor: productionLine.pointBorderColor,
         pointHoverBorderColor: '#fff',
         pointHoverBorderWidth: 2,
+        datalabels: { display: false },
         order: 1,
       });
     }
@@ -132,6 +137,15 @@ const BarLineChart_Sanluong = ({
   const options = useMemo(
     () => ({
       ...chartStableRenderOptions,
+      animation: {
+        ...chartStableRenderOptions.animation,
+        duration: 0,
+      },
+      animations: {
+        ...chartStableRenderOptions.animations,
+        y: { duration: 0 },
+        x: { duration: 0 },
+      },
       responsive: true,
       maintainAspectRatio: false,
       interaction: {
@@ -149,12 +163,21 @@ const BarLineChart_Sanluong = ({
             },
           },
         },
-        datalabels: { display: false },
-        legend: getChartLegendOptions({}, theme),
+        datalabels: { clip: false },
+        legend: getChartLegendOptions(
+          {
+            labels: {
+              padding: 4,
+              boxWidth: 10,
+              font: { size: 10 },
+            },
+          },
+          theme,
+        ),
         title: { display: false },
         zoom: zoomPluginOptions,
       },
-      layout: { padding: 0 },
+      layout: { padding: { top: 4, right: 0, bottom: 0, left: 0 } },
       scales: {
         x: themedXScale(
           {
@@ -215,8 +238,6 @@ const BarLineChart_Sanluong = ({
     <div style={{ height: '100%', width: '100%' }}>
       <Chart ref={chartRef} key={theme} type="bar" data={data} options={options} />
     </div>
-
-    
   );
 };
 

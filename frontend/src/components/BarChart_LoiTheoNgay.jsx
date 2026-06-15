@@ -9,12 +9,14 @@ import {
   getCategoryXAxisTickOptions,
   getChartLegendOptions,
   formatChartTooltipTitle,
+  getBarColumnDataLabelOptions,
   PRODUCTION_CHART_COLORS,
   createProductionBarGradient,
   createProductionBarHoverGradient,
   themedScale,
   themedXScale,
 } from '../utils/chartTheme';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -33,6 +35,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   zoomPlugin,
+  ChartDataLabels,
 );
 
 const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month', categoryPrefix = '' }) => {
@@ -63,6 +66,7 @@ const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month', category
           },
           hoverBorderColor: PRODUCTION_CHART_COLORS.bar.border,
           hoverBorderWidth: 2,
+          datalabels: getBarColumnDataLabelOptions(PRODUCTION_CHART_COLORS.barDataLabel, 0),
         },
       ],
     }),
@@ -72,6 +76,15 @@ const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month', category
   const options = useMemo(
     () => ({
       ...chartStableRenderOptions,
+      animation: {
+        ...chartStableRenderOptions.animation,
+        duration: 0,
+      },
+      animations: {
+        ...chartStableRenderOptions.animations,
+        y: { duration: 0 },
+        x: { duration: 0 },
+      },
       responsive: true,
       maintainAspectRatio: false,
       interaction: {
@@ -79,9 +92,7 @@ const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month', category
         intersect: false,
       },
       plugins: {
-        datalabels: {
-          display: false,
-        },
+        datalabels: { clip: false },
         tooltip: {
           filter: (item) => Number(item.raw) > 0,
           callbacks: {
@@ -100,7 +111,7 @@ const BarChart_LoiTheoNgay = ({ labels, dataValues, viewMode = 'month', category
         title: { display: false },
         zoom: zoomPluginOptions,
       },
-      layout: { padding: 0 },
+      layout: { padding: { top: 4, right: 0, bottom: 0, left: 0 } },
       scales: {
         x: themedXScale(
           {
