@@ -137,15 +137,6 @@ const BarLineChart_Sanluong = ({
   const options = useMemo(
     () => ({
       ...chartStableRenderOptions,
-      animation: {
-        ...chartStableRenderOptions.animation,
-        duration: 0,
-      },
-      animations: {
-        ...chartStableRenderOptions.animations,
-        y: { duration: 0 },
-        x: { duration: 0 },
-      },
       responsive: true,
       maintainAspectRatio: false,
       interaction: {

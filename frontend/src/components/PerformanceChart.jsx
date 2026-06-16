@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { NEON_PALETTE, isDarkChartTheme } from '../utils/chartTheme';
+import { NEON_PALETTE, isDarkChartTheme, chartDoughnutAnimationOptions } from '../utils/chartTheme';
 import useTheme from '../hooks/useTheme';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -37,18 +37,22 @@ const PerformanceChart = ({ performance }) => {
     [performance, remainderColor],
   );
 
-  const options = {
-    cutout: '70%',
-    plugins: {
-      datalabels: {
-        display: false, 
+  const options = useMemo(
+    () => ({
+      ...chartDoughnutAnimationOptions,
+      cutout: '70%',
+      plugins: {
+        datalabels: {
+          display: false,
+        },
+        legend: { display: false },
+        tooltip: { enabled: false },
       },
-      legend: { display: false },
-      tooltip: { enabled: false },
-    },
-    responsive: true,
-    maintainAspectRatio: false,
-  };
+      responsive: true,
+      maintainAspectRatio: false,
+    }),
+    [],
+  );
 
   return (
     <div

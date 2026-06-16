@@ -332,19 +332,44 @@ const CHART_EASING = 'easeOutQuart';
 /** Animation mượt khi đổi chế độ xem / cập nhật dữ liệu (polling). */
 export const chartSmoothAnimationOptions = {
   animation: {
-    duration: 550,
+    duration: 600,
     easing: CHART_EASING,
   },
   animations: {
     tension: {
+      duration: 450,
+      easing: CHART_EASING,
+    },
+    y: {
+      type: 'number',
+      duration: 600,
+      easing: CHART_EASING,
+    },
+    x: {
+      type: 'number',
+      duration: 500,
+      easing: CHART_EASING,
+    },
+    numbers: {
+      type: 'number',
+      duration: 600,
+      easing: CHART_EASING,
+    },
+    colors: {
+      type: 'color',
       duration: 400,
+      easing: CHART_EASING,
+    },
+    radius: {
+      type: 'number',
+      duration: 500,
       easing: CHART_EASING,
     },
   },
   transitions: {
     active: {
       animation: {
-        duration: 180,
+        duration: 200,
         easing: CHART_EASING,
       },
     },
@@ -353,7 +378,8 @@ export const chartSmoothAnimationOptions = {
     },
     show: {
       animations: {
-        colors: { duration: 280, easing: CHART_EASING },
+        colors: { duration: 320, easing: CHART_EASING },
+        numbers: { duration: 600, easing: CHART_EASING },
       },
     },
     hide: {
@@ -367,11 +393,54 @@ export const chartSmoothAnimationOptions = {
 /** Biểu đồ rất nhiều điểm (vd. trạng thái 24h) — animation ngắn hơn. */
 export const chartDenseAnimationOptions = {
   animation: {
-    duration: 280,
+    duration: 400,
     easing: 'easeOutCubic',
   },
+  animations: {
+    y: {
+      type: 'number',
+      duration: 400,
+      easing: 'easeOutCubic',
+    },
+    x: {
+      type: 'number',
+      duration: 320,
+      easing: 'easeOutCubic',
+    },
+    numbers: {
+      type: 'number',
+      duration: 400,
+      easing: 'easeOutCubic',
+    },
+  },
   transitions: {
-    active: { animation: { duration: 120 } },
+    active: { animation: { duration: 150 } },
+    resize: { animation: { duration: 0 } },
+  },
+};
+
+/** Doughnut / gauge nhỏ (hiệu suất %). */
+export const chartDoughnutAnimationOptions = {
+  animation: {
+    animateRotate: true,
+    animateScale: true,
+    duration: 700,
+    easing: CHART_EASING,
+  },
+  animations: {
+    numbers: {
+      type: 'number',
+      duration: 700,
+      easing: CHART_EASING,
+    },
+    colors: {
+      type: 'color',
+      duration: 450,
+      easing: CHART_EASING,
+    },
+  },
+  transitions: {
+    active: { animation: { duration: 200 } },
     resize: { animation: { duration: 0 } },
   },
 };
