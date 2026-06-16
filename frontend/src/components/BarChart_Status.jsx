@@ -140,7 +140,7 @@ ChartJS.register(
   zoomPlugin,
 );
 
-const STATUS_CHART_TICKS = { 0: 'Maint', 1: 'Stop', 2: 'Auto' };
+const STATUS_CHART_TICKS = { 1: 'Stop', 2: 'Auto' };
 
 const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
   const { theme } = useTheme();
@@ -221,7 +221,7 @@ const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
               font: { size: 9 },
               callback: (value) => STATUS_CHART_TICKS[value] ?? '',
             },
-            min: 0,
+            min: 1,
             max: 2,
           },
           undefined,
