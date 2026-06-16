@@ -23,7 +23,7 @@ function valuesEqual(a, b) {
 /**
  * Giảm số dòng lưu trong bảng máy mà vẫn đủ cho biểu đồ:
  * - Bản ghi đầu ngày giữ snapshot mở (min).
- * - Trong cửa sổ interval: UPDATE bản ghi mới nhất (max).
+ * - Trong cửa sổ interval: UPDATE bản ghi mới nhất (max), giữ nguyên timestamp (mốc bucket).
  * - Hết cửa sổ: INSERT bản ghi mới (mẫu ~5 phút cho biểu đồ trạng thái 24h).
  */
 export async function saveProductionRow(pool, tableName, machineId, row) {
@@ -117,22 +117,21 @@ export async function saveProductionRow(pool, tableName, machineId, row) {
   };
 
   const updateRow = async (id) => {
+    // Không cập nhật timestamp — giữ mốc bắt đầu bucket để elapsed đủ 5 phút mới INSERT.
     await pool.query(
       `UPDATE ${tableName}
        SET nr = $1,
-           timestamp = $2,
-           shoot = $3,
-           cycle = $4,
-           time_on = $5,
-           time_off = $6,
-           check_get = $7,
-           product = $8,
-           status = $9,
-           input_material = $10
-       WHERE id = $11`,
+           shoot = $2,
+           cycle = $3,
+           time_on = $4,
+           time_off = $5,
+           check_get = $6,
+           product = $7,
+           status = $8,
+           input_material = $9
+       WHERE id = $10`,
       [
         fields.nr,
-        fields.timestamp,
         fields.shoot,
         fields.cycle,
         fields.time_on,
