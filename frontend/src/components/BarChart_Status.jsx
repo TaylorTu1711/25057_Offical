@@ -117,6 +117,7 @@ import {
   getCategoryTooltipTitleCallback,
   getStatusLineStyle,
 } from '../utils/chartTheme';
+import { getStatusChartLabel } from '../utils/machineStatus';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -139,7 +140,7 @@ ChartJS.register(
   zoomPlugin,
 );
 
-const statusLabels = ['Maint', 'Stop', 'Run'];
+const STATUS_CHART_TICKS = { 0: 'Maint', 1: 'Stop', 2: 'Auto' };
 
 const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
   const { theme } = useTheme();
@@ -192,7 +193,7 @@ const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
             title: getCategoryTooltipTitleCallback(labels, categoryPrefix),
             label: (context) => {
               const value = context.parsed?.y ?? context.raw;
-              return `Trạng thái: ${statusLabels[value] ?? value ?? '—'}`;
+              return `Trạng thái: ${getStatusChartLabel(value)}`;
             },
           },
         },
@@ -218,7 +219,7 @@ const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
               stepSize: 1,
               padding: 4,
               font: { size: 9 },
-              callback: (value) => statusLabels[value] ?? value,
+              callback: (value) => STATUS_CHART_TICKS[value] ?? '',
             },
             min: 0,
             max: 2,

@@ -1,4 +1,4 @@
-import { normalizeMachineStatus } from './machineStatus';
+import { normalizeMachineStatus, toStatusChartValue } from './machineStatus';
 
 export function generateTimestampsInRange(start, end, intervalMinutes = 5) {
   const timestamps = [];
@@ -27,12 +27,12 @@ export function buildStatusTimelineChart(
     .filter((d) => d?.timestamp)
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-  let lastStatus = normalizeMachineStatus(currentStatus);
+  let lastStatus = toStatusChartValue(currentStatus);
 
   for (const d of allSorted) {
     const ts = new Date(d.timestamp).getTime();
     if (ts >= fromMs) break;
-    const s = normalizeMachineStatus(d.status);
+    const s = toStatusChartValue(d.status);
     if (s != null) lastStatus = s;
   }
 
@@ -47,7 +47,7 @@ export function buildStatusTimelineChart(
   const mappedData = rangeTimestamps.map((t) => {
     const tMs = t.getTime();
     while (ptr < rangeFiltered.length && new Date(rangeFiltered[ptr].timestamp).getTime() <= tMs) {
-      const s = normalizeMachineStatus(rangeFiltered[ptr].status);
+      const s = toStatusChartValue(rangeFiltered[ptr].status);
       if (s != null) lastStatus = s;
       ptr += 1;
     }

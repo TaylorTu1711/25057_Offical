@@ -41,6 +41,22 @@ export const getMachineStatusLabelWithEmoji = (status) => {
 
 export const isMachineRunning = (status) => normalizeMachineStatus(status) === 2;
 
+/** Biểu đồ trạng thái 24h: Maint (0), Stop (1), Auto (2). */
+export const toStatusChartValue = (status) => normalizeMachineStatus(status);
+
+export const getStatusChartLabel = (chartValue) => {
+  switch (Number(chartValue)) {
+    case 0:
+      return 'Maint';
+    case 1:
+      return 'Stop';
+    case 2:
+      return 'Auto';
+    default:
+      return '—';
+  }
+};
+
 export const isMachineConnected = (lastUpdated, nowMs = Date.now(), thresholdMinutes = 2) => {
   if (!lastUpdated) return false;
   const last = new Date(lastUpdated).getTime();
