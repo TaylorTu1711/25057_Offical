@@ -41,7 +41,16 @@ export const pushDataFromPLC = async (req, res) => {
                     [nr, machine_id, timestamp, alarm_code, alarm_id, alarm_name, check_get]
                 );
             } else if (isProduction) {
-                const { timestamp, status } = row;
+                let { timestamp, status } = row;
+
+                if (status == null || status === '') {
+                    const { rows: machineRows } = await pool.query(
+                        `SELECT status FROM machines WHERE machine_id = $1`,
+                        [machine_id],
+                    );
+                    status = machineRows[0]?.status ?? null;
+                    row = { ...row, status };
+                }
 
                 const result = await saveProductionRow(pool, tableName, machine_id, row);
                 if (result.reason === 'invalid_shoot') {

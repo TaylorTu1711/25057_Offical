@@ -74,9 +74,26 @@ export async function saveProductionRow(pool, tableName, machineId, row) {
     time_off,
     check_get,
     product: productValue,
-    status,
+    status: status != null && status !== '' ? status : null,
     input_material,
   };
+
+  if (fields.status == null && todayRows.length > 0) {
+    const prevStatus = todayRows[todayRows.length - 1]?.status;
+    if (prevStatus != null && prevStatus !== '') {
+      fields.status = prevStatus;
+    }
+  }
+
+  if (fields.status == null) {
+    const { rows: machineRows } = await pool.query(
+      `SELECT status FROM machines WHERE machine_id = $1`,
+      [machineId],
+    );
+    if (machineRows[0]?.status != null && machineRows[0]?.status !== '') {
+      fields.status = machineRows[0].status;
+    }
+  }
 
   const insertRow = async () => {
     await pool.query(

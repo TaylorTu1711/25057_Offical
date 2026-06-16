@@ -220,7 +220,7 @@ const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
               font: { size: 9 },
               callback: (value) => statusLabels[value] ?? value,
             },
-            min: 1,
+            min: 0,
             max: 2,
           },
           undefined,

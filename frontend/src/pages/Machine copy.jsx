@@ -47,6 +47,7 @@ import {
 } from '../utils/chartViewRange';
 import { parseStandardProductivity, parseHandoverDate } from '../utils/parseStandardProductivity';
 import { hasInputProductInfo, hasOutputProductInfo } from '../utils/machineProductInfo';
+import { buildStatusTimelineChart } from '../utils/machineStatusTimeline';
 
 const ALARM_TABLE_COLUMN_ORDER = ['code', 'description', 'timestamp'];
 
@@ -80,8 +81,8 @@ const toLocalDateKey = (input) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const getRollingFromDate = (minutesAgo) => {
-  const d = new Date();
+const getRollingFromDate = (minutesAgo, to = new Date()) => {
+  const d = new Date(to);
   d.setMinutes(d.getMinutes() - minutesAgo);
   return d;
 };
@@ -310,45 +311,21 @@ function Machine() {
 
   const isConnected = (lastUpdated) => isMachineConnected(lastUpdated, now);
 
-  function generateTimestampsInRange(start, end, intervalMinutes = 5) {
-  const timestamps = [];
-  const current = new Date(start);
-  while (current <= end) {
-    timestamps.push(new Date(current));
-    current.setMinutes(current.getMinutes() + intervalMinutes);
-  }
-  return timestamps;
-}
-
-
   useEffect(() => {
     const effectiveTo = new Date(now);
-    const effectiveFrom = getRollingFromDate(1440);
-
-    const rangeFiltered = rawMachineData.filter((d) => {
-      const ts = new Date(d.timestamp);
-      return ts >= effectiveFrom && ts <= effectiveTo;
-    });
-
-    rangeFiltered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-    const rangeTimestamps = generateTimestampsInRange(effectiveFrom, effectiveTo, 5);
-
-    const mappedData = rangeTimestamps.map((t) => {
-      const match = rangeFiltered.find((d) => {
-        const dataTime = new Date(d.timestamp);
-        return Math.abs(dataTime - t) < 1000 * 60 * 2.5;
-      });
-      return match ? match.status : null;
-    });
-
-    const labels = rangeTimestamps.map((t) =>
-      t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    const effectiveFrom = getRollingFromDate(1440, effectiveTo);
+    const liveStatus = statusMachine?.status ?? machineInfo?.status ?? null;
+    const { labels, mappedData } = buildStatusTimelineChart(
+      rawMachineData,
+      effectiveFrom,
+      effectiveTo,
+      5,
+      liveStatus,
     );
 
     setLabelsChart3((prev) => (chartSeriesEqual(prev, labels) ? prev : labels));
     setStatusDataValuesChart3((prev) => (chartSeriesEqual(prev, mappedData) ? prev : mappedData));
-  }, [rawMachineData, now]);
+  }, [rawMachineData, now, statusMachine?.status, machineInfo?.status]);
 
   return (
    <div className="app-page-bg" style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
