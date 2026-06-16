@@ -182,7 +182,6 @@ const ThreeGears = ({ isRunning = true }) => {
     const ctx = canvas.getContext('2d');
     const animSpeed = 0.016;
     let active = true;
-    let lastFrameMs = null;
 
     const draw = () => {
       const displayWidth = wrapper.clientWidth;
@@ -239,15 +238,12 @@ const ThreeGears = ({ isRunning = true }) => {
       ctx.restore();
     };
 
-    const loop = (frameTime) => {
+    const loop = () => {
       if (!active) return;
-      const now = frameTime ?? performance.now();
-      const deltaMs = lastFrameMs == null ? 0 : Math.min(now - lastFrameMs, 120);
-      lastFrameMs = now;
-      if (spinRef.current && deltaMs > 0) {
-        tRef.current += deltaMs / (1000 / 60);
-      }
       draw();
+      if (spinRef.current) {
+        tRef.current += 1;
+      }
       rafRef.current = requestAnimationFrame(loop);
     };
 
