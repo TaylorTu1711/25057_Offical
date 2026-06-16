@@ -62,7 +62,6 @@ const PerformanceChart = ({ performance }) => {
     >
       <Doughnut key={theme} data={data} options={options} />
       <div
-        key={`${performance}-${theme}`}
         className="notranslate machine-top-panel__stat-value machine-top-panel__stat-value--perf"
         translate="no"
         style={{
@@ -79,4 +78,4 @@ const PerformanceChart = ({ performance }) => {
   );
 };
 
-export default PerformanceChart;
+export default React.memo(PerformanceChart);

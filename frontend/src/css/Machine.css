@@ -231,6 +231,8 @@
   height: var(--machine-top-name-h);
   min-height: var(--machine-top-name-h);
   max-height: var(--machine-top-name-h);
+  contain: layout paint size style;
+  overflow: hidden;
 }
 
 .machine-top-panel__handover-date {
@@ -345,6 +347,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  contain: strict;
+}
+
+.machine-status-animated .three-gears__canvas {
+  will-change: contents;
 }
 
 .machine-status-animated svg,

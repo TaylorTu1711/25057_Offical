@@ -17,7 +17,6 @@ import { BASE_URL } from '../config/config';
 import MachineTreeSidebar from '../components/MachineTreeSidebar';
 import MachineTreeSidebarMobile from '../components/MachineTreeSidebarMobile';
 import useMachineData from '../hooks/useMachineData';
-import useLiveCumulativeRuntime from '../hooks/useLiveCumulativeRuntime';
 import useNow from '../hooks/useNow';
 import useStableMachineRunning from '../hooks/useStableMachineRunning';
 import { buildErrorStats } from '../utils/errorStats';
@@ -29,7 +28,7 @@ import {
 } from '../utils/machineStatus';
 import CumulativeRuntimeDisplay from '../components/machine/CumulativeRuntimeDisplay';
 import MachineInfoModal from '../components/machine/MachineInfoModal';
-import MachineStatusAnimated from '../components/machine/MachineStatusAnimated';
+import MachineStatusIconPanel from '../components/machine/MachineStatusIconPanel';
 import AnalysisErrorModal from '../components/machine/AnalysisErrorModal';
 import MachineTimeRangePanel from '../components/machine/MachineTimeRangePanel';
 import AutoFitMachineName from '../components/machine/AutoFitMachineName';
@@ -170,18 +169,15 @@ function Machine() {
 
 
   const currentMachineStatus =
-    machineInfo?.status ?? statusMachine?.status ?? null;
+    statusMachine?.status ?? machineInfo?.status ?? null;
   const machineIsConnected = isMachineConnected(
     machineInfo?.last_updated ?? statusMachine?.last_updated,
     now
   );
-  const machineIsRunning = machineIsConnected && isMachineRunning(currentMachineStatus);
-  const machineIsRunningForIcon = useStableMachineRunning(machineIsRunning);
-  const liveRuntimeSeconds = useLiveCumulativeRuntime(
-    totalTimeOnSeconds,
-    machineIsRunning,
-    machine_id,
-  );
+  const machineIsConnectedForIcon = useStableMachineRunning(machineIsConnected);
+  const statusRunningStable = useStableMachineRunning(isMachineRunning(currentMachineStatus));
+  const machineIsRunningForIcon = machineIsConnectedForIcon && statusRunningStable;
+  const machineIsRunningRaw = machineIsConnected && isMachineRunning(currentMachineStatus);
   const statusIconAlt = !machineIsConnected
     ? 'Mất kết nối PLC'
     : getMachineStatusLabel(currentMachineStatus);
@@ -478,10 +474,9 @@ function Machine() {
                           : ' machine-top-panel__status-icon--stopped'
                       }`}
                     >
-                      <MachineStatusAnimated
-                        key={machine_id}
+                      <MachineStatusIconPanel
                         isRunning={machineIsRunningForIcon}
-                        isConnected={machineIsConnected}
+                        isConnected={machineIsConnectedForIcon}
                         title={statusIconAlt}
                       />
                     </div>
@@ -530,7 +525,11 @@ function Machine() {
                       <p className="fw-semibold mb-0 text-brand">THỜI GIAN CHẠY LŨY KẾ</p>
                       <div className="flex-grow-1 d-flex align-items-center justify-content-center px-1">
                         {selectedMachineData ? (
-                          <CumulativeRuntimeDisplay totalSeconds={liveRuntimeSeconds} />
+                          <CumulativeRuntimeDisplay
+                            serverSeconds={totalTimeOnSeconds}
+                            isRunning={machineIsRunningRaw}
+                            machineId={machine_id}
+                          />
                         ) : (
                           <h5 className="m-0 text-dark">N/A</h5>
                         )}

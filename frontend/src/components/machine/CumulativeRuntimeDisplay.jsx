@@ -1,4 +1,5 @@
 import React from 'react';
+import useLiveCumulativeRuntime from '../../hooks/useLiveCumulativeRuntime';
 import {
   formatCumulativeRuntime,
   formatRuntimeDays,
@@ -7,7 +8,9 @@ import {
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
-const CumulativeRuntimeDisplay = ({ totalSeconds }) => {
+/** Đồng hồ thời gian chạy lũy kế — tick nội bộ, không re-render cả trang máy. */
+const CumulativeRuntimeDisplay = ({ serverSeconds, isRunning, machineId }) => {
+  const totalSeconds = useLiveCumulativeRuntime(serverSeconds, isRunning, machineId);
   const { hours, minutes, seconds } = parseRuntimeSeconds(totalSeconds);
   const label = formatCumulativeRuntime(totalSeconds);
   const daysLabel = formatRuntimeDays(totalSeconds);
@@ -47,4 +50,4 @@ const CumulativeRuntimeDisplay = ({ totalSeconds }) => {
   );
 };
 
-export default CumulativeRuntimeDisplay;
+export default React.memo(CumulativeRuntimeDisplay);

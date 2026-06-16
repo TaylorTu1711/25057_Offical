@@ -1,6 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
+import { POLL_INTERVALS } from '../../config/polling';
 
 const TAU = Math.PI * 2;
+
+/** Giữ quay thêm một nhịp poll — tránh khựng khi status nhấp nháy 1 lần. */
+const SPIN_HOLD_MS = POLL_INTERVALS.status + 800;
 
 const GEAR_COLORS = [
   { color: '#2563eb', holeStroke: '#1d4ed8' },
@@ -143,11 +147,31 @@ const ThreeGears = ({ isRunning = true }) => {
   const canvasRef = useRef(null);
   const tRef = useRef(0);
   const rafRef = useRef(null);
-  const isRunningRef = useRef(isRunning);
+  const spinRef = useRef(isRunning);
+  const spinHoldTimerRef = useRef(null);
   const canvasSizeRef = useRef({ width: 0, height: 0 });
 
   useEffect(() => {
-    isRunningRef.current = isRunning;
+    if (isRunning) {
+      if (spinHoldTimerRef.current) {
+        clearTimeout(spinHoldTimerRef.current);
+        spinHoldTimerRef.current = null;
+      }
+      spinRef.current = true;
+      return undefined;
+    }
+
+    spinHoldTimerRef.current = setTimeout(() => {
+      spinRef.current = false;
+      spinHoldTimerRef.current = null;
+    }, SPIN_HOLD_MS);
+
+    return () => {
+      if (spinHoldTimerRef.current) {
+        clearTimeout(spinHoldTimerRef.current);
+        spinHoldTimerRef.current = null;
+      }
+    };
   }, [isRunning]);
 
   useEffect(() => {
@@ -164,7 +188,7 @@ const ThreeGears = ({ isRunning = true }) => {
       const displayHeight = wrapper.clientHeight;
       if (!displayWidth || !displayHeight) return;
 
-      const running = isRunningRef.current;
+      const running = spinRef.current;
       const gears = buildGears(running);
       const cluster = getGearClusterMetrics(gears);
       const dpr = window.devicePixelRatio || 1;
@@ -217,7 +241,7 @@ const ThreeGears = ({ isRunning = true }) => {
     const loop = () => {
       if (!active) return;
       draw();
-      if (isRunningRef.current) {
+      if (spinRef.current) {
         tRef.current += 1;
       }
       rafRef.current = requestAnimationFrame(loop);
@@ -225,15 +249,8 @@ const ThreeGears = ({ isRunning = true }) => {
 
     rafRef.current = requestAnimationFrame(loop);
 
-    const observer = new ResizeObserver(() => {
-      if (!active) return;
-      draw();
-    });
-    observer.observe(wrapper);
-
     return () => {
       active = false;
-      observer.disconnect();
       cancelAnimationFrame(rafRef.current);
     };
   }, []);
@@ -249,4 +266,4 @@ const ThreeGears = ({ isRunning = true }) => {
   );
 };
 
-export default ThreeGears;
+export default memo(ThreeGears);
