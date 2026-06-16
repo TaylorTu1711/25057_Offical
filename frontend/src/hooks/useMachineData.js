@@ -8,40 +8,90 @@ import { calcUsagePerformancePct } from '../utils/machinePerformance';
 
 const normalizeDate = (iso) => new Date(iso).toISOString().split('T')[0];
 
-const buildDailyData = (data) =>
-  Object.values(
-    data.reduce((acc, item) => {
-      if (!item.timestamp) return acc;
-      const date = item.timestamp.slice(0, 10);
+/** PLC gửi product/time_on/input_material dạng lũy kế — tính sản lượng ngày = max − min (hoặc max − cuối ngày trước). */
+const buildDailyData = (data) => {
+  const buckets = data.reduce((acc, item) => {
+    if (!item.timestamp) return acc;
+    const date = item.timestamp.slice(0, 10);
 
-      if (!acc[date]) {
-        acc[date] = { min: item, max: item };
-        return acc;
+    if (!acc[date]) {
+      acc[date] = { min: item, max: item };
+      return acc;
+    }
+
+    const currentTime = new Date(item.timestamp).getTime();
+    const minTime = new Date(acc[date].min.timestamp).getTime();
+    const maxTime = new Date(acc[date].max.timestamp).getTime();
+
+    if (currentTime < minTime) acc[date].min = item;
+    if (currentTime > maxTime) acc[date].max = item;
+    return acc;
+  }, {});
+
+  const sortedDates = Object.keys(buckets).sort();
+  let prevClose = { product: 0, time_on: 0, input_material: 0 };
+  let prevDateKey = null;
+
+  return sortedDates.map((date) => {
+    const { min, max } = buckets[date];
+    const minProduct = Number(min.product) || 0;
+    const maxProduct = Number(max.product) || 0;
+    const minTimeOn = Number(min.time_on) || 0;
+    const maxTimeOn = Number(max.time_on) || 0;
+    const minInput = Number(min.input_material) || 0;
+    const maxInput = Number(max.input_material) || 0;
+
+    const outputDiff = maxProduct - minProduct;
+    const timeOnDiff = maxTimeOn - minTimeOn;
+    const inputDiff = maxInput - minInput;
+    const isSingleReading =
+      min.id != null && max.id != null
+        ? min.id === max.id
+        : min.timestamp === max.timestamp;
+
+    const calendarSpanDays = prevDateKey
+      ? Math.round(
+          (new Date(`${date}T12:00:00`).getTime() - new Date(`${prevDateKey}T12:00:00`).getTime())
+            / 86400000,
+        )
+      : 0;
+    const hasMissingDaysBetween = calendarSpanDays > 1;
+
+    const resolveDaily = (diff, minVal, maxVal, prevVal) => {
+      if (diff < 0) return maxVal;
+
+      // Nhiều bản ghi trong ngày → luôn max − min (đúng kể cả khi thiếu ngày ở giữa, vd. 25 rồi 27).
+      if (!isSingleReading) {
+        if (minVal + 1e-6 < prevVal) return Math.max(0, maxVal - prevVal);
+        return diff;
       }
 
-      const currentTime = new Date(item.timestamp).getTime();
-      const minTime = new Date(acc[date].min.timestamp).getTime();
-      const maxTime = new Date(acc[date].max.timestamp).getTime();
+      // Chỉ 1 bản ghi trong ngày — cần mốc ngày trước.
+      if (!prevDateKey) return 0;
 
-      if (currentTime < minTime) acc[date].min = item;
-      if (currentTime > maxTime) acc[date].max = item;
-      return acc;
-    }, {})
-  ).map(({ min, max }) => {
-    const outputDiff = (Number(max.product) || 0) - (Number(min.product) || 0);
-    const timeOnDiff = (Number(max.time_on) || 0) - (Number(min.time_on) || 0);
-    const inputDiff = (Number(max.input_material) || 0) - (Number(min.input_material) || 0);
-    const isSingleReading = min.timestamp === max.timestamp;
+      // Thiếu ngày ở giữa (vd. có 25, 27 không có 26): không tách được từng ngày → không gán vào cột 27.
+      if (hasMissingDaysBetween) return 0;
+
+      return Math.max(0, maxVal - prevVal);
+    };
+
+    const product = resolveDaily(outputDiff, minProduct, maxProduct, prevClose.product);
+    const time_on = resolveDaily(timeOnDiff, minTimeOn, maxTimeOn, prevClose.time_on);
+    const input_material = resolveDaily(inputDiff, minInput, maxInput, prevClose.input_material);
+
+    prevClose = { product: maxProduct, time_on: maxTimeOn, input_material: maxInput };
+    prevDateKey = date;
 
     return {
       ...max,
-      product: isSingleReading ? Number(max.product) || 0 : outputDiff < 0 ? Number(max.product) : outputDiff,
-      time_on: isSingleReading ? Number(max.time_on) || 0 : timeOnDiff < 0 ? Number(max.time_on) : timeOnDiff,
-      input_material: isSingleReading ? Number(max.input_material) || 0 : inputDiff < 0 ? Number(max.input_material) : inputDiff,
+      product,
+      time_on,
+      input_material,
       min_timestamp: min.timestamp,
       max_timestamp: max.timestamp,
     };
   });
+};
 
 const buildPerformance = (dailyData, rawData) => {
   const totalTimeOnSeconds = dailyData.reduce(

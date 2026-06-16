@@ -153,6 +153,7 @@ export async function saveProductionRow(pool, tableName, machineId, row) {
     return { saved: true, action: 'insert', reason: 'new_interval' };
   }
 
+  // Đã có ≥2 dòng: giữ bản ghi đầu ngày (min), chỉ cập nhật bản ghi mới nhất (max).
   if (withinWindow) {
     if (unchanged) {
       return { saved: false, action: 'skip', reason: 'unchanged_within_window' };
