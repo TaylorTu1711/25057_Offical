@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, startTransition } from 'react';
 import axios from 'axios';
 import { BASE_URL } from '../config/config';
 import { POLL_INTERVALS } from '../config/polling';
@@ -182,9 +182,11 @@ export default function useMachineData(machineId) {
     const res = await axios.get(`${BASE_URL}/api/status?machine_id=${machineId}`);
     const row = res.data?.[0];
     if (!row) return;
-    setStatusMachine({
-      ...row,
-      status: row.status != null ? Number(row.status) : row.status,
+    startTransition(() => {
+      setStatusMachine({
+        ...row,
+        status: row.status != null ? Number(row.status) : row.status,
+      });
     });
   }, [machineId]);
 
@@ -193,9 +195,11 @@ export default function useMachineData(machineId) {
     const res = await axios.get(`${BASE_URL}/api/machines/${machineId}`);
     const row = res.data?.[0];
     if (!row) return;
-    setMachineInfo({
-      ...row,
-      status: row.status != null ? Number(row.status) : row.status,
+    startTransition(() => {
+      setMachineInfo({
+        ...row,
+        status: row.status != null ? Number(row.status) : row.status,
+      });
     });
   }, [machineId]);
 
@@ -216,13 +220,22 @@ export default function useMachineData(machineId) {
     const uniqueErrors = sortedData.filter(
       (error, index, self) => index === self.findIndex((e) => e.timestamp === error.timestamp)
     );
-    setErrorsMachine(uniqueErrors);
-    setAllErrorsMachine(data);
+    const run = () => {
+      const stats = buildErrorStats(data);
+      startTransition(() => {
+        setErrorsMachine(uniqueErrors);
+        setAllErrorsMachine(data);
+        setLabelsChartErr(stats.labels);
+        setTooltipLabelsChartErr(stats.tooltipLabels);
+        setDataValuesChartErr(stats.dataValues);
+      });
+    };
 
-    const stats = buildErrorStats(data);
-    setLabelsChartErr(stats.labels);
-    setTooltipLabelsChartErr(stats.tooltipLabels);
-    setDataValuesChartErr(stats.dataValues);
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(run, { timeout: 80 });
+    } else {
+      setTimeout(run, 0);
+    }
   }, [machineId]);
 
   const applyMachineParams = useCallback((data) => {
@@ -230,15 +243,25 @@ export default function useMachineData(machineId) {
     if (data.length === 0 && hasChartDataRef.current) return;
 
     hasChartDataRef.current = data.length > 0;
-    setRawMachineData(data);
-    const dailyData = buildDailyData(data);
-    setRawData(dailyData);
 
-    const perf = buildPerformance(dailyData, data);
-    setTotalTimeOn(perf.totalTimeOn);
-    setTotalTimeOnSeconds(perf.totalTimeOnSeconds);
-    setShootMachine(perf.shootMachine);
-    setPerformanceMachine(perf.performanceMachine);
+    const run = () => {
+      const dailyData = buildDailyData(data);
+      const perf = buildPerformance(dailyData, data);
+      startTransition(() => {
+        setRawMachineData(data);
+        setRawData(dailyData);
+        setTotalTimeOn(perf.totalTimeOn);
+        setTotalTimeOnSeconds(perf.totalTimeOnSeconds);
+        setShootMachine(perf.shootMachine);
+        setPerformanceMachine(perf.performanceMachine);
+      });
+    };
+
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(run, { timeout: 80 });
+    } else {
+      setTimeout(run, 0);
+    }
   }, []);
 
   const fetchMachineParams = useCallback(

@@ -6,7 +6,7 @@ import LineChart_TimeOn from '../components/BarChart_Thoigian';
 import BarChartStatus from '../components/BarChart_Status';
 import BarChart_LoiTheoNgay from '../components/BarChart_LoiTheoNgay';
 import BarChart_AnalysisError from '../components/BarChart_AnalysisError';
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, startTransition, useDeferredValue } from 'react';
 import { useParams, useNavigate  } from 'react-router-dom';
 import AppNavbar from '../components/Navbar';
 import PerformanceChart from '../components/PerformanceChart';
@@ -28,7 +28,7 @@ import {
 } from '../utils/machineStatus';
 import CumulativeRuntimeDisplay from '../components/machine/CumulativeRuntimeDisplay';
 import MachineInfoModal from '../components/machine/MachineInfoModal';
-import MachineStatusIconPanel from '../components/machine/MachineStatusIconPanel';
+import MachineStatusIconPanel, { MachineStatusIconProvider } from '../components/machine/MachineStatusIconPanel';
 import AnalysisErrorModal from '../components/machine/AnalysisErrorModal';
 import MachineTimeRangePanel from '../components/machine/MachineTimeRangePanel';
 import AutoFitMachineName from '../components/machine/AutoFitMachineName';
@@ -47,6 +47,7 @@ import {
 } from '../utils/chartViewRange';
 import { parseStandardProductivity, parseHandoverDate } from '../utils/parseStandardProductivity';
 import { hasInputProductInfo, hasOutputProductInfo } from '../utils/machineProductInfo';
+import { buildStatusTimelineChart } from '../utils/machineStatusTimeline';
 
 const ALARM_TABLE_COLUMN_ORDER = ['code', 'description', 'timestamp'];
 
@@ -80,8 +81,8 @@ const toLocalDateKey = (input) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const getRollingFromDate = (minutesAgo) => {
-  const d = new Date();
+const getRollingFromDate = (minutesAgo, to = new Date()) => {
+  const d = new Date(to);
   d.setMinutes(d.getMinutes() - minutesAgo);
   return d;
 };
@@ -117,6 +118,10 @@ function Machine() {
     isLoading,
     handleBootData,
   } = machineData;
+
+  const deferredRawMachineData = useDeferredValue(rawMachineData);
+  const deferredRawData = useDeferredValue(rawData);
+  const deferredAllErrorsMachine = useDeferredValue(allErrorsMachine);
 
   const {
     widthsPercent: alarmColWidths,
@@ -181,6 +186,15 @@ function Machine() {
   const statusIconAlt = !machineIsConnected
     ? 'Mất kết nối PLC'
     : getMachineStatusLabel(currentMachineStatus);
+
+  const machineStatusIconProps = useMemo(
+    () => ({
+      isRunning: machineIsRunningForIcon,
+      isConnected: machineIsConnectedForIcon,
+      title: statusIconAlt,
+    }),
+    [machineIsRunningForIcon, machineIsConnectedForIcon, statusIconAlt],
+  );
 
 
   const offcanvasRef = useRef(null);
@@ -271,84 +285,61 @@ function Machine() {
   }, []);
 
   useEffect(() => {
-    if (!selectedDay || !rawData.length) return;
+    if (!selectedDay || !deferredRawData.length) return;
 
-    // Lọc dữ liệu trong ngày được chọn
-    const dataInDay = rawData.filter(
+    const dataInDay = deferredRawData.filter(
       (d) => new Date(d.timestamp).toISOString().slice(0, 10) === selectedDay
     );
 
-    // Tìm dữ liệu mới nhất trong ngày đó (timestamp lớn nhất)
     const latestData = dataInDay.reduce((latest, current) =>
       new Date(current.timestamp) > new Date(latest.timestamp) ? current : latest
-    , dataInDay[0]); // giá trị khởi đầu
-    setSelectedMachineData(latestData);
-  }, [selectedDay, rawData]);
+    , dataInDay[0]);
+    startTransition(() => {
+      setSelectedMachineData(latestData);
+    });
+  }, [selectedDay, deferredRawData]);
 
   useEffect(() => {
-    const productivity = buildProductivitySeries(rawData, chartViewMode, chartSelection);
-    const time = buildTimeSeries(rawData, chartViewMode, chartSelection);
-    const errors = buildErrorSeries(allErrorsMachine, chartViewMode, chartSelection);
+    const productivity = buildProductivitySeries(deferredRawData, chartViewMode, chartSelection);
+    const time = buildTimeSeries(deferredRawData, chartViewMode, chartSelection);
+    const errors = buildErrorSeries(deferredAllErrorsMachine, chartViewMode, chartSelection);
 
-    setChartLabels((prev) => (chartSeriesEqual(prev, productivity.labels) ? prev : productivity.labels));
-    setProductivityOutputValues((prev) =>
-      chartSeriesEqual(prev, productivity.output) ? prev : productivity.output,
-    );
-    setProductivityInputValues((prev) =>
-      chartSeriesEqual(prev, productivity.input) ? prev : productivity.input,
-    );
-    setTimeRunValues((prev) => (chartSeriesEqual(prev, time.timeRun) ? prev : time.timeRun));
-    setPerformanceValues((prev) =>
-      chartSeriesEqual(prev, time.performance) ? prev : time.performance,
-    );
-    setOutputRateValues((prev) =>
-      chartSeriesEqual(prev, time.outputRate) ? prev : time.outputRate,
-    );
-    setErrorChartLabels((prev) => (chartSeriesEqual(prev, errors.labels) ? prev : errors.labels));
-    setErrorChartValues((prev) => (chartSeriesEqual(prev, errors.values) ? prev : errors.values));
-  }, [rawData, allErrorsMachine, chartViewMode, chartSelection]);
+    startTransition(() => {
+      setChartLabels((prev) => (chartSeriesEqual(prev, productivity.labels) ? prev : productivity.labels));
+      setProductivityOutputValues((prev) =>
+        chartSeriesEqual(prev, productivity.output) ? prev : productivity.output,
+      );
+      setProductivityInputValues((prev) =>
+        chartSeriesEqual(prev, productivity.input) ? prev : productivity.input,
+      );
+      setTimeRunValues((prev) => (chartSeriesEqual(prev, time.timeRun) ? prev : time.timeRun));
+      setPerformanceValues((prev) =>
+        chartSeriesEqual(prev, time.performance) ? prev : time.performance,
+      );
+      setOutputRateValues((prev) =>
+        chartSeriesEqual(prev, time.outputRate) ? prev : time.outputRate,
+      );
+      setErrorChartLabels((prev) => (chartSeriesEqual(prev, errors.labels) ? prev : errors.labels));
+      setErrorChartValues((prev) => (chartSeriesEqual(prev, errors.values) ? prev : errors.values));
+    });
+  }, [deferredRawData, deferredAllErrorsMachine, chartViewMode, chartSelection]);
 
   const isConnected = (lastUpdated) => isMachineConnected(lastUpdated, now);
 
-  function generateTimestampsInRange(start, end, intervalMinutes = 5) {
-  const timestamps = [];
-  const current = new Date(start);
-  while (current <= end) {
-    timestamps.push(new Date(current));
-    current.setMinutes(current.getMinutes() + intervalMinutes);
-  }
-  return timestamps;
-}
-
-
   useEffect(() => {
-    const effectiveTo = new Date(now);
-    const effectiveFrom = getRollingFromDate(1440);
-
-    const rangeFiltered = rawMachineData.filter((d) => {
-      const ts = new Date(d.timestamp);
-      return ts >= effectiveFrom && ts <= effectiveTo;
-    });
-
-    rangeFiltered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-    const rangeTimestamps = generateTimestampsInRange(effectiveFrom, effectiveTo, 5);
-
-    const mappedData = rangeTimestamps.map((t) => {
-      const match = rangeFiltered.find((d) => {
-        const dataTime = new Date(d.timestamp);
-        return Math.abs(dataTime - t) < 1000 * 60 * 2.5;
-      });
-      return match ? match.status : null;
-    });
-
-    const labels = rangeTimestamps.map((t) =>
-      t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    const effectiveTo = new Date();
+    const effectiveFrom = getRollingFromDate(1440, effectiveTo);
+    const { labels, mappedData } = buildStatusTimelineChart(
+      deferredRawMachineData,
+      effectiveFrom,
+      effectiveTo,
     );
 
-    setLabelsChart3((prev) => (chartSeriesEqual(prev, labels) ? prev : labels));
-    setStatusDataValuesChart3((prev) => (chartSeriesEqual(prev, mappedData) ? prev : mappedData));
-  }, [rawMachineData, now]);
+    startTransition(() => {
+      setLabelsChart3((prev) => (chartSeriesEqual(prev, labels) ? prev : labels));
+      setStatusDataValuesChart3((prev) => (chartSeriesEqual(prev, mappedData) ? prev : mappedData));
+    });
+  }, [deferredRawMachineData]);
 
   return (
    <div className="app-page-bg" style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
@@ -474,11 +465,9 @@ function Machine() {
                           : ' machine-top-panel__status-icon--stopped'
                       }`}
                     >
-                      <MachineStatusIconPanel
-                        isRunning={machineIsRunningForIcon}
-                        isConnected={machineIsConnectedForIcon}
-                        title={statusIconAlt}
-                      />
+                      <MachineStatusIconProvider {...machineStatusIconProps}>
+                        <MachineStatusIconPanel />
+                      </MachineStatusIconProvider>
                     </div>
                   </div>
                 </div>
