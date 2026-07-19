@@ -60,3 +60,79 @@ export function buildStatusTimelineChart(
 
   return { labels, mappedData };
 }
+
+/**
+ * Biểu đồ công suất / dòng điện realtime 24h — forward-fill theo mẫu telemetry.
+ * livePower / liveCurrent: giá trị hiện tại (điểm cuối cửa sổ).
+ */
+export function buildPowerCurrentTimelineChart(
+  rawMachineData,
+  effectiveFrom,
+  effectiveTo,
+  intervalMinutes = 5,
+  livePower = null,
+  liveCurrent = null,
+) {
+  const fromMs = effectiveFrom.getTime();
+  const toMs = effectiveTo.getTime();
+
+  const allSorted = (Array.isArray(rawMachineData) ? rawMachineData : [])
+    .filter((d) => d?.timestamp)
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  const toPower = (row) => {
+    const v = Number(row?.power);
+    return Number.isFinite(v) ? v : null;
+  };
+  const toCurrent = (row) => {
+    const v = Number(row?.avg_a ?? row?.current);
+    return Number.isFinite(v) ? v : null;
+  };
+
+  let lastPower = null;
+  let lastCurrent = null;
+
+  for (const d of allSorted) {
+    const ts = new Date(d.timestamp).getTime();
+    if (ts >= fromMs) break;
+    const p = toPower(d);
+    const c = toCurrent(d);
+    if (p != null) lastPower = p;
+    if (c != null) lastCurrent = c;
+  }
+
+  const rangeFiltered = allSorted.filter((d) => {
+    const ts = new Date(d.timestamp).getTime();
+    return ts >= fromMs && ts <= toMs;
+  });
+
+  const rangeTimestamps = generateTimestampsInRange(effectiveFrom, effectiveTo, intervalMinutes);
+  let ptr = 0;
+
+  const power = [];
+  const current = [];
+
+  rangeTimestamps.forEach((t) => {
+    const tMs = t.getTime();
+    while (ptr < rangeFiltered.length && new Date(rangeFiltered[ptr].timestamp).getTime() <= tMs) {
+      const p = toPower(rangeFiltered[ptr]);
+      const c = toCurrent(rangeFiltered[ptr]);
+      if (p != null) lastPower = p;
+      if (c != null) lastCurrent = c;
+      ptr += 1;
+    }
+    power.push(lastPower);
+    current.push(lastCurrent);
+  });
+
+  if (power.length > 0) {
+    if (Number.isFinite(Number(livePower))) power[power.length - 1] = Number(livePower);
+    if (Number.isFinite(Number(liveCurrent))) current[current.length - 1] = Number(liveCurrent);
+  }
+
+  const labels = rangeTimestamps.map((t) =>
+    t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+  );
+
+  return { labels, power, current };
+}

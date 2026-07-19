@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trash2 } from 'lucide-react';
 
 export default function MachineInfoModal({
   open,
@@ -6,6 +7,8 @@ export default function MachineInfoModal({
   isConnected,
   onClose,
   onBoot,
+  onDelete,
+  deleting = false,
 }) {
   if (!open) return null;
 
@@ -66,13 +69,29 @@ export default function MachineInfoModal({
           </div>
         </div>
 
-        <div className="d-flex justify-content-end mt-4 gap-2 flex-wrap">
-          <button type="button" className="btn app-modal-btn-primary px-3" onClick={onBoot}>
-            Boot
-          </button>
-          <button type="button" className="btn btn-secondary px-4" onClick={onClose}>
-            Đóng
-          </button>
+        <div className="d-flex justify-content-between align-items-center mt-4 gap-2 flex-wrap">
+          {typeof onDelete === 'function' ? (
+            <button
+              type="button"
+              className="btn btn-outline-danger px-3 d-inline-flex align-items-center gap-2"
+              onClick={onDelete}
+              disabled={deleting}
+              aria-label="Xoá máy"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              {deleting ? 'Đang xoá...' : 'Xoá máy'}
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="d-flex gap-2 flex-wrap ms-auto">
+            <button type="button" className="btn app-modal-btn-primary px-3" onClick={onBoot}>
+              Boot
+            </button>
+            <button type="button" className="btn btn-secondary px-4" onClick={onClose}>
+              Đóng
+            </button>
+          </div>
         </div>
       </div>
     </div>

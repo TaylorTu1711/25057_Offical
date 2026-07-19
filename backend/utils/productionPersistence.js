@@ -26,7 +26,7 @@ function valuesEqual(a, b) {
  * - Trong cửa sổ interval: UPDATE bản ghi mới nhất (max), giữ nguyên timestamp (mốc bucket).
  * - Hết cửa sổ: INSERT bản ghi mới (mẫu ~5 phút cho biểu đồ trạng thái 24h).
  */
-export async function saveProductionRow(pool, tableName, machineId, row) {
+export async function saveProductionRow(pool, tableName, machineId, row, registryTable = 'machines') {
   const {
     nr,
     timestamp,
@@ -87,7 +87,7 @@ export async function saveProductionRow(pool, tableName, machineId, row) {
 
   if (fields.status == null) {
     const { rows: machineRows } = await pool.query(
-      `SELECT status FROM machines WHERE machine_id = $1`,
+      `SELECT status FROM ${registryTable} WHERE machine_id = $1`,
       [machineId],
     );
     if (machineRows[0]?.status != null && machineRows[0]?.status !== '') {

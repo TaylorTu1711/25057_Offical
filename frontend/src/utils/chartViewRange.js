@@ -337,22 +337,27 @@ export function buildProductivitySeries(rawData, viewMode, selection = {}) {
 }
 
 export function buildTimeSeries(rawData, viewMode, selection = {}) {
+  const rowEnergyKwh = (row) => Number(row.power_consumption ?? row.shoot ?? 0) || 0;
+
   if (viewMode === CHART_VIEW_MODES.day) {
     const { from, to, year, month } = getSelectionRange(viewMode, selection);
     const filtered = filterInRange(rawData, from, to);
     const days = getDaysInMonth(year, month - 1);
     const timeMap = {};
+    const energyMap = {};
     const outputMap = {};
 
     filtered.forEach((row) => {
       const key = toLocalDateKey(row.timestamp);
       timeMap[key] = (row.time_on ?? 0) / 3600;
+      energyMap[key] = rowEnergyKwh(row);
       outputMap[key] = row.product ?? 0;
     });
 
     return {
       labels: days.map(formatDayLabel),
       timeRun: days.map((d) => timeMap[toLocalDateKey(d)] ?? 0),
+      energyKwh: days.map((d) => energyMap[toLocalDateKey(d)] ?? 0),
       performance: days.map((d) => calcPerformancePct(timeMap[toLocalDateKey(d)] ?? 0, 1)),
       outputRate: days.map((d) => {
         const key = toLocalDateKey(d);
@@ -366,18 +371,21 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
     const filtered = filterInRange(rawData, from, to);
     const monthKeys = getMonthKeysInYear(year);
     const timeMap = {};
+    const energyMap = {};
     const outputMap = {};
 
     filtered.forEach((row) => {
       const ts = new Date(row.timestamp);
       const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
       timeMap[key] = (timeMap[key] || 0) + (row.time_on ?? 0) / 3600;
+      energyMap[key] = (energyMap[key] || 0) + rowEnergyKwh(row);
       outputMap[key] = (outputMap[key] || 0) + (row.product ?? 0);
     });
 
     return {
       labels: monthKeys.map(formatMonthLabel),
       timeRun: monthKeys.map((key) => timeMap[key] ?? 0),
+      energyKwh: monthKeys.map((key) => energyMap[key] ?? 0),
       performance: monthKeys.map((key) => {
         const [, month] = key.split('-');
         const daysInMonth = new Date(year, parseInt(month, 10), 0).getDate();
@@ -397,18 +405,21 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
       const months = getMonthsInRange(from, to);
       const spansMultipleYears = new Set(months.map((m) => m.year)).size > 1;
       const timeMap = {};
+      const energyMap = {};
       const outputMap = {};
 
       filtered.forEach((row) => {
         const ts = new Date(row.timestamp);
         const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
         timeMap[key] = (timeMap[key] || 0) + (row.time_on ?? 0) / 3600;
+        energyMap[key] = (energyMap[key] || 0) + rowEnergyKwh(row);
         outputMap[key] = (outputMap[key] || 0) + (row.product ?? 0);
       });
 
       return {
         labels: months.map((m) => formatRangeMonthLabel(m, spansMultipleYears)),
         timeRun: months.map((m) => timeMap[m.key] ?? 0),
+        energyKwh: months.map((m) => energyMap[m.key] ?? 0),
         performance: months.map((m) =>
           calcPerformancePct(
             timeMap[m.key] ?? 0,
@@ -423,17 +434,20 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
 
     const days = getDaysInRange(from, to);
     const timeMap = {};
+    const energyMap = {};
     const outputMap = {};
 
     filtered.forEach((row) => {
       const key = toLocalDateKey(row.timestamp);
       timeMap[key] = (row.time_on ?? 0) / 3600;
+      energyMap[key] = rowEnergyKwh(row);
       outputMap[key] = row.product ?? 0;
     });
 
     return {
       labels: days.map((d) => formatRangeDayLabel(d, days.length)),
       timeRun: days.map((d) => timeMap[toLocalDateKey(d)] ?? 0),
+      energyKwh: days.map((d) => energyMap[toLocalDateKey(d)] ?? 0),
       performance: days.map((d) => calcPerformancePct(timeMap[toLocalDateKey(d)] ?? 0, 1)),
       outputRate: days.map((d) => {
         const key = toLocalDateKey(d);
@@ -446,17 +460,20 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
   const years = getYearKeysFromData(rawData, [], new Date());
   const filtered = filterInRange(rawData, from, to);
   const timeMap = {};
+  const energyMap = {};
   const outputMap = {};
 
   filtered.forEach((row) => {
     const y = new Date(row.timestamp).getFullYear();
     timeMap[y] = (timeMap[y] || 0) + (row.time_on ?? 0) / 3600;
+    energyMap[y] = (energyMap[y] || 0) + rowEnergyKwh(row);
     outputMap[y] = (outputMap[y] || 0) + (row.product ?? 0);
   });
 
   return {
     labels: years.map(formatYearLabel),
     timeRun: years.map((y) => timeMap[y] ?? 0),
+    energyKwh: years.map((y) => energyMap[y] ?? 0),
     performance: years.map((y) => {
       const isLeap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
       return calcPerformancePct(timeMap[y] ?? 0, isLeap ? 366 : 365);
@@ -551,6 +568,125 @@ export function buildErrorSeries(allErrors, viewMode, selection = {}) {
   return {
     labels: years.map(formatYearLabel),
     values: years.map((y) => countMap[y] ?? 0),
+  };
+}
+
+const avgBucket = (sum, count) => (count > 0 ? sum / count : 0);
+
+const pushElectricalSample = (map, key, row) => {
+  if (!map[key]) map[key] = { powerSum: 0, currentSum: 0, count: 0 };
+  map[key].powerSum += Number(row.power) || 0;
+  map[key].currentSum += Number(row.avg_a) || 0;
+  map[key].count += 1;
+};
+
+/**
+ * Trung bình công suất (kW) và dòng (A) theo chế độ xem — telemetry CNC thô.
+ */
+export function buildPowerCurrentSeries(rawRows = [], viewMode, selection = {}) {
+  const rows = Array.isArray(rawRows) ? rawRows : [];
+
+  if (viewMode === CHART_VIEW_MODES.day) {
+    const { from, to, year, month } = getSelectionRange(viewMode, selection);
+    const filtered = filterInRange(rows, from, to);
+    const days = getDaysInMonth(year, month - 1);
+    const map = {};
+    filtered.forEach((row) => pushElectricalSample(map, toLocalDateKey(row.timestamp), row));
+    return {
+      labels: days.map(formatDayLabel),
+      power: days.map((d) => {
+        const b = map[toLocalDateKey(d)];
+        return b ? avgBucket(b.powerSum, b.count) : 0;
+      }),
+      current: days.map((d) => {
+        const b = map[toLocalDateKey(d)];
+        return b ? avgBucket(b.currentSum, b.count) : 0;
+      }),
+    };
+  }
+
+  if (viewMode === CHART_VIEW_MODES.month) {
+    const { from, to, year } = getSelectionRange(viewMode, selection);
+    const filtered = filterInRange(rows, from, to);
+    const monthKeys = getMonthKeysInYear(year);
+    const map = {};
+    filtered.forEach((row) => {
+      const ts = new Date(row.timestamp);
+      const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
+      pushElectricalSample(map, key, row);
+    });
+    return {
+      labels: monthKeys.map(formatMonthLabel),
+      power: monthKeys.map((key) => {
+        const b = map[key];
+        return b ? avgBucket(b.powerSum, b.count) : 0;
+      }),
+      current: monthKeys.map((key) => {
+        const b = map[key];
+        return b ? avgBucket(b.currentSum, b.count) : 0;
+      }),
+    };
+  }
+
+  if (viewMode === CHART_VIEW_MODES.range) {
+    const { from, to } = getSelectionRange(viewMode, selection);
+    const filtered = filterInRange(rows, from, to);
+
+    if (isRangeByMonth(selection)) {
+      const months = getMonthsInRange(from, to);
+      const spansMultipleYears = new Set(months.map((m) => m.year)).size > 1;
+      const map = {};
+      filtered.forEach((row) => {
+        const ts = new Date(row.timestamp);
+        const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
+        pushElectricalSample(map, key, row);
+      });
+      return {
+        labels: months.map((m) => formatRangeMonthLabel(m, spansMultipleYears)),
+        power: months.map((m) => {
+          const b = map[m.key];
+          return b ? avgBucket(b.powerSum, b.count) : 0;
+        }),
+        current: months.map((m) => {
+          const b = map[m.key];
+          return b ? avgBucket(b.currentSum, b.count) : 0;
+        }),
+      };
+    }
+
+    const days = getDaysInRange(from, to);
+    const map = {};
+    filtered.forEach((row) => pushElectricalSample(map, toLocalDateKey(row.timestamp), row));
+    return {
+      labels: days.map((d) => formatRangeDayLabel(d, days.length)),
+      power: days.map((d) => {
+        const b = map[toLocalDateKey(d)];
+        return b ? avgBucket(b.powerSum, b.count) : 0;
+      }),
+      current: days.map((d) => {
+        const b = map[toLocalDateKey(d)];
+        return b ? avgBucket(b.currentSum, b.count) : 0;
+      }),
+    };
+  }
+
+  const years = getYearKeysFromData(rows, [], new Date());
+  const map = {};
+  rows.forEach((row) => {
+    const y = new Date(row.timestamp).getFullYear();
+    if (!Number.isFinite(y)) return;
+    pushElectricalSample(map, String(y), row);
+  });
+  return {
+    labels: years.map(formatYearLabel),
+    power: years.map((y) => {
+      const b = map[String(y)];
+      return b ? avgBucket(b.powerSum, b.count) : 0;
+    }),
+    current: years.map((y) => {
+      const b = map[String(y)];
+      return b ? avgBucket(b.currentSum, b.count) : 0;
+    }),
   };
 }
 

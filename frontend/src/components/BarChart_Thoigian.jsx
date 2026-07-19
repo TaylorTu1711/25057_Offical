@@ -12,6 +12,8 @@ import {
   getOutputRateLineStyle,
   createTimeBarGradient,
   createTimeBarHoverGradient,
+  createNeonBarGradient,
+  createNeonBarHoverGradient,
   NEON_BAR_GRADIENTS,
   themedScale,
   themedXScale,
@@ -19,7 +21,6 @@ import {
   getCategoryXAxisTickOptions,
   getChartLegendOptions,
   getCategoryTooltipTitleCallback,
-  formatChartTooltipValue,
   getBarColumnDataLabelOptions,
   TIME_CHART_COLORS,
 } from '../utils/chartTheme';
@@ -52,15 +53,19 @@ ChartJS.register(
 const LineChart_TimeOn = ({
   labels,
   line3,
+  energyKwhValues,
   performanceValues,
   outputRateValues,
   standardProductivity,
   xTickMode = 'month',
   categoryPrefix = '',
+  /** 'bar' (mặc định) | 'line' — MIDA dùng line */
+  timeSeriesType = 'bar',
 }) => {
   const { theme } = useTheme();
   const performanceLine = useMemo(() => getPerformanceLineStyle(), []);
   const timeBarPalette = NEON_BAR_GRADIENTS.neonPink;
+  const energyBarPalette = NEON_BAR_GRADIENTS.cyanBlue;
   const outputRateLine = useMemo(() => getOutputRateLineStyle(), []);
   const standardLine = useMemo(() => getStandardProductivityLineStyle(), []);
   const labelCount = labels?.length ?? 0;
@@ -75,45 +80,112 @@ const LineChart_TimeOn = ({
     !hasStandard &&
     Array.isArray(performanceValues) &&
     performanceValues.length === labels.length;
+  const hasEnergy =
+    !hasOutputRate &&
+    !hasPerformance &&
+    Array.isArray(energyKwhValues) &&
+    energyKwhValues.length === labels.length;
 
   const { chartRef, zoomPluginOptions } = useChartZoomPreserve(
-    [labels, line3, performanceValues, outputRateValues, standardProductivity?.value],
+    [labels, line3, energyKwhValues, performanceValues, outputRateValues, standardProductivity?.value],
     'x',
   );
 
   const y1Max = useMemo(() => {
+    if (hasEnergy) {
+      const vals = energyKwhValues.filter((v) => v != null && Number.isFinite(Number(v)));
+      const peak = Math.max(...vals.map(Number), 0);
+      if (peak <= 0) return 1;
+      return Math.ceil(peak * 1.15 * 10) / 10;
+    }
     if (!hasStandard) return 100;
     const rates = outputRateValues.filter((v) => v != null && Number.isFinite(v));
     const peak = Math.max(...rates, standardProductivity.value, 0.5);
     return Math.ceil(peak * 1.2 * 10) / 10;
-  }, [hasStandard, outputRateValues, standardProductivity?.value]);
+  }, [hasEnergy, hasStandard, energyKwhValues, outputRateValues, standardProductivity?.value]);
 
   const data = useMemo(() => {
-    const datasets = [
-      {
+    const useLine = timeSeriesType === 'line';
+    const datasets = [];
+
+    const timeDataset = useLine
+      ? {
+          type: 'line',
+          label: 'Thời gian chạy (giờ)',
+          data: line3,
+          yAxisID: 'y',
+          borderColor: timeBarPalette.border,
+          backgroundColor: timeBarPalette.top,
+          borderWidth: 2.5,
+          tension: 0.35,
+          fill: false,
+          clip: false,
+          spanGaps: true,
+          pointRadius: labelCount <= 48 ? 2.5 : 0,
+          pointHoverRadius: 5,
+          pointHitRadius: 12,
+          pointBackgroundColor: timeBarPalette.border,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1,
+          pointHoverBackgroundColor: timeBarPalette.border,
+          pointHoverBorderColor: '#fff',
+          pointHoverBorderWidth: 1.5,
+          datalabels: { display: false },
+          // Chart.js vẽ ngược order: số nhỏ hơn → vẽ sau → nằm trên cột
+          order: 0,
+        }
+      : {
+          type: 'bar',
+          label: 'Thời gian chạy (giờ)',
+          data: line3,
+          yAxisID: 'y',
+          backgroundColor: (context) => {
+            const { chart } = context;
+            const { ctx, chartArea } = chart;
+            return createTimeBarGradient(ctx, chartArea);
+          },
+          borderColor: timeBarPalette.border,
+          borderWidth: 1,
+          borderRadius: { topLeft: 3, topRight: 3 },
+          hoverBackgroundColor: (context) => {
+            const { chart } = context;
+            const { ctx, chartArea } = chart;
+            return createTimeBarHoverGradient(ctx, chartArea);
+          },
+          hoverBorderColor: timeBarPalette.border,
+          hoverBorderWidth: 2,
+          datalabels: getBarColumnDataLabelOptions(TIME_CHART_COLORS.barDataLabel),
+          order: 0,
+        };
+
+    // Thời gian trước trong legend; cột điện năng order cao hơn → vẽ trước (nằm dưới)
+    datasets.push(timeDataset);
+
+    if (hasEnergy) {
+      datasets.push({
         type: 'bar',
-        label: 'Thời gian chạy (giờ)',
-        data: line3,
-        yAxisID: 'y',
+        label: 'Điện năng tiêu thụ (kWh)',
+        data: energyKwhValues,
+        yAxisID: 'y1',
         backgroundColor: (context) => {
           const { chart } = context;
           const { ctx, chartArea } = chart;
-          return createTimeBarGradient(ctx, chartArea);
+          return createNeonBarGradient(ctx, chartArea, energyBarPalette);
         },
-        borderColor: timeBarPalette.border,
+        borderColor: energyBarPalette.border,
         borderWidth: 1,
         borderRadius: { topLeft: 3, topRight: 3 },
         hoverBackgroundColor: (context) => {
           const { chart } = context;
           const { ctx, chartArea } = chart;
-          return createTimeBarHoverGradient(ctx, chartArea);
+          return createNeonBarHoverGradient(ctx, chartArea, energyBarPalette);
         },
-        hoverBorderColor: timeBarPalette.border,
+        hoverBorderColor: energyBarPalette.border,
         hoverBorderWidth: 2,
-        datalabels: getBarColumnDataLabelOptions(TIME_CHART_COLORS.barDataLabel),
-        order: 3,
-      },
-    ];
+        datalabels: { display: false },
+        order: 1,
+      });
+    }
 
     if (hasOutputRate) {
       datasets.push({
@@ -184,18 +256,27 @@ const LineChart_TimeOn = ({
   }, [
     labels,
     line3,
+    energyKwhValues,
+    labelCount,
     performanceValues,
     outputRateValues,
+    hasEnergy,
     hasPerformance,
     hasOutputRate,
     performanceLine,
     timeBarPalette,
+    energyBarPalette,
     outputRateLine,
     standardLine,
     standardProductivity,
+    timeSeriesType,
   ]);
 
-  const rightAxisStyle = hasStandard ? outputRateLine : performanceLine;
+  const rightAxisStyle = hasEnergy
+    ? { axisColor: energyBarPalette.border }
+    : hasStandard
+      ? outputRateLine
+      : performanceLine;
 
   const options = useMemo(
     () => ({
@@ -205,6 +286,11 @@ const LineChart_TimeOn = ({
       interaction: {
         mode: 'index',
         intersect: false,
+      },
+      // Chart.js vẽ ngược order: line order thấp hơn bar → đường nằm trên cột
+      datasets: {
+        bar: { order: 1 },
+        line: { order: 0 },
       },
       plugins: {
         datalabels: { clip: false },
@@ -216,11 +302,17 @@ const LineChart_TimeOn = ({
               if (raw == null || raw === '') return null;
               const num = Number(raw);
               const dsLabel = context.dataset.label ?? '';
+              if (dsLabel.includes('Điện năng')) {
+                return `${dsLabel}: ${num.toLocaleString('en-US', { maximumFractionDigits: 3 })} kWh`;
+              }
               if (dsLabel.includes('Năng suất thực tế')) {
                 return `${dsLabel}: ${num.toFixed(2)} tấn/giờ`;
               }
               if (dsLabel === 'Năng suất (%)') {
                 return `${dsLabel}: ${num.toFixed(1)}%`;
+              }
+              if (dsLabel.includes('Thời gian')) {
+                return `${dsLabel}: ${num.toFixed(2)} giờ`;
               }
               return `${dsLabel}: ${num.toFixed(2)}`;
             },
@@ -230,6 +322,7 @@ const LineChart_TimeOn = ({
             if (dsLabel.includes('Năng suất chuẩn')) return false;
             return (
               item.dataset.yAxisID === 'y' ||
+              item.dataset.yAxisID === 'y1' ||
               dsLabel.includes('Năng suất thực tế') ||
               dsLabel === 'Năng suất (%)'
             );
@@ -256,11 +349,11 @@ const LineChart_TimeOn = ({
             beginAtZero: true,
             position: 'left',
             title: {
-              display: false,
-              text: 'Thời gian (giờ)',
+              display: true,
+              text: 'giờ',
               font: {
-                size: 14,
-                weight: 'bold',
+                size: 11,
+                weight: '600',
               },
             },
             ticks: { padding: 4 },
@@ -269,7 +362,7 @@ const LineChart_TimeOn = ({
           'linear',
           theme,
         ),
-        ...(hasPerformance || hasOutputRate
+        ...(hasPerformance || hasOutputRate || hasEnergy
           ? {
               y1: themedScale(
                 {
@@ -278,15 +371,19 @@ const LineChart_TimeOn = ({
                   position: 'right',
                   grid: { drawOnChartArea: false },
                   title: {
-                    display: false,
-                    text: hasStandard ? 'Năng suất (tấn/giờ)' : 'Năng suất (%)',
+                    display: true,
+                    text: hasEnergy
+                      ? 'kWh'
+                      : hasStandard
+                        ? 'Năng suất (tấn/giờ)'
+                        : 'Năng suất (%)',
                     color: rightAxisStyle.axisColor,
-                    font: { size: 11, weight: 'bold' },
+                    font: { size: 11, weight: '600' },
                   },
                   ticks: {
                     padding: 4,
                     callback: (value) =>
-                      hasStandard ? `${value}` : `${value}%`,
+                      hasEnergy || hasStandard ? `${value}` : `${value}%`,
                   },
                 },
                 rightAxisStyle.axisColor,
@@ -298,6 +395,7 @@ const LineChart_TimeOn = ({
       },
     }),
     [
+      hasEnergy,
       hasPerformance,
       hasOutputRate,
       hasStandard,
@@ -314,9 +412,18 @@ const LineChart_TimeOn = ({
 
   useSyncChartTheme(chartRef, theme, options);
 
+  const chartDefaultType = timeSeriesType === 'line' ? 'line' : 'bar';
+
   return (
     <div style={{ height: '100%', width: '100%' }}>
-      <Chart ref={chartRef} key={theme} type="bar" data={data} options={options} style={{ position: 'relative' }} />
+      <Chart
+        ref={chartRef}
+        key={`${theme}-${timeSeriesType}-${hasEnergy ? 'energy' : 'plain'}`}
+        type={chartDefaultType}
+        data={data}
+        options={options}
+        style={{ position: 'relative' }}
+      />
     </div>
   );
 };

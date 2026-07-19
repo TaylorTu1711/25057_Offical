@@ -1,5 +1,6 @@
 import express from "express";
 import pool from "../db.js";
+import { alarmTableRef, findMachinesRegistryTable, machineIdExists, telemetryTableRef } from "../utils/machineSchema.js";
 
 
 
@@ -53,11 +54,8 @@ export const addMachine = async (req, res) => {
   const alarmTable = `alarm${machine_id}`;
 
   try {
-    const existing = await client.query(
-      'SELECT machine_id FROM machines WHERE machine_id = $1',
-      [machine_id],
-    );
-    if (existing.rowCount > 0) {
+    const existing = await machineIdExists(client, machine_id);
+    if (existing) {
       client.release();
       return res.status(409).json({
         error: `ID máy "${machine_id}" đã tồn tại. Vui lòng dùng ID khác hoặc xóa máy cũ trước.`,
@@ -147,11 +145,19 @@ export const addMachine = async (req, res) => {
 export const deleteMachine = async (req, res) => {
 
   const machine_id = req.params.id;
-  const alarmTableName = `alarm${machine_id}`;
   try {
-    await pool.query(`DROP TABLE IF EXISTS "${alarmTableName}"`);
-    await pool.query('DELETE FROM machines WHERE machine_id = $1', [machine_id]);
-    await pool.query(`DROP TABLE IF EXISTS "${machine_id}"`);
+    const found = await findMachinesRegistryTable(pool, machine_id);
+    if (!found) {
+      return res.status(404).json({ error: 'Không tìm thấy máy' });
+    }
+
+    const { table: registryTable, machine } = found;
+    const alarmTable = alarmTableRef(machine_id, machine);
+    const telemetryTable = telemetryTableRef(machine_id, machine);
+
+    await pool.query(`DROP TABLE IF EXISTS ${alarmTable}`);
+    await pool.query(`DELETE FROM ${registryTable} WHERE machine_id = $1`, [machine_id]);
+    await pool.query(`DROP TABLE IF EXISTS ${telemetryTable}`);
     res.status(200).json({ message: 'Xoá thành công' });
   } catch (err) {
     res.status(500).json({ error: 'Lỗi xoá máy' });

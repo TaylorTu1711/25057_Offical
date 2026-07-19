@@ -1,0 +1,3497 @@
+/* ── MIDA CNC theme tokens (đỏ chủ đạo) ── */
+[data-theme='light'] .mida-page {
+  --mida-brand: #d32f2f;
+  --mida-brand-dark: #b71c1c;
+  --mida-brand-light: #ef5350;
+  --mida-brand-soft: rgba(211, 47, 47, 0.12);
+  --mida-brand-border: rgba(211, 47, 47, 0.42);
+  --mida-brand-glow: rgba(211, 47, 47, 0.35);
+  --mida-bg: linear-gradient(165deg, #faf6f6 0%, #f3ecec 45%, #fffafa 100%);
+  --mida-page-bg-solid: #faf6f6;
+  --mida-text: #0f172a;
+  --mida-text-muted: #64748b;
+  --mida-text-subtle: #475569;
+  --mida-navbar-bg: linear-gradient(90deg, #b71c1c 0%, #d32f2f 50%, #c62828 100%);
+  --mida-navbar-border: rgba(183, 28, 28, 0.55);
+  --mida-navbar-text: #ffffff;
+  --mida-navbar-muted: rgba(255, 255, 255, 0.88);
+  --mida-navbar-control-bg: rgba(255, 255, 255, 0.14);
+  --mida-navbar-control-border: rgba(255, 255, 255, 0.28);
+  --mida-navbar-control-hover: rgba(255, 255, 255, 0.24);
+  --mida-surface: rgba(255, 255, 255, 0.92);
+  --mida-surface-muted: #f8f0f0;
+  --mida-border: rgba(15, 23, 42, 0.12);
+  --mida-border-accent: var(--mida-brand-border);
+  --mida-link: #c62828;
+  --mida-link-hover: #d32f2f;
+  --mida-btn-bg: rgba(255, 255, 255, 0.9);
+  --mida-btn-text: #334155;
+  --mida-btn-border: rgba(15, 23, 42, 0.15);
+  --mida-card-hover-border: rgba(211, 47, 47, 0.55);
+  --mida-placeholder-bg: #ffebee;
+  --mida-placeholder-text: #d32f2f;
+  --mida-image-bg: #f8f0f0;
+  --mida-modal-bg: #ffffff;
+  --mida-modal-input-bg: #faf6f6;
+  --mida-modal-input-focus-bg: #ffffff;
+  --mida-logo-bg: transparent;
+  --mida-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --mida-pill-bg: rgba(255, 255, 255, 0.72);
+  --mida-pill-label: #334155;
+  --mida-total-icon-bg: rgba(241, 245, 249, 0.95);
+  --mida-total-icon-border: rgba(2, 132, 199, 0.45);
+  --mida-total-icon-color: #0284c7;
+  --mida-total-bar-bg: rgba(226, 232, 240, 0.92);
+  --mida-total-bar-border: rgba(2, 132, 199, 0.28);
+  --mida-total-bar-text: #334155;
+  --mida-total-value: #0284c7;
+}
+
+[data-theme='dark'] .mida-page {
+  --mida-brand: #ef5350;
+  --mida-brand-dark: #c62828;
+  --mida-brand-light: #ff7961;
+  --mida-brand-soft: rgba(239, 83, 80, 0.18);
+  --mida-brand-border: rgba(239, 83, 80, 0.38);
+  --mida-brand-glow: rgba(239, 83, 80, 0.4);
+  --mida-bg: linear-gradient(165deg, #1a1212 0%, #241818 45%, #1a1212 100%);
+  --mida-page-bg-solid: #1a1212;
+  --mida-text: #f5e9e9;
+  --mida-text-muted: #c9b4b4;
+  --mida-text-subtle: #9a8585;
+  --mida-navbar-bg: linear-gradient(90deg, #8e1a1a 0%, #b71c1c 45%, #c62828 100%);
+  --mida-navbar-border: rgba(239, 83, 80, 0.35);
+  --mida-navbar-text: #fff5f5;
+  --mida-navbar-muted: rgba(255, 245, 245, 0.88);
+  --mida-navbar-control-bg: rgba(255, 255, 255, 0.1);
+  --mida-navbar-control-border: rgba(255, 255, 255, 0.22);
+  --mida-navbar-control-hover: rgba(255, 255, 255, 0.2);
+  --mida-surface: rgba(40, 24, 24, 0.9);
+  --mida-surface-muted: rgba(40, 24, 24, 0.78);
+  --mida-border: rgba(201, 180, 180, 0.14);
+  --mida-border-accent: var(--mida-brand-border);
+  --mida-link: #ffab91;
+  --mida-link-hover: #ffccbc;
+  --mida-btn-bg: rgba(40, 24, 24, 0.85);
+  --mida-btn-text: #f5e9e9;
+  --mida-btn-border: rgba(201, 180, 180, 0.28);
+  --mida-card-hover-border: rgba(239, 83, 80, 0.55);
+  --mida-placeholder-bg: rgba(40, 24, 24, 0.75);
+  --mida-placeholder-text: #ef5350;
+  --mida-image-bg: rgba(26, 18, 18, 0.75);
+  --mida-modal-bg: #2a1a1a;
+  --mida-modal-input-bg: rgba(26, 18, 18, 0.9);
+  --mida-modal-input-focus-bg: rgba(26, 18, 18, 0.96);
+  --mida-logo-bg: transparent;
+  --mida-shadow: none;
+  --mida-pill-bg: rgba(15, 23, 42, 0.55);
+  --mida-pill-label: #e2e8f0;
+  --mida-total-icon-bg: rgba(8, 20, 40, 0.92);
+  --mida-total-icon-border: rgba(56, 189, 248, 0.55);
+  --mida-total-icon-color: #38bdf8;
+  --mida-total-bar-bg: rgba(12, 28, 52, 0.95);
+  --mida-total-bar-border: rgba(56, 189, 248, 0.22);
+  --mida-total-bar-text: #e2e8f0;
+  --mida-total-value: #38bdf8;
+}
+
+.mida-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--mida-bg);
+  color: var(--mida-text);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+/* Trang chi tiết CNC: map token SCADA (xanh) → tông đỏ MIDA giống trang tổng quan */
+[data-theme='light'] .mida-page--detail {
+  --app-bg: #faf6f6;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f8f0f0;
+  --app-surface-deep: #f0e4e4;
+  --app-surface-glow: #ffffff;
+  --app-text: #0f172a;
+  --app-text-muted: #64748b;
+  --app-border: rgba(211, 47, 47, 0.18);
+  --navbar-bg: rgba(255, 255, 255, 0.95);
+  --brand-color: #d32f2f;
+  --nav-hover-bg: rgba(211, 47, 47, 0.1);
+  --accent-blue: #d32f2f;
+  --neon-highlight-top: rgba(255, 255, 255, 0.92);
+  --card-shadow:
+    0 0 1px rgba(211, 47, 47, 0.12),
+    0 0 18px rgba(211, 47, 47, 0.06),
+    0 4px 16px rgba(15, 23, 42, 0.08);
+  --ambient-bg:
+    radial-gradient(ellipse 85% 55% at 12% -8%, rgba(211, 47, 47, 0.1) 0%, transparent 58%),
+    radial-gradient(ellipse 65% 45% at 98% 8%, rgba(239, 83, 80, 0.08) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 40% at 50% 105%, rgba(211, 47, 47, 0.07) 0%, transparent 48%);
+}
+
+[data-theme='dark'] .mida-page--detail {
+  --app-bg: #1a1212;
+  --app-surface: #2a1a1a;
+  --app-surface-muted: #3a2424;
+  --app-surface-deep: #241818;
+  --app-surface-glow: rgba(60, 28, 28, 0.88);
+  --app-text: #f5e9e9;
+  --app-text-muted: #c9b4b4;
+  --app-border: rgba(239, 83, 80, 0.28);
+  --navbar-bg: rgba(26, 18, 18, 0.94);
+  --brand-color: #ef5350;
+  --nav-hover-bg: rgba(239, 83, 80, 0.18);
+  --accent-blue: #ef5350;
+  --neon-glow-soft: rgba(239, 83, 80, 0.14);
+  --neon-glow-mid: rgba(239, 83, 80, 0.28);
+  --neon-glow-strong: rgba(239, 83, 80, 0.5);
+  --neon-highlight-top: rgba(239, 83, 80, 0.18);
+  --card-shadow:
+    0 0 1px rgba(239, 83, 80, 0.35),
+    0 0 22px rgba(198, 40, 40, 0.16),
+    0 4px 18px rgba(0, 0, 0, 0.42);
+  --ambient-bg:
+    radial-gradient(ellipse 85% 55% at 12% -8%, rgba(198, 40, 40, 0.28) 0%, transparent 58%),
+    radial-gradient(ellipse 65% 45% at 98% 8%, rgba(239, 83, 80, 0.16) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 40% at 50% 105%, rgba(198, 40, 40, 0.14) 0%, transparent 48%);
+}
+
+.mida-page--detail {
+  background: var(--mida-bg);
+  background-image: var(--ambient-bg);
+  background-attachment: fixed;
+  color: var(--mida-text);
+  /* Đồng bộ bề rộng thẻ chọn ngày ↔ cột POWER/CURRENT/VOLTAGE/FREQUENCY */
+  --mida-date-panel-w: 152px;
+  /* Khoảng cách đều giữa mọi thẻ (ngang + dọc), nhỏ hơn 3px */
+  --mida-card-gap: calc(0.4rem - 3px);
+  --mida-top-gap: var(--mida-card-gap);
+  /* Bo góc thống nhất cho mọi thẻ */
+  --mida-card-radius: 6px;
+  /* Cỡ chữ tên thẻ / tên biểu đồ thống nhất */
+  --mida-card-title-size: 12px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.mida-page__body--detail {
+  font-family: Arial, sans-serif;
+  flex: 1;
+  overflow: hidden;
+  margin: 0;
+  height: calc(100dvh - 44px);
+  min-height: 0;
+}
+
+.mida-page__body {
+  background: transparent;
+  min-height: 0;
+}
+
+.mida-page--detail .mida-page__body {
+  gap: var(--mida-card-gap) !important;
+}
+
+.mida-page--detail .mida-detail__main {
+  height: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mida-card-gap) !important;
+  /* Lề trang = khoảng cách giữa thẻ; trái 0 vì body gap với sidebar */
+  padding-top: var(--mida-card-gap) !important;
+  padding-right: var(--mida-card-gap) !important;
+  padding-bottom: var(--mida-card-gap) !important;
+  padding-left: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Thống nhất khoảng cách giữa mọi thẻ trên trang chi tiết */
+.mida-page--detail .machine-top-panel--mida,
+.mida-page--detail .machine-top-panel--mida .row,
+.mida-page--detail .machine-top-panel--mida .machine-top-panel__main-row,
+.mida-page--detail .machine-top-panel--mida .machine-top-panel__stats-grid-row {
+  --bs-gutter-x: 0 !important;
+  --bs-gutter-y: 0 !important;
+  --machine-top-row-gap: var(--mida-card-gap) !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  gap: var(--mida-card-gap) !important;
+  row-gap: var(--mida-card-gap) !important;
+  column-gap: var(--mida-card-gap) !important;
+}
+
+.mida-page--detail .machine-top-panel--mida .row > [class*='col-'] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.mida-page--detail .machine-top-panel--mida {
+  gap: var(--mida-card-gap) !important;
+  column-gap: var(--mida-card-gap) !important;
+  row-gap: var(--mida-card-gap) !important;
+}
+
+.mida-page--detail .machine-top-panel--mida .machine-top-panel__center {
+  gap: var(--mida-card-gap) !important;
+  column-gap: var(--mida-card-gap) !important;
+  row-gap: var(--mida-card-gap) !important;
+}
+
+.mida-page--detail .machine-top-panel--mida .machine-top-panel__stats-col,
+.mida-page--detail .machine-top-panel--mida .machine-top-panel__main-row {
+  gap: var(--mida-card-gap) !important;
+  row-gap: var(--mida-card-gap) !important;
+  column-gap: var(--mida-card-gap) !important;
+}
+
+.mida-page--detail .machine-top-panel--mida .machine-top-panel__stats-grid-row,
+.mida-page--detail .machine-top-panel--mida .machine-top-panel__stat-pair-inner {
+  column-gap: var(--mida-card-gap) !important;
+  row-gap: var(--mida-card-gap) !important;
+  gap: var(--mida-card-gap) !important;
+}
+
+.mida-page--detail .machine-charts-row--mida {
+  gap: var(--mida-card-gap) !important;
+  /* Không margin-bottom — khoảng cách lấy từ gap/padding của main */
+  margin-bottom: 0 !important;
+}
+
+.mida-page--detail .mida-gauge-pair,
+.mida-page--detail .mida-elec-stack,
+.mida-page--detail .mida-elec-stack__pair,
+.mida-page--detail .mida-elec-stack__top {
+  gap: var(--mida-card-gap) !important;
+  row-gap: var(--mida-card-gap) !important;
+  column-gap: var(--mida-card-gap) !important;
+}
+
+.mida-page--detail .machine-top-panel__name,
+.mida-page--detail .machine-top-panel__stat-box,
+.mida-page--detail .machine-top-panel__image-wrap,
+.mida-page--detail .machine-chart-card,
+.mida-page--detail .machine-top-panel__alarms {
+  border-color: var(--app-border) !important;
+}
+
+/* Gauge + thẻ điện: cùng nền đỏ nhạt như các thẻ khác */
+.mida-page--detail .mida-gauge,
+.mida-page--detail .mida-elec-card {
+  background: linear-gradient(
+    168deg,
+    var(--app-surface-glow) 0%,
+    var(--app-surface) 40%,
+    var(--app-surface-deep) 100%
+  ) !important;
+  border-color: var(--app-border) !important;
+  box-shadow:
+    var(--card-shadow),
+    inset 0 1px 0 var(--neon-highlight-top) !important;
+}
+
+.mida-page--detail .machine-top-panel__name,
+.mida-page--detail .machine-top-panel__status-icon,
+.mida-page--detail .machine-top-panel__stat-box,
+.mida-page--detail .machine-top-panel__image-wrap,
+.mida-page--detail .machine-top-panel__alarms,
+.mida-page--detail .machine-chart-card,
+.mida-page--detail .mida-gauge,
+.mida-page--detail .mida-elec-card {
+  border-radius: var(--mida-card-radius) !important;
+}
+
+.mida-page--detail .machine-chart-head,
+.mida-page--detail .chart-title-brand,
+.mida-page--detail .mida-gauge__label,
+.mida-page--detail .mida-elec-card__label,
+.mida-page--detail .mida-elec-card--bar .mida-elec-card__label,
+.mida-page--detail .machine-top-panel__stat-box > .fw-semibold,
+.mida-page--detail .machine-top-panel__alarms h6 {
+  font-size: var(--mida-card-title-size) !important;
+}
+
+.mida-page--detail .machine-top-panel__stat-value,
+.mida-page--detail .chart-title-brand,
+.mida-page--detail .text-brand,
+.mida-page--detail .machine-tree-sidebar h5 {
+  color: var(--brand-color) !important;
+}
+
+.mida-page--detail .machine-view-mode-segment__btn--active,
+.mida-page--detail .machine-view-mode-chip--active {
+  background: var(--mida-brand) !important;
+  border-color: var(--mida-brand) !important;
+  color: #ffffff !important;
+}
+
+.mida-page--detail .tree-item--active {
+  color: var(--mida-brand) !important;
+  background: var(--mida-brand-soft) !important;
+}
+
+.mida-page--detail .spinner-border.text-primary {
+  color: var(--mida-brand) !important;
+  border-color: var(--mida-brand) !important;
+  border-right-color: transparent !important;
+}
+
+/* Sidebar danh sách máy — tông đỏ MIDA */
+.mida-page--detail,
+.mida-page--detail .machine-tree-sidebar-wrapper,
+.mida-page--detail .machine-tree-sidebar,
+.mida-page--detail .offcanvas {
+  --tree-bg: #f8f0f0;
+  --tree-text: #475569;
+  --tree-text-active: #d32f2f;
+  --tree-text-level0: #b71c1c;
+  --tree-text-icon-default: #94a3b8;
+  --tree-text-icon-level0: #d32f2f;
+  --tree-text-icon-level1: #c62828;
+  --tree-border: rgba(211, 47, 47, 0.18);
+  --tree-line: #b71c1c;
+  --tree-divider: rgba(211, 47, 47, 0.12);
+  --tree-active-bg: rgba(211, 47, 47, 0.12);
+  --tree-active-border: #d32f2f;
+  --tree-hover-bg: #fff5f5;
+  --tree-empty-icon: #e8cfcf;
+}
+
+[data-theme='dark'] .mida-page--detail,
+[data-theme='dark'] .mida-page--detail .machine-tree-sidebar-wrapper,
+[data-theme='dark'] .mida-page--detail .machine-tree-sidebar,
+[data-theme='dark'] .mida-page--detail .offcanvas {
+  --tree-bg: #241818;
+  --tree-text: #f5e9e9;
+  --tree-text-active: #ffffff;
+  --tree-text-level0: #ffab91;
+  --tree-text-icon-default: rgba(255, 171, 145, 0.68);
+  --tree-text-icon-level0: #ef5350;
+  --tree-text-icon-level1: #ff8a80;
+  --tree-border: rgba(239, 83, 80, 0.28);
+  --tree-line: #ef5350;
+  --tree-divider: rgba(239, 83, 80, 0.16);
+  --tree-active-bg: rgba(239, 83, 80, 0.18);
+  --tree-active-border: #ef5350;
+  --tree-hover-bg: #2a1a1a;
+  --tree-empty-icon: #5a3a3a;
+}
+
+/* Ghi đè gradient xanh mặc định của MachineTree.css */
+[data-theme='light'] .mida-page--detail .machine-tree-sidebar {
+  background:
+    radial-gradient(ellipse 90% 40% at 0% 0%, rgba(211, 47, 47, 0.1) 0%, transparent 55%),
+    linear-gradient(180deg, #fff8f8 0%, var(--tree-bg) 55%, #f3e8e8 100%);
+  border-left-color: var(--tree-border);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.85),
+    -4px 0 18px rgba(211, 47, 47, 0.08);
+}
+
+[data-theme='dark'] .mida-page--detail .machine-tree-sidebar {
+  background:
+    radial-gradient(ellipse 90% 40% at 0% 0%, rgba(239, 83, 80, 0.2) 0%, transparent 55%),
+    linear-gradient(180deg, #2a1818 0%, var(--tree-bg) 55%, #1a1010 100%) !important;
+  border-left-color: rgba(239, 83, 80, 0.28) !important;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 171, 145, 0.08),
+    -4px 0 24px rgba(239, 83, 80, 0.1) !important;
+}
+
+[data-theme='dark'] .mida-page--detail .machine-tree-sidebar .tree-item--active {
+  box-shadow:
+    inset 0 0 20px rgba(239, 83, 80, 0.12),
+    0 0 10px rgba(239, 83, 80, 0.14);
+}
+
+[data-theme='dark'] .mida-page--detail .offcanvas {
+  background: #241818;
+  border-color: rgba(239, 83, 80, 0.28);
+}
+
+[data-theme='dark'] .mida-page--detail .offcanvas .machine-tree-sidebar {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mida-page--detail .machine-view-mode-segment__btn:hover:not(.machine-view-mode-segment__btn--active),
+.mida-page--detail .machine-view-mode-chip:hover:not(.machine-view-mode-chip--active) {
+  color: var(--mida-brand) !important;
+}
+
+.mida-page--detail .machine-view-mode-segment__btn--active {
+  box-shadow: 0 1px 4px rgba(211, 47, 47, 0.35);
+}
+
+.mida-page--detail .machine-view-mode-body--scroll {
+  scrollbar-color: rgba(211, 47, 47, 0.35) transparent;
+}
+
+.mida-page--detail .machine-view-mode-body--scroll::-webkit-scrollbar-thumb {
+  background: rgba(211, 47, 47, 0.35);
+}
+
+/* Cặp biểu đồ tròn CNC */
+.mida-gauge-panel {
+  min-height: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.machine-charts-stack--equal-pair.machine-charts-stack--split > .machine-chart-card.mida-gauge-panel {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.mida-gauge-pair {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mida-card-gap, 0.4rem);
+  align-items: stretch;
+  justify-items: stretch;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+}
+
+.mida-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.3rem;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  padding: 0.4rem 0.3rem 0.45rem;
+  border-radius: var(--mida-card-radius, 6px);
+  border: 1px solid var(--mida-border, rgba(15, 23, 42, 0.1));
+  background: var(--mida-surface, #ffffff);
+  box-shadow: var(--mida-shadow, 0 1px 3px rgba(15, 23, 42, 0.06));
+}
+
+.mida-gauge__label {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: var(--mida-card-title-size, 12px);
+  font-weight: 700;
+  color: var(--brand-color, #d32f2f);
+  line-height: 1.2;
+  max-width: 100%;
+  padding: 0 0.15rem;
+  order: 0;
+}
+
+.mida-gauge__chart {
+  position: relative;
+  flex: 1 1 auto;
+  width: min(100%, 112px);
+  aspect-ratio: 1 / 1;
+  max-height: 100%;
+  filter: drop-shadow(0 0 8px var(--mida-gauge-glow, rgba(211, 47, 47, 0.28)));
+}
+
+.mida-gauge__chart--radial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 118px);
+  filter: none;
+  aspect-ratio: auto;
+  min-height: 0;
+}
+
+.mida-gauge__chart--radial .mida-elec-radial {
+  width: min(100%, 118px);
+}
+
+.mida-gauge__value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
+  font-size: clamp(0.95rem, 1.8vw, 1.2rem);
+  font-weight: 700;
+  color: var(--brand-color, #d32f2f);
+  line-height: 1;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.mida-gauge__number {
+  font-variant-numeric: tabular-nums;
+}
+
+.mida-gauge__unit {
+  font-size: 0.55em;
+  font-weight: 600;
+  margin-top: 0.2em;
+}
+
+@media (max-width: 575.98px) {
+  .mida-gauge-pair {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--mida-card-gap, 0.35rem);
+  }
+
+  .mida-gauge {
+    min-height: 0;
+  }
+
+  .mida-gauge__chart {
+    width: min(100%, 100px);
+  }
+
+  .mida-gauge__chart--radial,
+  .mida-gauge__chart--radial .mida-elec-radial {
+    width: min(100%, 108px);
+  }
+}
+
+[data-theme='dark'] .mida-gauge {
+  background: rgba(40, 24, 24, 0.92);
+  border-color: rgba(201, 180, 180, 0.16);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .mida-page--detail .machine-top-panel__stat-value {
+  color: #ff8a80 !important;
+  text-shadow:
+    0 0 8px rgba(239, 83, 80, 0.45),
+    0 0 20px rgba(198, 40, 40, 0.25);
+}
+
+[data-theme='dark'] .mida-page--detail .machine-top-panel__stat-box .text-brand,
+[data-theme='dark'] .mida-page--detail .machine-top-panel__stat-box > .fw-semibold,
+[data-theme='dark'] .mida-page--detail .machine-top-panel__name.text-brand,
+[data-theme='dark'] .mida-page--detail .machine-top-panel__name .auto-fit-machine-name__text,
+[data-theme='dark'] .mida-page--detail .chart-title-brand,
+[data-theme='dark'] .mida-page--detail .machine-chart-head,
+[data-theme='dark'] .mida-page--detail .mida-gauge__label,
+[data-theme='dark'] .mida-page--detail .mida-elec-card__label {
+  color: #ffccbc !important;
+}
+
+.mida-navbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.28rem 1rem;
+  border-bottom: 1px solid var(--mida-navbar-border);
+  background: var(--mida-navbar-bg);
+  color: var(--mida-navbar-text, #ffffff);
+  box-shadow: 0 2px 10px rgba(183, 28, 28, 0.28);
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+.mida-navbar__logo-link {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  text-decoration: none;
+  line-height: 0;
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  border-radius: 0.35rem;
+  padding: 0.1rem 0.35rem;
+  justify-self: start;
+}
+
+.mida-navbar__logo {
+  width: auto;
+  height: 40px;
+  max-width: min(260px, 48vw);
+  object-fit: contain;
+  object-position: left center;
+  display: block;
+}
+
+.mida-navbar__title {
+  margin: 0;
+  font-size: clamp(0.95rem, 2.2vw, 1.35rem);
+  font-weight: 700;
+  color: var(--mida-navbar-text, #ffffff);
+  text-align: center;
+  justify-self: center;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+}
+
+.mida-navbar__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  justify-self: end;
+}
+
+.mida-navbar__nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--mida-navbar-text, #ffffff);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+[data-theme='dark'] .mida-navbar__nav-item {
+  color: var(--mida-navbar-text, #fff5f5);
+}
+
+.mida-navbar__nav-label {
+  display: inline-block;
+}
+
+.mida-navbar__nav-item.is-active {
+  color: var(--mida-navbar-text, #ffffff);
+  font-weight: 700;
+  background: var(--mida-navbar-control-hover);
+  border-color: var(--mida-navbar-control-border);
+}
+
+.mida-navbar__nav-item--home {
+  background: transparent;
+}
+
+.mida-navbar__nav-item--logout {
+  background: transparent;
+  padding-inline: 0.55rem;
+}
+
+@media (hover: hover) {
+  .mida-navbar__nav-item--home:hover,
+  .mida-navbar__nav-item--logout:hover {
+    background: var(--mida-navbar-control-hover);
+  }
+
+  [data-theme='dark'] .mida-navbar__nav-item--home:hover,
+  [data-theme='dark'] .mida-navbar__nav-item--logout:hover {
+    background: var(--mida-navbar-control-hover);
+  }
+}
+
+.mida-navbar__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--mida-navbar-control-border);
+  background: var(--mida-navbar-control-bg);
+  color: var(--mida-navbar-text, #ffffff);
+  border-radius: 0.5rem;
+  padding: 0.28rem 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.mida-navbar__icon-btn:hover {
+  background: var(--mida-navbar-control-hover);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.mida-navbar__mobile-menu {
+  display: none;
+  position: relative;
+  justify-self: end;
+}
+
+.mida-navbar__menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--mida-navbar-control-border);
+  border-radius: 0.5rem;
+  background: var(--mida-navbar-control-bg);
+  color: var(--mida-navbar-text, #ffffff);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.mida-navbar__menu-btn:hover {
+  background: var(--mida-navbar-control-hover);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.mida-navbar__dropdown {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 120;
+  min-width: 11rem;
+  padding: 0.3rem;
+  border-radius: 0.55rem;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+}
+
+[data-theme='light'] .mida-navbar__dropdown {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.mida-navbar__dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.mida-navbar__dropdown .mida-navbar__nav-item--home,
+.mida-navbar__dropdown .mida-navbar__nav-item--logout {
+  background: transparent;
+  color: #0f172a;
+}
+
+[data-theme='dark'] .mida-navbar__dropdown .mida-navbar__nav-item {
+  color: #f5e9e9;
+}
+
+.mida-navbar__dropdown .mida-navbar__nav-item.is-active {
+  color: var(--mida-brand);
+}
+
+.mida-navbar__dropdown-item:not(.mida-navbar__nav-item) {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+[data-theme='light'] .mida-navbar__dropdown-item:not(.mida-navbar__nav-item) {
+  color: #334155;
+}
+
+.mida-navbar__dropdown-item:not(.mida-navbar__nav-item):hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='light'] .mida-navbar__dropdown-item:not(.mida-navbar__nav-item):hover {
+  background: rgba(211, 47, 47, 0.08);
+}
+
+@media (hover: hover) {
+  .mida-navbar__dropdown .mida-navbar__nav-item--home:hover {
+    background: rgba(211, 47, 47, 0.12);
+  }
+
+  .mida-navbar__dropdown .mida-navbar__nav-item--logout:hover {
+    background: rgba(211, 47, 47, 0.12);
+  }
+
+  [data-theme='dark'] .mida-navbar__dropdown .mida-navbar__nav-item--home:hover {
+    background: rgba(239, 83, 80, 0.14);
+  }
+
+  [data-theme='dark'] .mida-navbar__dropdown .mida-navbar__nav-item--logout:hover {
+    background: rgba(239, 83, 80, 0.14);
+  }
+}
+
+.mida-main {
+  flex: 1;
+  padding: 0.45rem 1.25rem 1.5rem;
+  overflow: auto;
+}
+
+.mida-main--factory {
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+}
+
+.mida-main--factory .mida-toolbar {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  margin-bottom: 0.35rem;
+}
+
+.mida-main--factory .mida-factory {
+  margin-top: 0;
+}
+
+.mida-main--factory .mida-empty {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+.mida-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.mida-toolbar--factory-tab {
+  margin-bottom: 0.35rem;
+}
+
+.mida-factory__top-left {
+  position: absolute;
+  top: 0.65rem;
+  left: 0.65rem;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  max-width: min(22rem, calc(100% - 1.3rem));
+  pointer-events: none;
+}
+
+.mida-factory__top-left > * {
+  pointer-events: auto;
+}
+
+.mida-factory__bottom-left {
+  position: fixed;
+  left: max(1rem, env(safe-area-inset-left, 0px));
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 0.4rem;
+  max-width: min(22rem, calc(100% - 6rem));
+  pointer-events: none;
+}
+
+.mida-factory__bottom-left > * {
+  pointer-events: auto;
+}
+
+.mida-factory__tabs-overlay {
+  padding: 0.25rem;
+  border-radius: 0.55rem;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.4);
+}
+
+[data-theme='light'] .mida-factory__tabs-overlay {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--mida-brand-border);
+  box-shadow: 0 2px 12px rgba(183, 28, 28, 0.12);
+}
+
+.mida-tabs--on-layout .mida-tab.is-active {
+  background: var(--mida-brand);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+[data-theme='light'] .mida-tabs--on-layout .mida-tab {
+  color: #64748b;
+}
+
+[data-theme='light'] .mida-tabs--on-layout .mida-tab.is-active {
+  background: var(--mida-brand);
+  color: #ffffff;
+}
+
+.mida-tabs--on-layout .mida-tab--ep,
+[data-theme='light'] .mida-tabs--on-layout .mida-tab--ep {
+  color: #000000;
+}
+
+.mida-tabs--on-layout .mida-tab--ep.is-active,
+[data-theme='light'] .mida-tabs--on-layout .mida-tab--ep.is-active {
+  color: #000000;
+}
+
+.mida-factory__stats-overlay > * {
+  pointer-events: auto;
+}
+
+.mida-factory__fab {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.85rem;
+  height: 2.85rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--mida-brand-dark), var(--mida-brand));
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px var(--mida-brand-glow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mida-factory__fab:hover {
+  transform: scale(1.06);
+  box-shadow: 0 6px 18px rgba(183, 28, 28, 0.5);
+}
+
+.mida-factory__fab:active {
+  transform: scale(0.98);
+}
+
+.mida-toolbar__cluster {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  grid-template-areas: 'total status add';
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.mida-toolbar__footer {
+  display: contents;
+}
+
+.mida-toolbar__footer .mida-total-stat {
+  grid-area: total;
+}
+
+.mida-toolbar__status-pills {
+  grid-area: status;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  min-width: 0;
+}
+
+.mida-toolbar__footer .mida-add-btn {
+  grid-area: add;
+}
+
+.mida-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem;
+  border-radius: 0.65rem;
+  background: var(--mida-surface-muted);
+  border: 1px solid var(--mida-border);
+}
+
+.mida-tab {
+  border: none;
+  background: transparent;
+  color: var(--mida-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1.5rem;
+  min-width: 7.5rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mida-tab:hover {
+  color: var(--mida-text);
+}
+
+.mida-tabs--on-layout {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.mida-tabs--on-layout .mida-tab {
+  min-width: 6rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.82rem;
+}
+
+.mida-tab.is-active {
+  background: var(--mida-brand);
+  color: #ffffff;
+  box-shadow: var(--mida-shadow);
+}
+
+.mida-tab--ep {
+  color: #000000;
+}
+
+.mida-tab--ep.is-active {
+  color: #000000;
+}
+
+.mida-toolbar__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--mida-text);
+}
+
+.mida-add-btn {
+  border: none;
+  background: linear-gradient(135deg, var(--mida-brand-dark), var(--mida-brand));
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mida-add-btn:hover {
+  filter: brightness(1.08);
+}
+
+.mida-modal-overlay {
+  z-index: 1200;
+}
+
+.mida-modal-panel {
+  background: var(--mida-modal-bg);
+  border: 1px solid var(--mida-border-accent);
+  color: var(--mida-text);
+}
+
+.mida-modal-input {
+  background: var(--mida-modal-input-bg);
+  border-color: var(--mida-btn-border);
+  color: var(--mida-text);
+}
+
+.mida-modal-input:focus {
+  background: var(--mida-modal-input-focus-bg);
+  color: var(--mida-text);
+  border-color: var(--mida-brand-light);
+  box-shadow: 0 0 0 0.2rem var(--mida-brand-soft);
+}
+
+.mida-modal-btn {
+  border-color: var(--mida-btn-border);
+  color: var(--mida-btn-text);
+}
+
+.mida-modal-btn--primary {
+  background: linear-gradient(135deg, var(--mida-brand-dark), var(--mida-brand));
+  border: none;
+  color: #fff;
+}
+
+.mida-modal-error {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+
+.mida-total-stat {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex-shrink: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.mida-total-stat__icon-box {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mida-total-icon-bg);
+  border: 1px solid var(--mida-total-icon-border);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.12);
+}
+
+.mida-total-stat__icon {
+  color: var(--mida-total-icon-color);
+  filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.35));
+}
+
+.mida-total-stat__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-height: 34px;
+  padding: 0.35rem 0.85rem 0.35rem 0.65rem;
+  background: var(--mida-total-bar-bg);
+  border: 1px solid var(--mida-total-bar-border);
+  border-left: none;
+}
+
+.mida-total-stat__label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--mida-total-bar-text);
+  white-space: nowrap;
+}
+
+.mida-total-stat__value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--mida-total-value);
+  min-width: 0.75rem;
+  text-align: center;
+}
+
+.mida-status-pill {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.mida-status-pill__icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  margin-right: -13px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.24);
+}
+
+.mida-status-pill__icon {
+  width: 18px;
+  height: 18px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.mida-status-pill__body {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 34px;
+  padding: 0.3rem 0.75rem 0.3rem 1.35rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--mida-pill-bg);
+  backdrop-filter: blur(6px);
+}
+
+.mida-status-pill__label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--mida-pill-label);
+  white-space: nowrap;
+}
+
+.mida-status-pill__value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 1rem;
+  text-align: center;
+}
+
+.mida-status-pill--run .mida-status-pill__icon-wrap {
+  background: linear-gradient(145deg, #7dd3fc 0%, #0284c7 100%);
+}
+
+.mida-status-pill--run .mida-status-pill__body {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: var(--mida-pill-bg);
+}
+
+.mida-status-pill--run .mida-status-pill__value {
+  color: #38bdf8;
+}
+
+.mida-status-pill--stop .mida-status-pill__icon-wrap {
+  background: linear-gradient(145deg, #fca5a5 0%, #dc2626 100%);
+}
+
+.mida-status-pill--stop .mida-status-pill__body {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: var(--mida-pill-bg);
+}
+
+.mida-status-pill--stop .mida-status-pill__value {
+  color: #f87171;
+}
+
+.mida-status-pill--offline .mida-status-pill__icon-wrap {
+  background: linear-gradient(145deg, #cbd5e1 0%, #64748b 100%);
+}
+
+.mida-status-pill--offline .mida-status-pill__body {
+  border-color: rgba(148, 163, 184, 0.45);
+  background: var(--mida-pill-bg);
+}
+
+.mida-status-pill--offline .mida-status-pill__value {
+  color: #94a3b8;
+}
+
+[data-theme='light'] .mida-status-pill--run .mida-status-pill__value { color: #0284c7; }
+[data-theme='light'] .mida-status-pill--stop .mida-status-pill__value { color: #dc2626; }
+[data-theme='light'] .mida-status-pill--offline .mida-status-pill__value { color: #64748b; }
+
+.mida-factory {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.mida-factory__stage {
+  position: relative;
+  border-radius: 0;
+  border-top: 1px solid var(--mida-border-accent);
+  border-bottom: 1px solid var(--mida-border-accent);
+  border-left: none;
+  border-right: none;
+  box-shadow: var(--mida-shadow);
+  background: var(--mida-page-bg-solid);
+}
+
+.mida-factory__scroll {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.mida-factory__zoom-wrap {
+  position: relative;
+}
+
+.mida-factory__canvas {
+  position: relative;
+  width: 100%;
+  line-height: 0;
+}
+
+.mida-factory__stats-overlay {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 11;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem 0.38rem;
+  max-width: calc(100% - 1.3rem);
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  pointer-events: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mida-factory__stats-overlay::-webkit-scrollbar {
+  display: none;
+}
+
+.mida-factory__stats-pills {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem 0.38rem;
+  flex-shrink: 0;
+}
+
+.mida-factory__stats-overlay .mida-total-stat,
+.mida-factory__stats-overlay .mida-status-pill {
+  flex-shrink: 0;
+}
+
+.mida-factory__stats-overlay .mida-total-stat__icon-box {
+  width: 30px;
+  height: 30px;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.1);
+}
+
+.mida-factory__stats-overlay .mida-total-stat__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.mida-factory__stats-overlay .mida-total-stat__bar {
+  min-height: 26px;
+  padding: 0.22rem 0.5rem 0.22rem 0.45rem;
+  gap: 0.35rem;
+}
+
+.mida-factory__stats-overlay .mida-total-stat__label {
+  font-size: 0.68rem;
+}
+
+.mida-factory__stats-overlay .mida-total-stat__value {
+  font-size: 0.95rem;
+}
+
+.mida-factory__stats-overlay .mida-status-pill__icon-wrap {
+  width: 28px;
+  height: 28px;
+  margin-right: -10px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+}
+
+.mida-factory__stats-overlay .mida-status-pill__icon {
+  width: 14px;
+  height: 14px;
+}
+
+.mida-factory__stats-overlay .mida-status-pill__body {
+  min-height: 26px;
+  padding: 0.2rem 0.48rem 0.2rem 1.05rem;
+  gap: 0.3rem;
+}
+
+.mida-factory__stats-overlay .mida-status-pill__label {
+  font-size: 0.62rem;
+}
+
+.mida-factory__stats-overlay .mida-status-pill__value {
+  font-size: 0.85rem;
+}
+
+.mida-factory__stats-overlay.is-compact {
+  gap: 0.2rem;
+  padding: 0;
+}
+
+.mida-factory__stats-overlay.is-compact .mida-total-stat__label,
+.mida-factory__stats-overlay.is-compact .mida-status-pill__label {
+  display: none;
+}
+
+.mida-factory__stats-overlay.is-compact .mida-total-stat__bar {
+  min-height: 24px;
+  padding: 0.15rem 0.38rem 0.15rem 0.28rem;
+  justify-content: center;
+}
+
+.mida-factory__stats-overlay.is-compact .mida-total-stat__value {
+  font-size: 0.9rem;
+}
+
+.mida-factory__stats-overlay.is-compact .mida-status-pill__body {
+  min-height: 24px;
+  padding: 0.15rem 0.38rem 0.15rem 0.82rem;
+  justify-content: center;
+}
+
+.mida-factory__stats-overlay.is-compact .mida-status-pill__value {
+  font-size: 0.82rem;
+}
+
+.mida-factory__stats-overlay.is-compact .mida-status-pill__icon-wrap {
+  margin-right: -8px;
+}
+
+.mida-factory__stats-overlay.is-compact .mida-factory__stats-pills {
+  gap: 0.2rem;
+}
+
+.mida-factory__toolbar {
+  position: static;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  max-width: 100%;
+  pointer-events: none;
+}
+
+.mida-factory__edit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.72);
+  color: #f8fafc;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.35);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.mida-factory__edit-toggle:hover,
+.mida-factory__edit-toggle.is-active {
+  border-color: var(--mida-brand-light);
+  color: #ffcdd2;
+  background: rgba(40, 24, 24, 0.92);
+}
+
+.mida-factory__edit-hint {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #e2e8f0;
+  text-align: left;
+  background: rgba(15, 23, 42, 0.78);
+  border-radius: 0.45rem;
+  pointer-events: auto;
+  backdrop-filter: blur(6px);
+}
+
+.mida-factory__save-error {
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.72rem;
+  color: #fecaca;
+  text-align: left;
+  background: rgba(127, 29, 29, 0.85);
+  border-radius: 0.45rem;
+  pointer-events: auto;
+}
+
+.mida-factory.is-edit-mode .mida-factory__stage {
+  outline: 2px dashed var(--mida-brand-border);
+  outline-offset: 2px;
+}
+
+.mida-factory__map {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+
+.mida-factory__marker {
+  position: absolute;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  text-decoration: none;
+  color: inherit;
+  line-height: normal;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  touch-action: none;
+}
+
+.mida-factory__marker.is-editable {
+  cursor: grab;
+  z-index: 3;
+  touch-action: none;
+}
+
+.mida-factory__marker.is-editable:active,
+.mida-factory__marker.is-dragging {
+  cursor: grabbing;
+  z-index: 4;
+}
+
+.mida-factory__marker.is-saving {
+  opacity: 0.75;
+}
+
+.mida-factory__callout {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  line-height: normal;
+}
+
+.mida-factory__tag {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  background: var(--mida-brand);
+  color: #ffffff;
+  font-size: clamp(0.62rem, 1.1vw, 0.82rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+  pointer-events: auto;
+  transition: transform 0.2s ease, filter 0.2s ease, background 0.2s ease;
+}
+
+.mida-factory__marker--is-run .mida-factory__tag {
+  background: var(--mida-brand);
+  color: #ffffff;
+}
+
+.mida-factory__marker--is-stop .mida-factory__tag,
+.mida-factory__marker--is-offline .mida-factory__tag {
+  background: #6b7280;
+  color: #f8fafc;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.22);
+}
+
+[data-theme='light'] .mida-factory__marker--is-stop .mida-factory__tag,
+[data-theme='light'] .mida-factory__marker--is-offline .mida-factory__tag {
+  background: #9ca3af;
+  color: #ffffff;
+}
+
+.mida-factory__marker:hover .mida-factory__tag,
+.mida-factory__marker:focus-visible .mida-factory__tag {
+  transform: scale(1.04);
+  filter: brightness(1.06);
+}
+
+.mida-factory.is-edit-mode .mida-factory__callout {
+  pointer-events: auto;
+}
+
+.mida-factory.is-edit-mode .mida-factory__tag {
+  outline: 2px dashed rgba(255, 255, 255, 0.85);
+  outline-offset: 2px;
+}
+
+.mida-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.mida-machine-card-wrap {
+  position: relative;
+}
+
+.mida-machine-card__delete {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: 0.45rem;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fca5a5;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.mida-machine-card__delete:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+[data-theme='light'] .mida-machine-card__delete {
+  background: rgba(255, 255, 255, 0.92);
+  color: #dc2626;
+}
+
+[data-theme='light'] .mida-machine-card__delete:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.mida-machine-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--mida-surface);
+  border: 1px solid var(--mida-border-accent);
+  border-radius: 0.85rem;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--mida-shadow);
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.mida-machine-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--mida-card-hover-border);
+}
+
+.mida-machine-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--mida-border);
+  color: var(--mida-text-muted);
+}
+
+.mida-machine-card__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.mida-machine-card__dot.is-run { background: var(--mida-brand-light); box-shadow: 0 0 8px var(--mida-brand-glow); }
+.mida-machine-card__dot.is-stop { background: #ff8a65; }
+.mida-machine-card__dot.is-offline { background: #757575; }
+
+.mida-machine-card__body {
+  padding: 0.85rem;
+  text-align: center;
+}
+
+.mida-machine-card__img {
+  width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  margin-bottom: 0.65rem;
+  background: var(--mida-image-bg);
+}
+
+.mida-machine-card__placeholder {
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--mida-placeholder-text);
+  background: var(--mida-placeholder-bg);
+  border-radius: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.mida-machine-card__name {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--mida-text);
+}
+
+.mida-machine-card__id {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--mida-text-muted);
+  word-break: break-all;
+}
+
+.mida-machine-card__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.85rem 0.75rem;
+  font-size: 0.72rem;
+  color: var(--mida-text-muted);
+  border-top: 1px solid var(--mida-border);
+}
+
+.mida-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--mida-text-muted);
+}
+
+.mida-empty h2 {
+  color: var(--mida-text);
+  font-size: 1.15rem;
+}
+
+.mida-detail {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.mida-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--mida-link);
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.mida-detail__back:hover {
+  color: var(--mida-link-hover);
+}
+
+.mida-detail__header {
+  margin-bottom: 1.25rem;
+}
+
+.mida-detail__header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.mida-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(220, 38, 38, 0.45);
+  background: rgba(220, 38, 38, 0.1);
+  color: #fca5a5;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.mida-delete-btn:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.mida-delete-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.mida-detail__delete-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1050;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+}
+
+/* Trang chi tiết CNC: cùng 3 cột với hàng biểu đồ
+   stats (= time chart) | ảnh+cảnh báo (= status chart) | date (= elec) */
+.machine-top-panel--mida {
+  --machine-top-row-gap: var(--mida-card-gap, var(--mida-top-gap));
+  --machine-top-name-h: 78px;
+  --machine-top-stat-h: 92px;
+  --machine-top-stack-h: calc(
+    var(--machine-top-name-h) + var(--machine-top-row-gap) + var(--machine-top-stat-h)
+  );
+  align-items: stretch;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  --bs-gutter-x: 0;
+  --bs-gutter-y: 0;
+  gap: var(--mida-card-gap, var(--mida-top-gap));
+}
+
+.machine-top-panel--mida > [class*='col-'],
+.machine-top-panel--mida > .machine-top-panel__col-left,
+.machine-top-panel--mida > .machine-top-panel__center,
+.machine-top-panel--mida > .machine-top-panel__date-col {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.machine-top-panel--mida > .machine-top-panel__col-left {
+  order: 1;
+  min-width: 0;
+}
+
+.machine-top-panel--mida > .machine-top-panel__center {
+  order: 2;
+  display: grid;
+  grid-template-columns: var(--machine-top-stack-h) minmax(0, 1fr);
+  column-gap: var(--mida-card-gap, var(--mida-top-gap));
+  align-items: stretch;
+  min-width: 0;
+  height: var(--machine-top-stack-h);
+}
+
+.machine-top-panel--mida .machine-top-panel__image-col--mid {
+  /* Ghi đè Machine.css (.machine-top-panel__image-col { order: 2 }) */
+  order: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  min-width: 0;
+}
+
+.machine-top-panel--mida .machine-top-panel__image-col--mid .machine-top-panel__image-wrap {
+  width: 100%;
+  height: var(--machine-top-stack-h);
+  min-height: var(--machine-top-stack-h);
+  max-height: var(--machine-top-stack-h);
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.machine-top-panel--mida .machine-top-panel__alarms-wrap {
+  order: 2;
+  min-width: 0;
+  height: 100%;
+}
+
+.machine-top-panel--mida .machine-top-panel__alarms-wrap .machine-top-panel__alarms {
+  height: 100%;
+}
+
+.machine-top-panel--mida > .machine-top-panel__date-col {
+  order: 3;
+  min-width: 0;
+  width: var(--mida-date-panel-w);
+  height: var(--machine-top-stack-h);
+}
+
+.machine-top-panel--mida > .machine-top-panel__date-col > * {
+  width: 100%;
+  height: 100%;
+}
+
+.machine-top-panel--mida .machine-top-panel__stats-col,
+.machine-top-panel--mida .machine-top-panel__main-row {
+  gap: var(--mida-card-gap, var(--mida-top-gap));
+}
+
+.machine-top-panel--mida .machine-top-panel__stats-col > .machine-top-panel__stats-grid-row,
+.machine-top-panel--mida .machine-top-panel__stat-pair-inner {
+  column-gap: var(--mida-card-gap, var(--mida-top-gap));
+  row-gap: var(--mida-card-gap, var(--mida-top-gap));
+}
+
+@media (min-width: 1200px) {
+  .machine-top-panel--mida {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--mida-date-panel-w);
+    column-gap: var(--mida-card-gap, var(--mida-top-gap));
+    row-gap: var(--mida-card-gap, var(--mida-top-gap));
+    align-items: stretch;
+  }
+
+  .machine-top-panel--mida > .machine-top-panel__col-left,
+  .machine-top-panel--mida > .machine-top-panel__center,
+  .machine-top-panel--mida > .machine-top-panel__date-col {
+    flex: none !important;
+    max-width: none !important;
+    width: auto !important;
+  }
+
+  .machine-top-panel--mida > .machine-top-panel__date-col {
+    width: var(--mida-date-panel-w) !important;
+  }
+}
+
+[data-theme='light'] .mida-delete-btn {
+  background: #fef2f2;
+  border-color: rgba(220, 38, 38, 0.35);
+  color: #dc2626;
+}
+
+[data-theme='light'] .mida-delete-btn:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.mida-detail__status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--mida-text-muted);
+  margin-bottom: 0;
+}
+
+.mida-detail__title {
+  margin: 0 0 0.25rem;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-weight: 700;
+  color: var(--mida-text);
+}
+
+.mida-detail__id {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--mida-text-muted);
+  word-break: break-all;
+}
+
+.mida-detail__img {
+  max-width: 280px;
+  max-height: 160px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  background: var(--mida-image-bg);
+}
+
+.mida-detail__placeholder {
+  background: var(--mida-surface-muted);
+  border: 1px dashed var(--mida-border-accent);
+  border-radius: 0.85rem;
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--mida-shadow);
+}
+
+.mida-detail__placeholder h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  color: var(--mida-text);
+}
+
+.mida-detail__placeholder p {
+  margin: 0 0 1rem;
+  color: var(--mida-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.mida-detail__meta {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.mida-detail__meta div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 0.5rem;
+}
+
+.mida-detail__meta dt {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--mida-text-subtle);
+}
+
+.mida-detail__meta dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--mida-text);
+}
+
+/* ── Responsive ── */
+
+/* Laptop nhỏ / tablet ngang: cụm thống kê xuống hàng riêng */
+@media (max-width: 1199.98px) {
+  .mida-toolbar__cluster {
+    width: 100%;
+    margin-left: 0;
+    justify-content: end;
+  }
+}
+
+/* Tablet */
+@media (max-width: 991.98px) {
+  .mida-page--factory {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .mida-main {
+    padding: 0.45rem 1rem 1.25rem;
+  }
+
+  .mida-main--factory {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  .mida-main--factory .mida-toolbar {
+    flex-shrink: 0;
+  }
+
+  .mida-main--factory .mida-factory {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mida-main--factory .mida-factory__stage {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mida-main--factory .mida-factory__scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
+  }
+
+  .mida-main--factory .mida-factory__scroll.is-mobile-zoom .mida-factory__canvas {
+    transform-origin: top left;
+  }
+
+  .mida-factory.is-edit-mode .mida-factory__scroll {
+    overflow: auto;
+    overscroll-behavior: auto;
+  }
+
+  .mida-main--factory .mida-factory__map {
+    width: 100%;
+    height: auto;
+    max-width: none;
+  }
+
+  .mida-main--factory .mida-toolbar,
+  .mida-main--factory .mida-empty {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .mida-toolbar {
+    align-items: stretch;
+  }
+
+  .mida-tabs {
+    width: 100%;
+  }
+
+  .mida-tab {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 1rem;
+  }
+
+  .mida-toolbar__cluster {
+    width: 100%;
+  }
+
+  .mida-toolbar__status-pills {
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .mida-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.85rem;
+  }
+
+  .mida-detail__meta div {
+    grid-template-columns: 100px 1fr;
+  }
+}
+
+/* Mobile */
+@media (max-width: 767.98px) {
+  .mida-navbar {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'logo actions'
+      'title title';
+    gap: 0.45rem 0.75rem;
+    padding: 0.45rem 0.85rem;
+  }
+
+  .mida-navbar__logo-link {
+    grid-area: logo;
+  }
+
+  .mida-navbar__title {
+    grid-area: title;
+    white-space: normal;
+    line-height: 1.25;
+    font-size: clamp(0.8rem, 3.5vw, 1rem);
+  }
+
+  .mida-navbar__actions--desktop {
+    display: none;
+  }
+
+  .mida-navbar__mobile-menu {
+    display: block;
+    grid-area: actions;
+  }
+
+  .mida-navbar__logo {
+    height: 34px;
+    max-width: min(200px, 44vw);
+  }
+
+  .mida-main {
+    padding: 0.4rem 0.75rem 1rem;
+  }
+
+  .mida-main--factory {
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+
+  .mida-main--factory .mida-toolbar,
+  .mida-main--factory .mida-empty {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .mida-factory__stats-overlay {
+    top: 0.45rem;
+    right: 0.45rem;
+    max-width: calc(100% - 0.9rem);
+    padding: 0;
+    gap: 0.25rem 0.3rem;
+  }
+
+  .mida-factory__stats-pills {
+    gap: 0.25rem 0.3rem;
+  }
+
+  .mida-factory__stats-overlay .mida-total-stat__icon-box {
+    width: 26px;
+    height: 26px;
+  }
+
+  .mida-factory__stats-overlay .mida-total-stat__icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .mida-factory__stats-overlay .mida-total-stat__bar {
+    min-height: 24px;
+    padding: 0.18rem 0.42rem 0.18rem 0.38rem;
+  }
+
+  .mida-factory__stats-overlay .mida-total-stat__label {
+    font-size: 0.6rem;
+  }
+
+  .mida-factory__stats-overlay .mida-total-stat__value {
+    font-size: 0.82rem;
+  }
+
+  .mida-factory__stats-overlay .mida-status-pill__icon-wrap {
+    width: 24px;
+    height: 24px;
+    margin-right: -9px;
+  }
+
+  .mida-factory__stats-overlay .mida-status-pill__icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .mida-factory__stats-overlay .mida-status-pill__body {
+    min-height: 24px;
+    padding: 0.16rem 0.4rem 0.16rem 0.95rem;
+  }
+
+  .mida-factory__stats-overlay .mida-status-pill__label {
+    font-size: 0.56rem;
+  }
+
+  .mida-factory__stats-overlay .mida-status-pill__value {
+    font-size: 0.78rem;
+  }
+
+  .mida-factory__fab {
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    width: 2.55rem;
+    height: 2.55rem;
+  }
+
+  .mida-factory__top-left {
+    top: 0.45rem;
+    left: 0.45rem;
+    max-width: calc(100% - 0.9rem);
+  }
+
+  .mida-factory__bottom-left {
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    max-width: calc(100% - 5.5rem);
+  }
+
+  .mida-tabs--on-layout .mida-tab {
+    min-width: 0;
+    flex: 1 1 auto;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.72rem;
+  }
+
+  .mida-factory__tabs-overlay {
+    width: 100%;
+    max-width: 16rem;
+  }
+
+  .mida-factory__edit-toggle {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .mida-toolbar {
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+  }
+
+  .mida-toolbar__cluster {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'footer'
+      'status';
+    gap: 0.5rem;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .mida-toolbar__footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+    align-items: stretch;
+    grid-area: footer;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mida-toolbar__footer .mida-total-stat {
+    grid-area: auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    flex-shrink: 1;
+  }
+
+  .mida-toolbar__footer .mida-total-stat__bar {
+    flex: 1;
+    min-width: 0;
+    justify-content: space-between;
+    gap: 0.25rem;
+    overflow: hidden;
+  }
+
+  .mida-toolbar__footer .mida-total-stat__label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mida-toolbar__footer .mida-total-stat__value {
+    flex-shrink: 0;
+  }
+
+  .mida-toolbar__footer .mida-add-btn {
+    grid-area: auto;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    align-self: stretch;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.45rem;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    box-sizing: border-box;
+  }
+
+  .mida-toolbar__status-pills {
+    grid-area: status;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    width: 100%;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .mida-toolbar__status-pills .mida-status-pill {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .mida-toolbar__status-pills .mida-status-pill__body {
+    flex: 1;
+    min-width: 0;
+    justify-content: space-between;
+    padding: 0.25rem 0.45rem 0.25rem 1.15rem;
+    gap: 0.25rem;
+  }
+
+  .mida-toolbar__status-pills .mida-status-pill__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mida-toolbar__status-pills .mida-status-pill__value {
+    flex-shrink: 0;
+  }
+
+  .mida-tab {
+    font-size: 0.82rem;
+    padding: 0.45rem 0.75rem;
+  }
+
+  .mida-total-stat__icon-box {
+    width: 36px;
+    height: 36px;
+  }
+
+  .mida-total-stat__bar {
+    min-height: 32px;
+    padding: 0.3rem 0.65rem 0.3rem 0.55rem;
+  }
+
+  .mida-total-stat__label {
+    font-size: 0.74rem;
+  }
+
+  .mida-total-stat__value {
+    font-size: 1.25rem;
+  }
+
+  .mida-status-pill__icon-wrap {
+    width: 34px;
+    height: 34px;
+    margin-right: -11px;
+  }
+
+  .mida-status-pill__icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .mida-status-pill__body {
+    min-height: 30px;
+    padding: 0.25rem 0.6rem 0.25rem 1.2rem;
+    gap: 0.35rem;
+  }
+
+  .mida-status-pill__label {
+    font-size: 0.72rem;
+  }
+
+  .mida-status-pill__value {
+    font-size: 1.05rem;
+  }
+
+  .mida-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .mida-empty {
+    padding: 2rem 0.75rem;
+  }
+
+  .mida-factory__tag {
+    font-size: 0.56rem;
+    max-width: 6.5rem;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .mida-detail__meta div {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}
+
+/* Mobile nhỏ */
+@media (max-width: 479.98px) {
+  .mida-navbar__title {
+    font-size: 0.78rem;
+    letter-spacing: 0.01em;
+  }
+
+  .mida-tab {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.5rem;
+    letter-spacing: 0.02em;
+  }
+
+  .mida-toolbar__status-pills {
+    gap: 0.3rem;
+  }
+
+  .mida-toolbar__status-pills .mida-status-pill__icon-wrap {
+    width: 30px;
+    height: 30px;
+    margin-right: -9px;
+  }
+
+  .mida-toolbar__status-pills .mida-status-pill__icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .mida-toolbar__status-pills .mida-status-pill__body {
+    min-height: 28px;
+    padding: 0.2rem 0.35rem 0.2rem 1rem;
+  }
+
+  .mida-toolbar__status-pills .mida-status-pill__label {
+    font-size: 0.65rem;
+  }
+
+  .mida-toolbar__status-pills .mida-status-pill__value {
+    font-size: 0.95rem;
+  }
+
+  .mida-toolbar__footer {
+    gap: 0.3rem;
+  }
+
+  .mida-toolbar__footer .mida-total-stat__icon-box {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mida-toolbar__footer .mida-total-stat__icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .mida-toolbar__footer .mida-total-stat__bar {
+    min-height: 32px;
+    padding: 0.25rem 0.35rem 0.25rem 0.45rem;
+  }
+
+  .mida-toolbar__footer .mida-total-stat__label {
+    font-size: 0.68rem;
+  }
+
+  .mida-toolbar__footer .mida-total-stat__value {
+    font-size: 1.1rem;
+  }
+
+  .mida-toolbar__footer .mida-add-btn {
+    font-size: 0.75rem;
+    padding: 0.45rem 0.35rem;
+  }
+
+  .mida-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mida-machine-card__name {
+    font-size: 0.95rem;
+  }
+
+  .mida-detail__placeholder {
+    padding: 1rem;
+  }
+}
+
+/* Thẻ điện áp / dòng / công suất / tần số — bố cục dọc */
+.mida-elec-panel {
+  min-height: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.mida-elec-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mida-card-gap, 0.4rem);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+}
+
+/* ĐIỆN ÁP = cùng chiều cao khối biểu đồ trạng thái (phía trên) */
+.mida-elec-stack__pair {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mida-card-gap, 0.4rem);
+  min-height: 0;
+}
+
+.mida-elec-stack__pair--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Điện áp full-width: phóng to cột bar, thẻ ngoài giữ nguyên */
+.mida-elec-stack__pair--single .mida-elec-card--bar {
+  padding: 0.28rem 0.35rem 0.3rem;
+}
+
+.mida-elec-stack__pair--single .mida-elec-card--bar .mida-elec-card__label {
+  font-size: clamp(0.55rem, 0.95vw, 0.68rem);
+  letter-spacing: 0.04em;
+}
+
+.mida-elec-stack__pair--single .mida-elec-card__body--bar {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  padding: 0.05rem 0.2rem 0.1rem;
+}
+
+.mida-elec-stack__pair--single .mida-elec-card--bar .mida-elec-card__value {
+  font-size: clamp(0.52rem, 1.05vw, 0.68rem);
+}
+
+.mida-elec-stack__pair--single .mida-elec-bar {
+  width: min(42%, 56px);
+  flex: 1 1 auto;
+  max-height: none;
+  gap: 1.5px;
+}
+
+/* POWER + CURRENT = cùng chiều cao khối biểu đồ Công suất & dòng điện (phía dưới) */
+.mida-elec-stack__top {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: var(--mida-card-gap, 0.4rem);
+  min-height: 0;
+}
+
+.mida-elec-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 0.4rem 0.3rem 0.45rem;
+  border-radius: var(--mida-card-radius, 6px);
+  border: 1px solid var(--mida-border, rgba(15, 23, 42, 0.1));
+  background: var(--mida-surface, #ffffff);
+  box-shadow: var(--mida-shadow, 0 1px 3px rgba(15, 23, 42, 0.06));
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.mida-elec-card--bar {
+  padding: 0.25rem 0.12rem 0.28rem;
+  gap: 0.15rem;
+}
+
+.mida-elec-card__label {
+  font-size: clamp(0.62rem, 1vw, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--mida-elec-color);
+  line-height: 1.2;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.mida-elec-card--bar .mida-elec-card__label {
+  font-size: clamp(0.48rem, 0.85vw, 0.58rem);
+  letter-spacing: 0.03em;
+}
+
+.mida-elec-card__body {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mida-elec-card__body--bar {
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-top: 0;
+  justify-content: flex-start;
+}
+
+.mida-elec-card__value {
+  font-size: clamp(0.82rem, 1.4vw, 1.05rem);
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 0 auto;
+}
+
+.mida-elec-card--bar .mida-elec-card__value {
+  font-size: clamp(0.52rem, 1.05vw, 0.68rem);
+}
+
+.mida-elec-card__unit {
+  font-size: 0.72em;
+  font-weight: 700;
+  margin-left: 0.05em;
+}
+
+.mida-elec-radial {
+  position: relative;
+  width: min(100%, 118px);
+  aspect-ratio: 1 / 1;
+}
+
+.mida-elec-radial__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.mida-elec-radial__value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(0.7rem, 1.3vw, 0.92rem);
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.mida-elec-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: min(55%, 26px);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.mida-elec-bar__seg {
+  display: block;
+  flex: 1 1 0;
+  min-height: 1px;
+  border-radius: 1px;
+}
+
+/* Hàng biểu đồ CNC — 2 hàng × 3 cột:
+   gauges | status | V/F
+   time   | power  | POWER+CURRENT */
+.machine-charts-row--mida {
+  --mida-charts-top-h: clamp(155px, 25vh, 200px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--mida-date-panel-w);
+  /* Hàng trên vừa phải → hàng dưới (time + power) cao hơn một chút */
+  grid-template-rows: var(--mida-charts-top-h) minmax(0, 1fr);
+  gap: var(--mida-card-gap, 0.4rem);
+  margin-bottom: 0;
+  align-items: stretch;
+  flex: 1 1 0;
+  min-height: 380px;
+  max-height: min(78vh, 780px);
+}
+
+.mida-charts-cell {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mida-charts-cell--gauges {
+  grid-column: 1;
+  grid-row: 1;
+  height: var(--mida-charts-top-h);
+  min-height: var(--mida-charts-top-h);
+  max-height: var(--mida-charts-top-h);
+}
+
+.mida-charts-cell--status {
+  grid-column: 2;
+  grid-row: 1;
+  height: var(--mida-charts-top-h);
+  min-height: var(--mida-charts-top-h);
+  max-height: var(--mida-charts-top-h);
+}
+
+.mida-charts-cell--gauges .mida-gauge-pair {
+  height: 100% !important;
+  min-height: 0;
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.mida-charts-cell--gauges .mida-gauge {
+  height: 100% !important;
+  min-height: 0;
+}
+
+.mida-charts-cell--elec {
+  grid-column: 3;
+  grid-row: 1 / -1;
+  display: grid;
+  grid-template-rows: subgrid;
+  min-height: 0;
+}
+
+.mida-charts-cell--time {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.mida-charts-cell--power {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.mida-charts-cell .machine-chart-card {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  width: 100%;
+}
+
+.mida-charts-cell .machine-chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.mida-charts-cell .machine-chart-plot {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.mida-charts-cell--time .machine-chart-card,
+.mida-charts-cell--power .machine-chart-card {
+  /* Ép hai biểu đồ dưới luôn fill đủ ô lưới (bằng chiều cao nhau) */
+  flex: 1 1 auto !important;
+  height: 100% !important;
+}
+
+.mida-charts-cell--elec .mida-elec-stack {
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: 1 / -1;
+  height: auto;
+  min-height: 0;
+  gap: var(--mida-card-gap, 0.4rem);
+}
+
+.mida-charts-cell--elec .mida-elec-stack__pair,
+.mida-charts-cell--elec .mida-elec-stack__top {
+  flex: unset;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ===== Responsive trang chi tiết CNC ===== */
+
+/* Tablet / dưới desktop: sidebar ẩn → padding 2 bên đều = khoảng cách thẻ */
+@media (max-width: 1199.98px) {
+  .mida-page--detail {
+    --mida-date-panel-w: min(148px, 26vw);
+    --machine-top-name-h: 66px;
+    --machine-top-stat-h: 80px;
+  }
+
+  .mida-page--detail .mida-detail__main {
+    padding-left: var(--mida-card-gap) !important;
+    padding-right: var(--mida-card-gap) !important;
+    padding-top: var(--mida-card-gap) !important;
+    padding-bottom: var(--mida-card-gap) !important;
+    margin-top: 0 !important;
+    gap: var(--mida-card-gap) !important;
+  }
+
+  .mida-page--detail .mida-page__body {
+    height: calc(100dvh - 48px) !important;
+    gap: var(--mida-card-gap) !important;
+  }
+}
+
+/* Tablet ngang/dọc vừa (768–1199): vẫn 3 cột top giống desktop, rút gọn */
+@media (max-width: 1199.98px) and (min-width: 768px) {
+  .machine-top-panel--mida {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) var(--mida-date-panel-w);
+    column-gap: var(--mida-card-gap) !important;
+    row-gap: var(--mida-card-gap) !important;
+    align-items: stretch;
+  }
+
+  .machine-top-panel--mida > .machine-top-panel__col-left,
+  .machine-top-panel--mida > .machine-top-panel__center,
+  .machine-top-panel--mida > .machine-top-panel__date-col {
+    width: auto !important;
+    max-width: none !important;
+    height: var(--machine-top-stack-h);
+    flex: none !important;
+  }
+
+  .machine-top-panel--mida > .machine-top-panel__center {
+    grid-template-columns: minmax(72px, var(--machine-top-stack-h)) minmax(0, 1fr);
+    height: var(--machine-top-stack-h);
+    min-height: 0;
+  }
+
+  .machine-top-panel--mida .machine-top-panel__image-col--mid .machine-top-panel__image-wrap {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    aspect-ratio: auto;
+  }
+
+  .machine-top-panel--mida > .machine-top-panel__date-col {
+    width: var(--mida-date-panel-w) !important;
+  }
+
+  .machine-charts-row--mida {
+    --mida-charts-top-h: auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: minmax(160px, auto);
+    flex: 0 0 auto;
+    max-height: none;
+    min-height: 0;
+    gap: var(--mida-card-gap) !important;
+    margin-bottom: 0 !important;
+  }
+
+  .mida-charts-cell--gauges {
+    grid-column: 1;
+    grid-row: 1;
+    height: auto;
+    min-height: 160px;
+    max-height: none;
+  }
+
+  .mida-charts-cell--status {
+    grid-column: 2;
+    grid-row: 1;
+    height: auto;
+    min-height: 160px;
+    max-height: none;
+  }
+
+  .mida-charts-cell--time {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 220px;
+  }
+
+  .mida-charts-cell--power {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 220px;
+  }
+
+  .mida-charts-cell--elec {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex;
+    min-height: 260px;
+    max-height: none;
+  }
+
+  .mida-charts-cell--elec .mida-elec-stack {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(120px, 150px) minmax(140px, 180px);
+    grid-row: auto;
+    height: 100%;
+    width: 100%;
+    gap: var(--mida-card-gap) !important;
+  }
+
+  .mida-charts-cell--elec .mida-elec-stack__pair {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    height: auto;
+  }
+
+  .mida-charts-cell--elec .mida-elec-stack__top {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .mida-elec-card--bar .mida-elec-card__label {
+    font-size: clamp(0.58rem, 1.2vw, 0.7rem);
+  }
+
+  .mida-elec-card--bar .mida-elec-card__value {
+    font-size: clamp(0.7rem, 1.6vw, 0.9rem);
+  }
+
+  .mida-elec-bar {
+    width: min(42%, 36px);
+  }
+}
+
+/* Điện thoại — xếp dọc, ngăn thẻ đè nhau
+   (ưu tiên cao hơn Bootstrap .row/.h-100 và Machine.css height cố định) */
+@media (max-width: 767.98px) {
+  .mida-page.mida-page--detail {
+    --mida-date-panel-w: min(132px, 40vw);
+    /* Giữ cùng token khoảng cách — không thu nhỏ lệch so với desktop */
+    --mida-card-gap: calc(0.4rem - 3px);
+    --mida-top-gap: var(--mida-card-gap);
+    --machine-top-name-h: 60px;
+    --machine-top-stat-h: 74px;
+    --machine-top-row-gap: var(--mida-card-gap);
+    /* Khung viewport + cuộn trong body — tránh màn hình trắng */
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .mida-page--detail .mida-page__body.mida-page__body--detail,
+  .mida-page--detail .mida-page__body {
+    flex: 1 1 auto !important;
+    flex-grow: 1 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: var(--mida-card-gap) !important;
+  }
+
+  .mida-page--detail .mida-detail__main {
+    flex: 0 0 auto !important;
+    flex-grow: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--mida-card-gap) !important;
+    padding: var(--mida-card-gap) !important;
+    padding-bottom: var(--mida-card-gap) !important;
+    margin-top: 0 !important;
+  }
+
+  .mida-page--detail .mida-navbar {
+    flex: 0 0 auto !important;
+  }
+
+  .mida-page--detail .machine-top-panel.machine-top-panel--mida,
+  .mida-page--detail .machine-top-panel--mida.row {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    gap: var(--mida-card-gap) !important;
+    row-gap: var(--mida-card-gap) !important;
+    column-gap: var(--mida-card-gap) !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida > .machine-top-panel__col-left,
+  .mida-page--detail .machine-top-panel--mida > .machine-top-panel__center,
+  .mida-page--detail .machine-top-panel--mida > .machine-top-panel__date-col {
+    position: relative !important;
+    float: none !important;
+    clear: both !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  /* Mobile: ảnh trên, cảnh báo dưới — tránh đè ngang */
+  .mida-page--detail .machine-top-panel--mida > .machine-top-panel__center {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--mida-card-gap) !important;
+    row-gap: var(--mida-card-gap) !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    height: auto !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-top-panel__image-col--mid {
+    order: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-top-panel__alarms-wrap,
+  .mida-page--detail .machine-top-panel--mida .machine-top-panel__alarms-row {
+    order: 2 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-top-panel__image-col--mid .machine-top-panel__image-wrap,
+  .mida-page--detail .machine-top-panel--mida .machine-top-panel__image-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border-radius: var(--mida-card-radius) !important;
+    aspect-ratio: 2 / 1 !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-top-panel__alarms,
+  .mida-page--detail .machine-top-panel--mida .machine-top-panel__alarms--list,
+  .mida-page--detail .machine-top-panel--mida .machine-top-panel__alarms--time {
+    height: auto !important;
+    min-height: 170px !important;
+    max-height: none !important;
+    overflow: auto !important;
+    margin: 0 !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida > .machine-top-panel__date-col {
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-time-range-panel {
+    height: auto !important;
+    min-height: 180px !important;
+    max-height: none !important;
+  }
+
+  /* Thẻ chọn ngày/tháng full-width trên mobile → chữ to hơn cho cân thẻ */
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-segment {
+    padding: 3px;
+    gap: 2px;
+    border-radius: 10px;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-segment__btn {
+    font-size: 0.92rem !important;
+    line-height: 1.2 !important;
+    padding: 0.45rem 0.35rem !important;
+    border-radius: 7px;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-picker__caption {
+    font-size: 0.78rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-chip {
+    font-size: 0.88rem !important;
+    border-radius: 6px;
+    min-height: 2.05rem;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-hint {
+    font-size: 0.78rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-range__granularity-btn {
+    font-size: 0.8rem !important;
+    padding: 0.35rem 0.2rem !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-range__label {
+    font-size: 0.8rem !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-range__input {
+    font-size: 0.95rem !important;
+    min-height: 2.2rem;
+    padding: 0.35rem 0.45rem;
+  }
+
+  /* Biểu đồ: flex column thay grid — hết chồng cột/hàng */
+  .mida-page--detail .machine-charts-row.machine-charts-row--mida {
+    --mida-charts-top-h: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    flex: 0 0 auto !important;
+    flex-grow: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    gap: var(--mida-card-gap) !important;
+    row-gap: var(--mida-card-gap) !important;
+    margin-bottom: 0 !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--gauges,
+  .mida-page--detail .mida-charts-cell--status {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  .mida-page--detail .mida-charts-cell,
+  .mida-page--detail .mida-charts-cell--gauges,
+  .mida-page--detail .mida-charts-cell--status,
+  .mida-page--detail .mida-charts-cell--time,
+  .mida-page--detail .mida-charts-cell--power,
+  .mida-page--detail .mida-charts-cell--elec {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Gauge không ép min-height → hết khoảng trống phía dưới trước thẻ trạng thái */
+  .mida-page--detail .mida-charts-cell--gauges {
+    min-height: 0 !important;
+    height: fit-content !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--status,
+  .mida-page--detail .mida-charts-cell--time,
+  .mida-page--detail .mida-charts-cell--power {
+    min-height: 0 !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--status {
+    /* Sát ngay dưới 2 thẻ hiệu suất (cùng gap với các thẻ khác) */
+    margin-top: 0 !important;
+  }
+
+  .mida-page--detail .mida-charts-cell .machine-chart-card,
+  .mida-page--detail .mida-charts-cell .machine-chart-card.h-100,
+  .mida-page--detail .mida-charts-cell--time .machine-chart-card,
+  .mida-page--detail .mida-charts-cell--power .machine-chart-card,
+  .mida-page--detail .mida-charts-cell .machine-chart-card--tall {
+    flex: 0 0 auto !important;
+    flex-grow: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--status .machine-chart-card {
+    min-height: 210px !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--time .machine-chart-card,
+  .mida-page--detail .mida-charts-cell--power .machine-chart-card,
+  .mida-page--detail .mida-charts-cell .machine-chart-card--tall {
+    min-height: 0 !important;
+    height: fit-content !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--power,
+  .mida-page--detail .mida-charts-cell--time {
+    height: fit-content !important;
+    flex: 0 0 auto !important;
+  }
+
+  .mida-page--detail .machine-chart-card--tall {
+    flex: 0 0 auto !important;
+    flex-grow: 0 !important;
+    height: fit-content !important;
+  }
+
+  /* Plot absolute → phải giữ chiều cao container, không thì canvas đè thẻ dưới */
+  .mida-page--detail .mida-charts-cell .machine-chart-plot {
+    position: relative !important;
+    flex: 0 0 auto !important;
+    height: 180px !important;
+    min-height: 180px !important;
+    max-height: 180px !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--time .machine-chart-plot,
+  .mida-page--detail .mida-charts-cell--power .machine-chart-plot {
+    height: 200px !important;
+    min-height: 200px !important;
+    max-height: 200px !important;
+  }
+
+  .mida-page--detail .mida-charts-cell .machine-chart-plot-inner {
+    position: absolute !important;
+    inset: 0 !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--gauges .mida-gauge-pair {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    gap: var(--mida-card-gap) !important;
+    align-items: start !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--gauges .mida-gauge {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--elec {
+    display: flex !important;
+    grid-template-rows: none !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--elec .mida-elec-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-rows: none !important;
+    grid-row: auto !important;
+    height: auto !important;
+    width: 100% !important;
+    gap: var(--mida-card-gap) !important;
+    row-gap: var(--mida-card-gap) !important;
+  }
+
+  .mida-page--detail .mida-elec-stack__pair {
+    flex: 0 0 auto !important;
+    min-height: 120px !important;
+    height: auto !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: var(--mida-card-gap) !important;
+    column-gap: var(--mida-card-gap) !important;
+    margin: 0 !important;
+  }
+
+  .mida-page--detail .mida-elec-stack__pair--single {
+    grid-template-columns: 1fr !important;
+  }
+
+  .mida-page--detail .mida-elec-stack__top {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    gap: var(--mida-card-gap) !important;
+    row-gap: var(--mida-card-gap) !important;
+    margin: 0 !important;
+  }
+
+  .mida-page--detail .mida-elec-card--radial {
+    min-height: 148px !important;
+    height: auto !important;
+  }
+
+  .mida-page--detail .mida-elec-card--bar {
+    min-height: 120px !important;
+    height: auto !important;
+    padding: 0.3rem 0.2rem;
+  }
+
+  .mida-page--detail .mida-elec-card--bar .mida-elec-card__label {
+    font-size: 0.62rem;
+  }
+
+  .mida-page--detail .mida-elec-card--bar .mida-elec-card__value {
+    font-size: 0.82rem;
+  }
+
+  .mida-page--detail .mida-elec-bar {
+    width: min(40%, 38px);
+    max-height: 88px;
+  }
+
+  .mida-page--detail .mida-elec-stack__pair--single .mida-elec-card__body--bar {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .mida-page--detail .mida-elec-stack__pair--single .mida-elec-card--bar .mida-elec-card__value {
+    font-size: 0.82rem;
+  }
+
+  .mida-page--detail .mida-elec-stack__pair--single .mida-elec-bar {
+    width: min(36%, 52px);
+    max-height: none;
+  }
+
+  .mida-page--detail .mida-elec-radial {
+    width: min(100%, 124px);
+  }
+
+  .mida-page--detail .mida-gauge-pair {
+    gap: var(--mida-card-gap) !important;
+  }
+
+  .mida-page--detail .mida-gauge__chart,
+  .mida-page--detail .mida-gauge__chart--radial,
+  .mida-page--detail .mida-gauge__chart--radial .mida-elec-radial {
+    width: min(100%, 104px);
+  }
+
+  .mida-page--detail .mida-detail__delete-fab {
+    right: 12px;
+    bottom: 12px;
+  }
+}
+
+/* Điện thoại nhỏ */
+@media (max-width: 575.98px) {
+  .mida-page--detail {
+    --mida-card-gap: calc(0.4rem - 3px);
+    --mida-top-gap: var(--mida-card-gap);
+    --mida-date-panel-w: min(120px, 42vw);
+  }
+
+  .machine-top-panel--mida {
+    --mida-top-gap: var(--mida-card-gap);
+    --machine-top-row-gap: var(--mida-card-gap);
+  }
+
+  .machine-top-panel--mida .machine-top-panel__alarms--list {
+    min-height: 150px !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--gauges {
+    min-height: 0 !important;
+    height: fit-content !important;
+  }
+
+  .mida-charts-cell--status,
+  .mida-charts-cell--time,
+  .mida-charts-cell--power,
+  .mida-charts-cell .machine-chart-card {
+    min-height: 0 !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--status .machine-chart-card {
+    min-height: 190px !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--gauges .machine-chart-card {
+    min-height: 0 !important;
+  }
+
+  .mida-page--detail .mida-charts-cell .machine-chart-plot {
+    height: 160px !important;
+    min-height: 160px !important;
+  }
+
+  .mida-page--detail .mida-charts-cell--time .machine-chart-plot,
+  .mida-page--detail .mida-charts-cell--power .machine-chart-plot {
+    height: 180px !important;
+    min-height: 180px !important;
+  }
+
+  .mida-gauge-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mida-elec-stack__pair {
+    min-height: 110px !important;
+  }
+
+  .mida-elec-card--radial {
+    min-height: 136px !important;
+  }
+
+  .mida-page--detail .machine-top-panel__stat-box > .fw-semibold,
+  .mida-page--detail .machine-chart-head,
+  .mida-page--detail .mida-gauge__label {
+    font-size: 11px !important;
+  }
+}
+
+@media (max-width: 1399.98px) and (min-width: 1200px) {
+  .mida-page--detail {
+    --mida-date-panel-w: 140px;
+  }
+
+  .machine-charts-row--mida {
+    --mida-charts-top-h: clamp(140px, 22vh, 180px);
+    min-height: 340px;
+  }
+}
+
+
+[data-theme='dark'] .mida-elec-card {
+  background: rgba(40, 24, 24, 0.92);
+  border-color: rgba(201, 180, 180, 0.16);
+  box-shadow: none;
+}

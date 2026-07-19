@@ -15,6 +15,8 @@ import errorMachineRoutes from "./routes/errorMachineRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import pushDataFromPLCRoutes from "./routes/pushDataFromPLCRoutes.js";
 import deleteDataToBoot from "./routes/bootDataRoutes.js";
+import portalRoutes from "./routes/portalRoutes.js";
+import { migrateUserAccessSchema } from "./utils/dbMigrate.js";
 
 
 dotenv.config();
@@ -39,6 +41,7 @@ app.use("/api/locations", locationRoutes);
 app.use("/api/status", statusRoutes);
 app.use("/api/errorsmachine", errorMachineRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/portal", portalRoutes);
 app.use("/api/pushData", pushDataFromPLCRoutes);
 app.use("/api/boot", deleteDataToBoot);
 
@@ -86,6 +89,7 @@ async function initDB() {
          );
       `);
       console.log("✅ Database initialized");
+      await migrateUserAccessSchema();
    } catch (error) {
       console.log("Error init DB", error);
    }

@@ -33,12 +33,13 @@ export const getFirstOperationDate = (rawRows = [], dailyRows = []) => {
 };
 
 /**
- * Hiệu suất sử dụng (%) =
- * tổng thời gian chạy (giờ) / (số ngày lịch từ ngày vận hành đến hôm nay × 24h) × 100
+ * Hiệu suất khai thác / sử dụng (%) =
+ * tổng thời gian bật máy (giờ) / (số ngày lịch từ ngày vận hành đến hôm nay × 24h) × 100
+ * (Portal MIDA: time_on; portal máy thường: time_on tương đương thời gian chạy.)
  */
 export function calcUsagePerformancePct(totalTimeOnSeconds, rawRows, dailyRows, now = new Date()) {
-  const runtimeSec = Number(totalTimeOnSeconds) || 0;
-  if (runtimeSec <= 0) return 0;
+  const onSec = Number(totalTimeOnSeconds) || 0;
+  if (onSec <= 0) return 0;
 
   const firstOp = getFirstOperationDate(rawRows, dailyRows);
   if (!firstOp) return 0;
@@ -47,8 +48,8 @@ export function calcUsagePerformancePct(totalTimeOnSeconds, rawRows, dailyRows, 
   if (calendarDays <= 0) return 0;
 
   const totalCalendarHours = calendarDays * 24;
-  const runtimeHours = runtimeSec / 3600;
-  const pct = (runtimeHours / totalCalendarHours) * 100;
+  const onHours = onSec / 3600;
+  const pct = (onHours / totalCalendarHours) * 100;
 
   return Math.min(100, Number(pct.toFixed(1)));
 }
