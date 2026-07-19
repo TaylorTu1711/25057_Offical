@@ -15,6 +15,8 @@ import MidaTotalStatBar from '../../components/mida/MidaTotalStatBar';
 import MidaStatusPill from '../../components/mida/MidaStatusPill';
 import '../../css/MidaCnc.css';
 
+// Tạm ẩn tab CNC / Máy ép — chỉ hiển thị CNC. Bật lại MACHINE_TABS + setActiveTab khi cần.
+const ACTIVE_MACHINE_TYPE = 'cnc';
 const MACHINE_TABS = [
   { id: 'cnc', label: 'Máy CNC', statLabel: 'Tổng máy CNC', emptyTitle: 'Chưa có máy CNC' },
   { id: 'ep', label: 'Máy ép', statLabel: 'Tổng máy ép', emptyTitle: 'Chưa có máy ép' },
@@ -22,7 +24,7 @@ const MACHINE_TABS = [
 
 export default function MidaCncDashboard() {
   const now = useNow(POLL_INTERVALS.connectionTick);
-  const [activeTab, setActiveTab] = useState('cnc');
+  const activeTab = ACTIVE_MACHINE_TYPE;
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -86,20 +88,6 @@ export default function MidaCncDashboard() {
       <main className={`mida-main${activeTab === 'cnc' ? ' mida-main--factory' : ''}`}>
         {activeTab !== 'cnc' && (
           <div className="mida-toolbar">
-            <div className="mida-tabs" role="tablist" aria-label="Loại máy MIDA">
-              {MACHINE_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  className={`mida-tab${tab.id === 'ep' ? ' mida-tab--ep' : ''}${activeTab === tab.id ? ' is-active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
             <div className="mida-toolbar__cluster">
               <div className="mida-toolbar__status-pills">
                 <MidaStatusPill variant="run" icon={Play} label="Đang chạy" value={stats.running} />
@@ -140,9 +128,6 @@ export default function MidaCncDashboard() {
             statLabel={tabMeta.statLabel}
             stats={stats}
             onCreateClick={() => setIsCreateOpen(true)}
-            machineTabs={MACHINE_TABS}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
           />
         )}
         {!loading && !error && machines.length > 0 && activeTab === 'ep' && (

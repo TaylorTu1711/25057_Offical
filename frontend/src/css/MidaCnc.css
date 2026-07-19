@@ -568,11 +568,23 @@
   box-shadow: none;
 }
 
-[data-theme='dark'] .mida-page--detail .machine-top-panel__stat-value {
+[data-theme='dark'] .mida-page--detail .machine-top-panel__stat-value,
+[data-theme='dark'] .mida-page--detail .machine-runtime-display__value,
+[data-theme='dark'] .mida-page--detail .machine-runtime-display__days-value,
+[data-theme='dark'] .mida-page--detail .machine-runtime-display__days-unit {
   color: #ff8a80 !important;
   text-shadow:
     0 0 8px rgba(239, 83, 80, 0.45),
     0 0 20px rgba(198, 40, 40, 0.25);
+}
+
+[data-theme='dark'] .mida-page--detail .machine-runtime-display__label {
+  color: rgba(255, 138, 128, 0.55);
+}
+
+[data-theme='dark'] .mida-page--detail .machine-runtime-display__sep {
+  color: rgba(239, 83, 80, 0.45);
+  text-shadow: 0 0 6px rgba(239, 83, 80, 0.35);
 }
 
 [data-theme='dark'] .mida-page--detail .machine-top-panel__stat-box .text-brand,
@@ -866,16 +878,32 @@
   margin-bottom: 0.35rem;
 }
 
-.mida-factory__top-left {
+.mida-factory__top-bar {
   position: absolute;
   top: 0.65rem;
   left: 0.65rem;
+  right: 0.65rem;
   z-index: 11;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  pointer-events: none;
+}
+
+.mida-factory__top-left {
+  position: relative;
+  top: auto;
+  left: auto;
+  z-index: auto;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.4rem;
-  max-width: min(22rem, calc(100% - 1.3rem));
+  max-width: min(22rem, 48%);
+  flex: 0 1 auto;
+  min-width: 0;
   pointer-events: none;
 }
 
@@ -1307,16 +1335,17 @@
 }
 
 .mida-factory__stats-overlay {
-  position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
-  z-index: 11;
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: auto;
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.3rem 0.38rem;
-  max-width: calc(100% - 1.3rem);
+  max-width: min(100%, 70%);
+  margin-left: auto;
   padding: 0;
   background: transparent;
   border: none;
@@ -1325,6 +1354,8 @@
   pointer-events: none;
   overflow-x: auto;
   scrollbar-width: none;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .mida-factory__stats-overlay::-webkit-scrollbar {
@@ -1333,7 +1364,7 @@
 
 .mida-factory__stats-pills {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.3rem 0.38rem;
@@ -1520,7 +1551,8 @@
   background: transparent;
   padding: 0;
   font: inherit;
-  touch-action: none;
+  /* Cho phép kéo pan layout trên mobile; chỉ khóa khi edit */
+  touch-action: manipulation;
 }
 
 .mida-factory__marker.is-editable {
@@ -2065,12 +2097,57 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
-    overscroll-behavior: contain;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
+    scroll-snap-type: none;
   }
 
   .mida-main--factory .mida-factory__scroll.is-mobile-zoom .mida-factory__canvas {
     transform-origin: top left;
+    will-change: transform;
+  }
+
+  .mida-main--factory .mida-factory__scroll.is-mobile-zoom .mida-factory__zoom-wrap {
+    /* Không để trình duyệt tự căn giữa nội dung nhỏ hơn viewport */
+    margin: 0;
+    min-width: 100%;
+    min-height: 100%;
+  }
+
+  /* Thống kê góc trên phải trên mobile */
+  .mida-factory__top-bar {
+    top: 0.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: 0.35rem;
+  }
+
+  .mida-factory__top-left {
+    max-width: 100%;
+    align-self: flex-start;
+  }
+
+  .mida-factory__tabs-overlay {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .mida-factory__stats-overlay {
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: 0;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    align-self: flex-end;
+  }
+
+  .mida-factory__stats-pills {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .mida-factory.is-edit-mode .mida-factory__scroll {
@@ -2176,15 +2253,23 @@
   }
 
   .mida-factory__stats-overlay {
-    top: 0.45rem;
-    right: 0.45rem;
-    max-width: calc(100% - 0.9rem);
+    top: auto;
+    right: auto;
+    left: auto;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: 0;
     padding: 0;
     gap: 0.25rem 0.3rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    align-self: flex-end;
   }
 
   .mida-factory__stats-pills {
     gap: 0.25rem 0.3rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .mida-factory__stats-overlay .mida-total-stat__icon-box {
@@ -2241,10 +2326,21 @@
     height: 2.55rem;
   }
 
-  .mida-factory__top-left {
+  .mida-factory__top-bar {
     top: 0.45rem;
     left: 0.45rem;
-    max-width: calc(100% - 0.9rem);
+    right: 0.45rem;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+    gap: 0.35rem;
+  }
+
+  .mida-factory__top-left {
+    top: auto;
+    left: auto;
+    max-width: 100%;
+    align-self: flex-start;
   }
 
   .mida-factory__bottom-left {
@@ -2261,8 +2357,8 @@
   }
 
   .mida-factory__tabs-overlay {
-    width: 100%;
-    max-width: 16rem;
+    width: auto;
+    max-width: 100%;
   }
 
   .mida-factory__edit-toggle {

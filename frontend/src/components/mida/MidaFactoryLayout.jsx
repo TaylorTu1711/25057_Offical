@@ -95,6 +95,9 @@ export default function MidaFactoryLayout({
     if (!scrollEl || !wrapEl || !canvasEl) return undefined;
 
     const mobileMq = window.matchMedia('(max-width: 991.98px)');
+    const hasCenteredRef = { current: false };
+    const touchActiveRef = { current: false };
+    let rafId = 0;
 
     const resetMobileZoom = () => {
       scrollEl.classList.remove('is-mobile-zoom');
@@ -103,6 +106,7 @@ export default function MidaFactoryLayout({
       canvasEl.style.transform = '';
       canvasEl.style.transformOrigin = '';
       mobileZoomRef.current = { scale: 0, width: 0, height: 0 };
+      hasCenteredRef.current = false;
     };
 
     const updateMobileCoverScale = () => {
@@ -110,6 +114,9 @@ export default function MidaFactoryLayout({
         resetMobileZoom();
         return;
       }
+
+      // Đang kéo bằng tay — không đụng scroll / scale (tránh bị kéo về giữa)
+      if (touchActiveRef.current) return;
 
       const { width: viewW, height: viewH } = scrollEl.getBoundingClientRect();
       const canvasW = canvasEl.offsetWidth;
@@ -121,9 +128,14 @@ export default function MidaFactoryLayout({
       const scaledH = canvasH * scale;
       const prev = mobileZoomRef.current;
       const layoutChanged =
-        Math.abs(prev.scale - scale) > 0.001
-        || Math.abs(prev.width - scaledW) > 1
-        || Math.abs(prev.height - scaledH) > 1;
+        Math.abs(prev.scale - scale) > 0.002
+        || Math.abs(prev.width - scaledW) > 2
+        || Math.abs(prev.height - scaledH) > 2;
+
+      if (!layoutChanged && prev.scale > 0) return;
+
+      const prevScrollLeft = scrollEl.scrollLeft;
+      const prevScrollTop = scrollEl.scrollTop;
 
       wrapEl.style.width = `${scaledW}px`;
       wrapEl.style.height = `${scaledH}px`;
@@ -131,34 +143,70 @@ export default function MidaFactoryLayout({
       canvasEl.style.transformOrigin = 'top left';
       scrollEl.classList.add('is-mobile-zoom');
 
-      if (layoutChanged) {
-        scrollEl.scrollLeft = Math.max(0, (scaledW - viewW) / 2);
-        scrollEl.scrollTop = Math.max(0, (scaledH - viewH) / 2);
-        mobileZoomRef.current = { scale, width: scaledW, height: scaledH };
+      const maxL = Math.max(0, scaledW - viewW);
+      const maxT = Math.max(0, scaledH - viewH);
+
+      if (!hasCenteredRef.current) {
+        scrollEl.scrollLeft = maxL / 2;
+        scrollEl.scrollTop = maxT / 2;
+        hasCenteredRef.current = true;
+      } else {
+        // Giữ nguyên pixel đang xem, chỉ clamp trong biên mới
+        scrollEl.scrollLeft = clamp(prevScrollLeft, 0, maxL);
+        scrollEl.scrollTop = clamp(prevScrollTop, 0, maxT);
       }
+
+      mobileZoomRef.current = { scale, width: scaledW, height: scaledH };
+    };
+
+    const scheduleUpdate = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(updateMobileCoverScale);
+    };
+
+    const onTouchStart = () => {
+      touchActiveRef.current = true;
+    };
+    const onTouchEnd = () => {
+      touchActiveRef.current = false;
+      // Sau khi thả tay mới cập nhật scale nếu viewport đổi (thanh địa chỉ iOS)
+      scheduleUpdate();
     };
 
     const img = canvasEl.querySelector('img');
     if (img && !img.complete) {
-      img.addEventListener('load', updateMobileCoverScale);
+      img.addEventListener('load', scheduleUpdate);
     }
 
-    const resizeObserver = new ResizeObserver(updateMobileCoverScale);
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
     resizeObserver.observe(scrollEl);
     resizeObserver.observe(canvasEl);
 
-    updateMobileCoverScale();
-    window.addEventListener('resize', updateMobileCoverScale);
-    mobileMq.addEventListener('change', updateMobileCoverScale);
+    scheduleUpdate();
+    window.addEventListener('resize', scheduleUpdate);
+    mobileMq.addEventListener('change', scheduleUpdate);
+    scrollEl.addEventListener('touchstart', onTouchStart, { passive: true });
+    scrollEl.addEventListener('touchend', onTouchEnd, { passive: true });
+    scrollEl.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    scrollEl.addEventListener('pointerdown', onTouchStart, { passive: true });
+    window.addEventListener('pointerup', onTouchEnd);
+    window.addEventListener('pointercancel', onTouchEnd);
 
     return () => {
+      cancelAnimationFrame(rafId);
       resizeObserver.disconnect();
-      window.removeEventListener('resize', updateMobileCoverScale);
-      mobileMq.removeEventListener('change', updateMobileCoverScale);
-      if (img) img.removeEventListener('load', updateMobileCoverScale);
+      window.removeEventListener('resize', scheduleUpdate);
+      mobileMq.removeEventListener('change', scheduleUpdate);
+      if (img) img.removeEventListener('load', scheduleUpdate);
+      scrollEl.removeEventListener('touchstart', onTouchStart);
+      scrollEl.removeEventListener('touchend', onTouchEnd);
+      scrollEl.removeEventListener('touchcancel', onTouchEnd);
+      scrollEl.removeEventListener('pointerdown', onTouchStart);
+      window.removeEventListener('pointerup', onTouchEnd);
+      window.removeEventListener('pointercancel', onTouchEnd);
       resetMobileZoom();
     };
-  }, [machines]);
+  }, []);
 
   useEffect(() => {
     const tabsEl = tabsOverlayRef.current;
@@ -328,40 +376,42 @@ export default function MidaFactoryLayout({
   return (
     <div className={`mida-factory${editMode ? ' is-edit-mode' : ''}`}>
       <div className="mida-factory__stage" aria-label="Sơ đồ layout nhà máy">
-        <div className="mida-factory__top-left">
-          {machineTabs && onTabChange && (
-            <div className="mida-factory__tabs-overlay" ref={tabsOverlayRef}>
-              <div className="mida-tabs mida-tabs--on-layout" role="tablist" aria-label="Loại máy MIDA">
-                {machineTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === tab.id}
-                    className={`mida-tab${tab.id === 'ep' ? ' mida-tab--ep' : ''}${activeTab === tab.id ? ' is-active' : ''}`}
-                    onClick={() => onTabChange(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+        <div className="mida-factory__top-bar">
+          <div className="mida-factory__top-left">
+            {machineTabs && onTabChange && (
+              <div className="mida-factory__tabs-overlay" ref={tabsOverlayRef}>
+                <div className="mida-tabs mida-tabs--on-layout" role="tablist" aria-label="Loại máy MIDA">
+                  {machineTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === tab.id}
+                      className={`mida-tab${tab.id === 'ep' ? ' mida-tab--ep' : ''}${activeTab === tab.id ? ' is-active' : ''}`}
+                      onClick={() => onTabChange(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          {stats && statLabel && (
+            <div
+              className={`mida-factory__stats-overlay${statsCompact ? ' is-compact' : ''}`}
+              ref={statsOverlayRef}
+              aria-label="Thống kê máy"
+            >
+              <MidaTotalStatBar icon={Boxes} label={statLabel} value={stats.total} />
+              <div className="mida-factory__stats-pills">
+                <MidaStatusPill variant="run" icon={Play} label="Đang chạy" value={stats.running} />
+                <MidaStatusPill variant="stop" icon={Pause} label="Dừng" value={stats.stopped} />
+                <MidaStatusPill variant="offline" icon={WifiOff} label="Mất kết nối" value={stats.offline} />
               </div>
             </div>
           )}
         </div>
-        {stats && statLabel && (
-          <div
-            className={`mida-factory__stats-overlay${statsCompact ? ' is-compact' : ''}`}
-            ref={statsOverlayRef}
-            aria-label="Thống kê máy"
-          >
-            <MidaTotalStatBar icon={Boxes} label={statLabel} value={stats.total} />
-            <div className="mida-factory__stats-pills">
-              <MidaStatusPill variant="run" icon={Play} label="Đang chạy" value={stats.running} />
-              <MidaStatusPill variant="stop" icon={Pause} label="Dừng" value={stats.stopped} />
-              <MidaStatusPill variant="offline" icon={WifiOff} label="Mất kết nối" value={stats.offline} />
-            </div>
-          </div>
-        )}
         <div className="mida-factory__scroll" ref={scrollRef}>
           <div className="mida-factory__zoom-wrap" ref={zoomWrapRef}>
             <div className="mida-factory__canvas" ref={containerRef}>
