@@ -36,7 +36,7 @@ async function ensureTable() {
       id SERIAL PRIMARY KEY,
       nr INTEGER,
       machine_id VARCHAR(255),
-      timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       time_on INTEGER,
       time_running INTEGER,
       phase1_v REAL,

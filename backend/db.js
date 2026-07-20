@@ -13,7 +13,7 @@ const pool = new Pool({
   database: process.env.DB_NAME || "postgres"
 });
 
-// Giờ tường từ Orange Pi (không TZ) hiểu đúng là giờ VN khi ghi TIMESTAMPTZ
+// Session TZ VN — dùng khi convert TIMESTAMPTZ → TIMESTAMP / CURRENT_TIMESTAMP
 pool.on('connect', (client) => {
   client.query(`SET TIME ZONE 'Asia/Ho_Chi_Minh'`).catch(() => {});
 });

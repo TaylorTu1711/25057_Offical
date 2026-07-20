@@ -112,7 +112,7 @@ export async function tableHasColumn(db, schema, tableName, columnName) {
 export const CNC_ELECTRICAL_COLUMNS = [
   ['nr', 'INTEGER'],
   ['machine_id', 'VARCHAR(255)'],
-  ['timestamp', 'TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP'],
+  ['timestamp', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'],
   ['time_on', 'INTEGER'],
   ['time_running', 'INTEGER'],
   ['phase1_v', 'REAL'],
@@ -129,6 +129,22 @@ export const CNC_ELECTRICAL_COLUMNS = [
   ['status', 'INTEGER'],
 ];
 
+/** Đổi TIMESTAMPTZ → TIMESTAMP (không +07), giữ giờ tường VN. */
+async function ensureTimestampWithoutTz(db, qualifiedTable, schema, tableName) {
+  const { rows } = await db.query(
+    `SELECT data_type FROM information_schema.columns
+     WHERE table_schema = $1 AND table_name = $2 AND column_name = 'timestamp'`,
+    [schema, tableName],
+  );
+  if (rows[0]?.data_type !== 'timestamp with time zone') return;
+
+  await db.query(`
+    ALTER TABLE ${qualifiedTable}
+    ALTER COLUMN "timestamp" TYPE TIMESTAMP WITHOUT TIME ZONE
+    USING ("timestamp" AT TIME ZONE 'Asia/Ho_Chi_Minh')
+  `);
+}
+
 /**
  * Đảm bảo bảng telemetry CNC có đủ cột điện (gồm frequency).
  * @param {import('pg').Pool|import('pg').PoolClient} db
@@ -143,6 +159,8 @@ export async function ensureCncElectricalTelemetryColumns(db, qualifiedTable) {
       `ALTER TABLE ${qualifiedTable} ADD COLUMN IF NOT EXISTS "${column}" ${typeSql}`,
     );
   }
+
+  await ensureTimestampWithoutTz(db, qualifiedTable, schema, tableName);
 }
 
 function normalizePayloadRow(row) {
@@ -182,6 +200,9 @@ export async function fetchCncTelemetryRows(db, machineId, machine) {
   if (!(await tableExists(db, schema, tableName))) {
     return [];
   }
+
+  // Bảng cũ TIMESTAMPTZ → TIMESTAMP (hiển thị không còn +07)
+  await ensureTimestampWithoutTz(db, qualified, schema, tableName);
 
   const hasLegacyColumns = await tableHasColumn(db, schema, tableName, 'shoot');
   const hasFrequency = await tableHasColumn(db, schema, tableName, 'frequency');
