@@ -128,6 +128,7 @@ export default function MidaCncDashboard() {
             statLabel={tabMeta.statLabel}
             stats={stats}
             onCreateClick={() => setIsCreateOpen(true)}
+            createOpen={isCreateOpen}
           />
         )}
         {!loading && !error && machines.length > 0 && activeTab === 'ep' && (

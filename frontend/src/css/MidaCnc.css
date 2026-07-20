@@ -997,8 +997,11 @@
   box-shadow: 0 6px 18px rgba(183, 28, 28, 0.5);
 }
 
-.mida-factory__fab:active {
+.mida-factory__fab:active,
+.mida-factory__fab.is-active {
   transform: scale(0.98);
+  background: linear-gradient(135deg, #9a1515, var(--mida-brand-dark));
+  box-shadow: 0 0 0 3px rgba(239, 83, 80, 0.35), 0 6px 18px rgba(183, 28, 28, 0.55);
 }
 
 .mida-toolbar__cluster {
@@ -1115,23 +1118,100 @@
   z-index: 1200;
 }
 
-.mida-modal-panel {
-  background: var(--mida-modal-bg);
-  border: 1px solid var(--mida-border-accent);
+/* Ghi đè AppModal (xanh) → theme đỏ MIDA giống các thẻ khác */
+.mida-modal-overlay.app-modal-overlay,
+[data-theme='dark'] .mida-modal-overlay.app-modal-overlay,
+[data-theme='light'] .mida-modal-overlay.app-modal-overlay {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 20%, rgba(211, 47, 47, 0.18) 0%, transparent 60%),
+    rgba(20, 10, 10, 0.72) !important;
+}
+
+[data-theme='light'] .mida-modal-overlay.app-modal-overlay {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 20%, rgba(211, 47, 47, 0.12) 0%, transparent 60%),
+    rgba(205, 190, 190, 0.72) !important;
+}
+
+.mida-modal-panel,
+.mida-modal-panel.app-modal-panel,
+[data-theme='dark'] .mida-modal-panel.app-modal-panel,
+[data-theme='light'] .mida-modal-panel.app-modal-panel {
+  background: var(--mida-modal-bg) !important;
+  border: 1px solid var(--mida-border-accent) !important;
+  color: var(--mida-text) !important;
+  box-shadow:
+    0 0 1px rgba(239, 83, 80, 0.35),
+    0 0 28px rgba(183, 28, 28, 0.18),
+    0 8px 32px rgba(0, 0, 0, 0.45) !important;
+}
+
+.mida-modal-panel .app-modal-title {
+  color: var(--mida-brand) !important;
+}
+
+.mida-modal-panel .app-modal-label {
   color: var(--mida-text);
 }
 
-.mida-modal-input {
-  background: var(--mida-modal-input-bg);
-  border-color: var(--mida-btn-border);
+/* Ô nhập — ghi đè AppModal !important (xanh) */
+.mida-modal-panel .mida-modal-input,
+.mida-modal-panel .app-modal-input,
+.mida-modal-panel .form-control,
+.mida-modal-panel .form-select,
+[data-theme='dark'] .mida-modal-panel .mida-modal-input,
+[data-theme='dark'] .mida-modal-panel .app-modal-input,
+[data-theme='dark'] .mida-modal-panel .form-control,
+[data-theme='dark'] .mida-modal-panel .form-select {
+  background-color: var(--mida-modal-input-bg) !important;
+  border-color: var(--mida-btn-border) !important;
+  color: var(--mida-text) !important;
+  box-shadow: none !important;
+}
+
+.mida-modal-panel .mida-modal-input::placeholder,
+.mida-modal-panel .app-modal-input::placeholder,
+.mida-modal-panel .form-control::placeholder {
+  color: var(--mida-text-muted, #94a3b8);
+  opacity: 1;
+}
+
+.mida-modal-panel .mida-modal-input:focus,
+.mida-modal-panel .app-modal-input:focus,
+.mida-modal-panel .form-control:focus,
+.mida-modal-panel .form-select:focus,
+[data-theme='dark'] .mida-modal-panel .mida-modal-input:focus,
+[data-theme='dark'] .mida-modal-panel .app-modal-input:focus,
+[data-theme='dark'] .mida-modal-panel .form-control:focus,
+[data-theme='dark'] .mida-modal-panel .form-select:focus {
+  background-color: var(--mida-modal-input-focus-bg) !important;
+  color: var(--mida-text) !important;
+  border-color: var(--mida-brand-light) !important;
+  box-shadow: 0 0 0 0.2rem var(--mida-brand-soft) !important;
+}
+
+.mida-modal-panel .form-select option {
+  background-color: var(--mida-modal-bg);
   color: var(--mida-text);
 }
 
-.mida-modal-input:focus {
-  background: var(--mida-modal-input-focus-bg);
-  color: var(--mida-text);
-  border-color: var(--mida-brand-light);
-  box-shadow: 0 0 0 0.2rem var(--mida-brand-soft);
+/* Nút chọn file trong dark mode */
+.mida-modal-panel .form-control[type='file']::file-selector-button,
+.mida-modal-panel .form-control[type='file']::-webkit-file-upload-button,
+[data-theme='dark'] .mida-modal-panel .form-control[type='file']::file-selector-button,
+[data-theme='dark'] .mida-modal-panel .form-control[type='file']::-webkit-file-upload-button {
+  background-color: rgba(211, 47, 47, 0.2) !important;
+  color: var(--mida-text) !important;
+  border: 1px solid var(--mida-brand-border) !important;
+}
+
+[data-theme='dark'] .mida-modal-panel .form-control[type='file']:hover::file-selector-button,
+[data-theme='dark'] .mida-modal-panel .form-control[type='file']:hover::-webkit-file-upload-button,
+[data-theme='dark'] .mida-modal-panel .form-control[type='file']:focus::file-selector-button,
+[data-theme='dark'] .mida-modal-panel .form-control[type='file']:focus::-webkit-file-upload-button {
+  background-color: rgba(211, 47, 47, 0.35) !important;
+  color: #fff !important;
+  border-color: var(--mida-brand-light) !important;
 }
 
 .mida-modal-btn {
@@ -1139,10 +1219,19 @@
   color: var(--mida-btn-text);
 }
 
-.mida-modal-btn--primary {
-  background: linear-gradient(135deg, var(--mida-brand-dark), var(--mida-brand));
-  border: none;
-  color: #fff;
+.mida-modal-btn--primary,
+.mida-modal-btn--primary.app-modal-btn-primary:not(:disabled),
+[data-theme='dark'] .mida-modal-btn--primary.app-modal-btn-primary:not(:disabled),
+[data-theme='light'] .mida-modal-btn--primary.app-modal-btn-primary:not(:disabled) {
+  background: linear-gradient(135deg, var(--mida-brand-dark), var(--mida-brand)) !important;
+  border: none !important;
+  color: #fff !important;
+}
+
+.mida-modal-btn--primary:not(:disabled):hover,
+[data-theme='dark'] .mida-modal-btn--primary.app-modal-btn-primary:not(:disabled):hover {
+  filter: brightness(1.06);
+  color: #fff !important;
 }
 
 .mida-modal-error {

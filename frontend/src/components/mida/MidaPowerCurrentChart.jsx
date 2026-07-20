@@ -42,6 +42,12 @@ ChartJS.register(
 
 const Y_AXIS_IDS = ['yPower', 'yCurrent'];
 
+/** Headroom trên đỉnh: công suất ít hơn → đường cao hơn; dòng điện nhiều hơn → đường thấp hơn, tránh trùng. */
+const Y_AXIS_HEADROOM = {
+  yPower: 0.1,
+  yCurrent: 0.42,
+};
+
 /** Tự chỉnh min/max trục Y theo khoảng X đang nhìn. */
 function fitYAxesToVisibleX(chart) {
   const xScale = chart?.scales?.x;
@@ -83,14 +89,15 @@ function fitYAxesToVisibleX(chart) {
       continue;
     }
 
+    const headroom = Y_AXIS_HEADROOM[axisId] ?? 0.15;
     const span = hi - lo;
-    // Pad theo kW/A — không dùng sàn 1.0 (trước đây làm max luôn ~1 khi reload)
     const pad =
       span > 0
-        ? Math.max(span * 0.12, Math.abs(hi) * 0.02)
-        : Math.max(Math.abs(hi) * 0.15, 0.1);
+        ? Math.max(span * headroom, Math.abs(hi) * 0.02)
+        : Math.max(Math.abs(hi) * Math.max(headroom, 0.15), 0.1);
     const nextMin = lo >= 0 ? 0 : lo - pad;
-    const nextMax = hi + pad;
+    // Current: thêm headroom trên đỉnh để đường thấp hơn so với công suất
+    const nextMax = hi + (hi > 0 ? hi * headroom : pad);
 
     if (scale.options.min !== nextMin || scale.options.max !== nextMax) {
       scale.options.min = nextMin;
@@ -100,14 +107,6 @@ function fitYAxesToVisibleX(chart) {
   }
 
   if (changed) chart.update('none');
-}
-
-/** true nếu trục X đang xem gần như full data (chưa zoom). */
-function isFullXRange(chart) {
-  const x = chart?.scales?.x;
-  const n = chart?.data?.labels?.length ?? 0;
-  if (!x || n <= 1) return true;
-  return x.min <= 0.01 && x.max >= n - 1.01;
 }
 
 /**
@@ -130,22 +129,7 @@ export default function MidaPowerCurrentChart({
   );
 
   const handleZoomOrPan = useCallback((ctx) => {
-    const chart = ctx.chart;
-    if (isFullXRange(chart)) {
-      let changed = false;
-      for (const axisId of Y_AXIS_IDS) {
-        const scale = chart.scales?.[axisId];
-        if (!scale) continue;
-        if (scale.options.min != null || scale.options.max != null) {
-          scale.options.min = undefined;
-          scale.options.max = undefined;
-          changed = true;
-        }
-      }
-      if (changed) chart.update('none');
-      return;
-    }
-    fitYAxesToVisibleX(chart);
+    fitYAxesToVisibleX(ctx.chart);
   }, []);
 
   const zoomPluginOptions = useMemo(
@@ -168,27 +152,11 @@ export default function MidaPowerCurrentChart({
     [baseZoomOptions, handleZoomOrPan],
   );
 
-  // Khi full range: bỏ khóa trục Y. Khi đang zoom: chỉnh lại theo vùng nhìn thấy.
+  // Luôn chỉnh headroom: công suất cao hơn, dòng điện thấp hơn — tránh trùng đường
   useLayoutEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
-    const id = requestAnimationFrame(() => {
-      if (isFullXRange(chart)) {
-        let changed = false;
-        for (const axisId of Y_AXIS_IDS) {
-          const scale = chart.scales?.[axisId];
-          if (!scale) continue;
-          if (scale.options.min != null || scale.options.max != null) {
-            scale.options.min = undefined;
-            scale.options.max = undefined;
-            changed = true;
-          }
-        }
-        if (changed) chart.update('none');
-        return;
-      }
-      fitYAxesToVisibleX(chart);
-    });
+    const id = requestAnimationFrame(() => fitYAxesToVisibleX(chart));
     return () => cancelAnimationFrame(id);
   }, [chartRef, labels, powerValues, currentValues]);
 
@@ -270,6 +238,7 @@ export default function MidaPowerCurrentChart({
           {
             beginAtZero: true,
             position: 'left',
+            grace: '8%',
             title: {
               display: true,
               text: 'kW',
@@ -295,6 +264,8 @@ export default function MidaPowerCurrentChart({
           {
             beginAtZero: true,
             position: 'right',
+            // Headroom lớn hơn → đường dòng điện thấp hơn, tách khỏi công suất
+            grace: '45%',
             title: {
               display: true,
               text: 'A',

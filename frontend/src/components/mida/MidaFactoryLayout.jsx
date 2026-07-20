@@ -54,6 +54,7 @@ export default function MidaFactoryLayout({
   statLabel,
   stats,
   onCreateClick,
+  createOpen = false,
   machineTabs,
   activeTab,
   onTabChange,
@@ -452,10 +453,11 @@ export default function MidaFactoryLayout({
       {onCreateClick && !editMode && (
         <button
           type="button"
-          className="mida-factory__fab"
+          className={`mida-factory__fab${createOpen ? ' is-active' : ''}`}
           onClick={onCreateClick}
           aria-label="Tạo máy mới"
           title="Tạo máy mới"
+          aria-pressed={createOpen}
         >
           <Plus size={22} strokeWidth={2.5} aria-hidden="true" />
         </button>
