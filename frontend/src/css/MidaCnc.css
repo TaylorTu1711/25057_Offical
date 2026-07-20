@@ -1583,7 +1583,7 @@
 .mida-factory__tag {
   display: inline-block;
   padding: 0.4rem 0.85rem;
-  background: var(--mida-brand);
+  background: #6b7280;
   color: #ffffff;
   font-size: clamp(0.62rem, 1.1vw, 0.82rem);
   font-weight: 700;
@@ -1599,19 +1599,35 @@
   transition: transform 0.2s ease, filter 0.2s ease, background 0.2s ease;
 }
 
+/* Đang chạy — xanh */
 .mida-factory__marker--is-run .mida-factory__tag {
-  background: var(--mida-brand);
+  background: #16a34a;
   color: #ffffff;
+  box-shadow: 0 2px 10px rgba(22, 163, 74, 0.35);
 }
 
-.mida-factory__marker--is-stop .mida-factory__tag,
+/* Đang dừng — đỏ */
+.mida-factory__marker--is-stop .mida-factory__tag {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.35);
+}
+
+/* Mất kết nối — xám */
 .mida-factory__marker--is-offline .mida-factory__tag {
   background: #6b7280;
   color: #f8fafc;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.22);
 }
 
-[data-theme='light'] .mida-factory__marker--is-stop .mida-factory__tag,
+[data-theme='light'] .mida-factory__marker--is-run .mida-factory__tag {
+  background: #15803d;
+}
+
+[data-theme='light'] .mida-factory__marker--is-stop .mida-factory__tag {
+  background: #b91c1c;
+}
+
 [data-theme='light'] .mida-factory__marker--is-offline .mida-factory__tag {
   background: #9ca3af;
   color: #ffffff;
@@ -1710,9 +1726,9 @@
   border-radius: 50%;
 }
 
-.mida-machine-card__dot.is-run { background: var(--mida-brand-light); box-shadow: 0 0 8px var(--mida-brand-glow); }
-.mida-machine-card__dot.is-stop { background: #ff8a65; }
-.mida-machine-card__dot.is-offline { background: #757575; }
+.mida-machine-card__dot.is-run { background: #16a34a; box-shadow: 0 0 8px rgba(22, 163, 74, 0.45); }
+.mida-machine-card__dot.is-stop { background: #dc2626; box-shadow: 0 0 8px rgba(220, 38, 38, 0.4); }
+.mida-machine-card__dot.is-offline { background: #6b7280; }
 
 .mida-machine-card__body {
   padding: 0.85rem;
