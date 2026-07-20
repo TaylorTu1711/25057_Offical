@@ -14,8 +14,8 @@ export const countCalendarDaysInclusive = (fromDate, toDate) => {
   return Math.floor((to.getTime() - from.getTime()) / msPerDay) + 1;
 };
 
-/** Ngày đầu tiên có dữ liệu = thời điểm máy được đưa vào hoạt động. */
-export const getFirstOperationDate = (rawRows = [], dailyRows = []) => {
+/** Timestamp sớm nhất trong dữ liệu (thời điểm bắt đầu gửi). */
+export const getFirstDataTimestamp = (rawRows = [], dailyRows = []) => {
   let earliest = null;
 
   const consider = (timestamp) => {
@@ -29,27 +29,48 @@ export const getFirstOperationDate = (rawRows = [], dailyRows = []) => {
   dailyRows.forEach((row) => consider(row.timestamp));
   dailyRows.forEach((row) => consider(row.min_timestamp));
 
+  return earliest;
+};
+
+/** Timestamp mới nhất trong dữ liệu. */
+export const getLatestDataTimestamp = (rawRows = [], dailyRows = []) => {
+  let latest = null;
+
+  const consider = (timestamp) => {
+    if (!timestamp) return;
+    const t = new Date(timestamp);
+    if (Number.isNaN(t.getTime())) return;
+    if (!latest || t > latest) latest = t;
+  };
+
+  rawRows.forEach((row) => consider(row.timestamp));
+  dailyRows.forEach((row) => consider(row.timestamp));
+  dailyRows.forEach((row) => consider(row.max_timestamp));
+
+  return latest;
+};
+
+/** Ngày đầu tiên có dữ liệu = thời điểm máy được đưa vào hoạt động. */
+export const getFirstOperationDate = (rawRows = [], dailyRows = []) => {
+  const earliest = getFirstDataTimestamp(rawRows, dailyRows);
   return earliest ? startOfLocalDay(earliest) : null;
 };
 
 /**
- * Hiệu suất khai thác / sử dụng (%) =
- * tổng thời gian bật máy (giờ) / (số ngày lịch từ ngày vận hành đến hôm nay × 24h) × 100
- * (Portal MIDA: time_on; portal máy thường: time_on tương đương thời gian chạy.)
+ * Hiệu suất khai thác (%) =
+ * time_on / (thời gian từ mẫu đầu tiên → mẫu mới nhất) × 100
  */
-export function calcUsagePerformancePct(totalTimeOnSeconds, rawRows, dailyRows, now = new Date()) {
+export function calcUsagePerformancePct(totalTimeOnSeconds, rawRows, dailyRows) {
   const onSec = Number(totalTimeOnSeconds) || 0;
   if (onSec <= 0) return 0;
 
-  const firstOp = getFirstOperationDate(rawRows, dailyRows);
-  if (!firstOp) return 0;
+  const firstTs = getFirstDataTimestamp(rawRows, dailyRows);
+  const latestTs = getLatestDataTimestamp(rawRows, dailyRows);
+  if (!firstTs || !latestTs) return 0;
 
-  const calendarDays = countCalendarDaysInclusive(firstOp, startOfLocalDay(now));
-  if (calendarDays <= 0) return 0;
+  const elapsedSec = (latestTs.getTime() - firstTs.getTime()) / 1000;
+  if (elapsedSec <= 0) return 0;
 
-  const totalCalendarHours = calendarDays * 24;
-  const onHours = onSec / 3600;
-  const pct = (onHours / totalCalendarHours) * 100;
-
+  const pct = (onSec / elapsedSec) * 100;
   return Math.min(100, Number(pct.toFixed(1)));
 }

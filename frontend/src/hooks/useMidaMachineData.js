@@ -168,7 +168,7 @@ const buildPerformance = (dailyData, rawData) => {
     ? clampPct((latestTimeRunning / latestTimeOn) * 100)
     : 0;
 
-  // Hiệu suất khai thác = thời gian bật máy / (số ngày lịch × 24h) × 100
+  // Hiệu suất khai thác = time_on / (mẫu đầu → mẫu mới nhất) × 100
   const performanceMachine = calcUsagePerformancePct(
     latestTimeOn || totalTimeOnSeconds,
     rawData,
