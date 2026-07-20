@@ -40,6 +40,7 @@ export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
 
   await ensureCncElectricalTelemetryColumns(db, qualifiedTable);
 
+  // Giữ nguyên chuỗi timestamp từ Orange Pi (vd: 2026-07-20 09:26:07.000)
   const timestamp = row.timestamp ?? null;
   if (timestamp != null && timestamp !== '') {
     const rowTs = new Date(timestamp);
@@ -60,7 +61,7 @@ export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
       phase1_a, phase2_a, phase3_a, avg_a,
       power, power_consumption, frequency, status
     ) VALUES (
-      $1, $2, COALESCE($3::timestamptz, CURRENT_TIMESTAMP), $4, $5,
+      $1, $2, COALESCE($3::timestamp, CURRENT_TIMESTAMP), $4, $5,
       $6, $7, $8, $9,
       $10, $11, $12, $13,
       $14, $15, $16, $17
