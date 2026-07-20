@@ -9,13 +9,38 @@ import { calcUsagePerformancePct } from '../utils/machinePerformance';
 
 const normalizeDate = (iso) => new Date(iso).toISOString().split('T')[0];
 
+/**
+ * Điện năng (kWh) = ∫ power(kW) · d(time_running giờ).
+ * Dùng trung bình công suất giữa hai mẫu liên tiếp × Δtime_running.
+ */
+const energyKwhFromPowerAndTimeRun = (rows) => {
+  if (!Array.isArray(rows) || rows.length < 2) return 0;
+
+  const sorted = [...rows].sort(
+    (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+  );
+
+  let total = 0;
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prevRun = Number(sorted[i - 1].time_running) || 0;
+    const currRun = Number(sorted[i].time_running) || 0;
+    const dtSec = currRun - prevRun;
+    if (dtSec <= 0) continue;
+
+    const p0 = Number(sorted[i - 1].power) || 0;
+    const p1 = Number(sorted[i].power) || 0;
+    total += ((p0 + p1) / 2) * (dtSec / 3600);
+  }
+  return total;
+};
+
 const buildDailyData = (data) => {
   const buckets = data.reduce((acc, item) => {
     if (!item.timestamp) return acc;
     const date = String(item.timestamp).slice(0, 10);
 
     if (!acc[date]) {
-      acc[date] = { min: item, max: item };
+      acc[date] = { min: item, max: item, samples: [item] };
       return acc;
     }
 
@@ -25,6 +50,7 @@ const buildDailyData = (data) => {
 
     if (currentTime < minTime) acc[date].min = item;
     if (currentTime > maxTime) acc[date].max = item;
+    acc[date].samples.push(item);
     return acc;
   }, {});
 
@@ -34,12 +60,11 @@ const buildDailyData = (data) => {
     time_on: 0,
     time_running: 0,
     input_material: 0,
-    power_consumption: 0,
   };
   let prevDateKey = null;
 
   return sortedDates.map((date) => {
-    const { min, max } = buckets[date];
+    const { min, max, samples } = buckets[date];
     const minProduct = Number(min.product) || 0;
     const maxProduct = Number(max.product) || 0;
     const minTimeOn = Number(min.time_on) || 0;
@@ -48,14 +73,11 @@ const buildDailyData = (data) => {
     const maxTimeRunning = Number(max.time_running) || 0;
     const minInput = Number(min.input_material) || 0;
     const maxInput = Number(max.input_material) || 0;
-    const minEnergy = Number(min.power_consumption ?? min.shoot) || 0;
-    const maxEnergy = Number(max.power_consumption ?? max.shoot) || 0;
 
     const outputDiff = maxProduct - minProduct;
     const timeOnDiff = maxTimeOn - minTimeOn;
     const timeRunningDiff = maxTimeRunning - minTimeRunning;
     const inputDiff = maxInput - minInput;
-    const energyDiff = maxEnergy - minEnergy;
     const isSingleReading =
       min.id != null && max.id != null
         ? min.id === max.id
@@ -89,19 +111,21 @@ const buildDailyData = (data) => {
       prevClose.time_running,
     );
     const input_material = resolveDaily(inputDiff, minInput, maxInput, prevClose.input_material);
-    const power_consumption = resolveDaily(
-      energyDiff,
-      minEnergy,
-      maxEnergy,
-      prevClose.power_consumption,
-    );
+
+    // Điện năng trong ngày: power × Δtime_running (không dùng cột power_consumption)
+    let power_consumption = energyKwhFromPowerAndTimeRun(samples);
+    if (power_consumption <= 0 && time_running > 0) {
+      const avgPower = samples.length > 0
+        ? samples.reduce((s, r) => s + (Number(r.power) || 0), 0) / samples.length
+        : Number(max.power) || 0;
+      power_consumption = avgPower * (time_running / 3600);
+    }
 
     prevClose = {
       product: maxProduct,
       time_on: maxTimeOn,
       time_running: maxTimeRunning,
       input_material: maxInput,
-      power_consumption: maxEnergy,
     };
     prevDateKey = date;
 
@@ -151,9 +175,21 @@ const buildPerformance = (dailyData, rawData) => {
     dailyData,
   );
 
-  const latestPowerConsumption = Number(
-    latestRaw?.power_consumption ?? latestRaw?.shoot ?? 0,
-  );
+  // Lũy kế kWh = ∫ power · d(time_running); fallback 1 mẫu: power × time_running
+  let cumulativeEnergyKwh = energyKwhFromPowerAndTimeRun(rawData);
+  if (cumulativeEnergyKwh <= 0) {
+    const fromDaily = dailyData.reduce(
+      (sum, item) => sum + (Number(item.power_consumption) || 0),
+      0,
+    );
+    if (fromDaily > 0) {
+      cumulativeEnergyKwh = fromDaily;
+    } else {
+      const latestPowerFallback = Number(latestRaw?.power) || 0;
+      cumulativeEnergyKwh = latestPowerFallback * (latestTimeRunning / 3600);
+    }
+  }
+
   const latestPower = Number(latestRaw?.power ?? 0);
   const latestVoltage = Number(latestRaw?.avg_v ?? 0);
   const latestCurrent = Number(latestRaw?.avg_a ?? 0);
@@ -163,7 +199,7 @@ const buildPerformance = (dailyData, rawData) => {
     totalTimeOn,
     totalTimeOnSeconds: latestTimeOn || totalTimeOnSeconds,
     totalTimeRunningSeconds: latestTimeRunning || totalTimeRunningSeconds,
-    shootMachine: latestPowerConsumption,
+    shootMachine: Number(cumulativeEnergyKwh.toFixed(3)),
     powerKw: latestPower,
     voltageAvg: latestVoltage,
     currentAvg: latestCurrent,

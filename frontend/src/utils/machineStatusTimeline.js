@@ -1,4 +1,4 @@
-import { normalizeMachineStatus, toStatusChartValue } from './machineStatus';
+import { toStatusChartValue } from './machineStatus';
 
 export function generateTimestampsInRange(start, end, intervalMinutes = 5) {
   const timestamps = [];
@@ -10,8 +10,19 @@ export function generateTimestampsInRange(start, end, intervalMinutes = 5) {
   return timestamps;
 }
 
+/** Căn mốc thời gian theo interval (ổn định trục khi polling). */
+function alignToInterval(date, intervalMinutes, mode = 'floor') {
+  const ms = intervalMinutes * 60 * 1000;
+  const t = new Date(date).getTime();
+  if (!Number.isFinite(t)) return new Date(date);
+  return new Date(
+    mode === 'ceil' ? Math.ceil(t / ms) * ms : Math.floor(t / ms) * ms,
+  );
+}
+
 /**
- * Biểu đồ trạng thái 24h — giữ trạng thái cuối (forward-fill), không cần khớp ±2.5 phút.
+ * Biểu đồ trạng thái 24h — forward-fill theo mẫu telemetry.
+ * Không tô quá khứ bằng trạng thái live; live chỉ gắn điểm cuối cửa sổ.
  */
 export function buildStatusTimelineChart(
   rawMachineData,
@@ -20,15 +31,25 @@ export function buildStatusTimelineChart(
   intervalMinutes = 5,
   currentStatus = null,
 ) {
-  const fromMs = effectiveFrom.getTime();
-  const toMs = effectiveTo.getTime();
+  const alignedTo = alignToInterval(effectiveTo, intervalMinutes, 'floor');
+  const windowMs = Math.max(
+    0,
+    new Date(effectiveTo).getTime() - new Date(effectiveFrom).getTime(),
+  );
+  const alignedFrom = alignToInterval(
+    new Date(alignedTo.getTime() - windowMs),
+    intervalMinutes,
+    'floor',
+  );
+  const fromMs = alignedFrom.getTime();
+  const toMs = alignedTo.getTime();
 
   const allSorted = (Array.isArray(rawMachineData) ? rawMachineData : [])
     .filter((d) => d?.timestamp)
     .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-  let lastStatus = toStatusChartValue(currentStatus);
-
+  // Seed chỉ từ lịch sử trước cửa sổ — không dùng live status (tránh tô sai quá khứ)
+  let lastStatus = null;
   for (const d of allSorted) {
     const ts = new Date(d.timestamp).getTime();
     if (ts >= fromMs) break;
@@ -41,7 +62,7 @@ export function buildStatusTimelineChart(
     return ts >= fromMs && ts <= toMs;
   });
 
-  const rangeTimestamps = generateTimestampsInRange(effectiveFrom, effectiveTo, intervalMinutes);
+  const rangeTimestamps = generateTimestampsInRange(alignedFrom, alignedTo, intervalMinutes);
   let ptr = 0;
 
   const mappedData = rangeTimestamps.map((t) => {
@@ -53,6 +74,11 @@ export function buildStatusTimelineChart(
     }
     return lastStatus;
   });
+
+  const live = toStatusChartValue(currentStatus);
+  if (mappedData.length > 0 && live != null) {
+    mappedData[mappedData.length - 1] = live;
+  }
 
   const labels = rangeTimestamps.map((t) =>
     t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
@@ -73,8 +99,18 @@ export function buildPowerCurrentTimelineChart(
   livePower = null,
   liveCurrent = null,
 ) {
-  const fromMs = effectiveFrom.getTime();
-  const toMs = effectiveTo.getTime();
+  const alignedTo = alignToInterval(effectiveTo, intervalMinutes, 'floor');
+  const windowMs = Math.max(
+    0,
+    new Date(effectiveTo).getTime() - new Date(effectiveFrom).getTime(),
+  );
+  const alignedFrom = alignToInterval(
+    new Date(alignedTo.getTime() - windowMs),
+    intervalMinutes,
+    'floor',
+  );
+  const fromMs = alignedFrom.getTime();
+  const toMs = alignedTo.getTime();
 
   const allSorted = (Array.isArray(rawMachineData) ? rawMachineData : [])
     .filter((d) => d?.timestamp)
@@ -106,7 +142,7 @@ export function buildPowerCurrentTimelineChart(
     return ts >= fromMs && ts <= toMs;
   });
 
-  const rangeTimestamps = generateTimestampsInRange(effectiveFrom, effectiveTo, intervalMinutes);
+  const rangeTimestamps = generateTimestampsInRange(alignedFrom, alignedTo, intervalMinutes);
   let ptr = 0;
 
   const power = [];
