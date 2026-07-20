@@ -1,8 +1,10 @@
 import pool from '../db.js';
+import { isCncElectricalRow, saveCncTelemetryRow } from '../utils/cncTelemetry.js';
 import { saveProductionRow } from '../utils/productionPersistence.js';
 import {
   alarmTableRef,
   findMachinesRegistryTable,
+  isCncMachine,
   telemetryTableRef,
 } from '../utils/machineSchema.js';
 
@@ -37,6 +39,7 @@ export const pushDataFromPLC = async (req, res) => {
 
       const isAlarm = Object.prototype.hasOwnProperty.call(row, 'alarm_code')
         && Object.prototype.hasOwnProperty.call(row, 'alarm_id');
+      const isCncTelemetry = isCncMachine(machine) && isCncElectricalRow(row);
       const isProduction = Object.prototype.hasOwnProperty.call(row, 'shoot')
         && Object.prototype.hasOwnProperty.call(row, 'product');
       const isStatus = Object.prototype.hasOwnProperty.call(row, 'status_value');
@@ -47,6 +50,25 @@ export const pushDataFromPLC = async (req, res) => {
           `INSERT INTO ${alarmTableName} (nr, machine_id, timestamp, alarm_code, alarm_id, alarm_name, check_get)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [nr, machine_id, timestamp, alarm_code, alarm_id, alarm_name, check_get],
+        );
+      } else if (isCncTelemetry) {
+        const result = await saveCncTelemetryRow(pool, tableName, machine_id, row);
+        if (result.reason === 'table_missing') {
+          console.warn('Chưa có bảng telemetry CNC:', tableName);
+          continue;
+        }
+        if (result.reason === 'invalid_timestamp') {
+          console.warn('timestamp không hợp lệ, bỏ qua bản ghi CNC:', row);
+          continue;
+        }
+
+        const { timestamp, status } = row;
+        await pool.query(
+          `UPDATE ${registryTable}
+           SET last_updated = COALESCE($1::timestamptz, CURRENT_TIMESTAMP),
+               status = COALESCE($2, status)
+           WHERE machine_id = $3`,
+          [timestamp || null, status ?? null, machine_id],
         );
       } else if (isProduction) {
         let { timestamp, status } = row;

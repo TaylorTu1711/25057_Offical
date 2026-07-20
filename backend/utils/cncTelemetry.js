@@ -1,4 +1,5 @@
-import { SCHEMA, alarmTableRef, telemetryTableRef } from './machineSchema.js';
+import { alarmTableRef, telemetryTableRef } from './machineSchema.js';
+import { parseReal } from './numeric.js';
 
 function parseQualifiedTable(qualified) {
   const match = String(qualified).match(/^"([^"]+)"\."([^"]+)"$/);
@@ -6,6 +7,86 @@ function parseQualifiedTable(qualified) {
     throw new Error(`Invalid qualified table: ${qualified}`);
   }
   return { schema: match[1], tableName: match[2] };
+}
+
+const CNC_ELECTRICAL_MARKERS = [
+  'phase1_v', 'phase2_v', 'phase3_v', 'avg_v',
+  'phase1_a', 'phase2_a', 'phase3_a', 'avg_a',
+  'power', 'power_consumption', 'frequency', 'freq',
+  'time_running',
+];
+
+/** Payload telemetry điện CNC từ Node-RED / PLC. */
+export function isCncElectricalRow(row) {
+  if (!row || typeof row !== 'object') return false;
+  return CNC_ELECTRICAL_MARKERS.some((key) => Object.prototype.hasOwnProperty.call(row, key));
+}
+
+function numOrNull(value) {
+  const n = parseReal(value);
+  return n;
+}
+
+/**
+ * Ghi một dòng telemetry điện vào bảng máy CNC (schema cnc).
+ * @returns {{ saved: boolean, reason?: string }}
+ */
+export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
+  const { schema, tableName } = parseQualifiedTable(qualifiedTable);
+
+  if (!(await tableExists(db, schema, tableName))) {
+    return { saved: false, reason: 'table_missing' };
+  }
+
+  await ensureCncElectricalTelemetryColumns(db, qualifiedTable);
+
+  const timestamp = row.timestamp ?? null;
+  if (timestamp != null && timestamp !== '') {
+    const rowTs = new Date(timestamp);
+    if (Number.isNaN(rowTs.getTime())) {
+      return { saved: false, reason: 'invalid_timestamp' };
+    }
+  }
+
+  const frequency = numOrNull(row.frequency ?? row.freq);
+  const status = row.status != null && row.status !== ''
+    ? Number(row.status)
+    : null;
+
+  await db.query(
+    `INSERT INTO ${qualifiedTable} (
+      nr, machine_id, timestamp, time_on, time_running,
+      phase1_v, phase2_v, phase3_v, avg_v,
+      phase1_a, phase2_a, phase3_a, avg_a,
+      power, power_consumption, frequency, status
+    ) VALUES (
+      $1, $2, COALESCE($3::timestamptz, CURRENT_TIMESTAMP), $4, $5,
+      $6, $7, $8, $9,
+      $10, $11, $12, $13,
+      $14, $15, $16, $17
+    )`,
+    [
+      row.nr ?? null,
+      machineId,
+      timestamp || null,
+      numOrNull(row.time_on),
+      numOrNull(row.time_running),
+      numOrNull(row.phase1_v),
+      numOrNull(row.phase2_v),
+      numOrNull(row.phase3_v),
+      numOrNull(row.avg_v),
+      numOrNull(row.phase1_a),
+      numOrNull(row.phase2_a),
+      numOrNull(row.phase3_a),
+      numOrNull(row.avg_a),
+      numOrNull(row.power),
+      numOrNull(row.power_consumption),
+      frequency,
+      Number.isFinite(status) ? status : null,
+    ],
+  );
+
+  return { saved: true, reason: 'insert' };
 }
 
 export async function tableExists(db, schema, tableName) {
