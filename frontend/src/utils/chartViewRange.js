@@ -338,6 +338,9 @@ export function buildProductivitySeries(rawData, viewMode, selection = {}) {
 
 export function buildTimeSeries(rawData, viewMode, selection = {}) {
   const rowEnergyKwh = (row) => Number(row.power_consumption ?? row.shoot ?? 0) || 0;
+  /** Giờ chạy trong bucket: ưu tiên time_running (CNC), fallback time_on. */
+  const rowRunHours = (row) =>
+    (Number(row.time_running ?? row.time_on ?? 0) || 0) / 3600;
 
   if (viewMode === CHART_VIEW_MODES.day) {
     const { from, to, year, month } = getSelectionRange(viewMode, selection);
@@ -349,7 +352,7 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
 
     filtered.forEach((row) => {
       const key = toLocalDateKey(row.timestamp);
-      timeMap[key] = (row.time_on ?? 0) / 3600;
+      timeMap[key] = rowRunHours(row);
       energyMap[key] = rowEnergyKwh(row);
       outputMap[key] = row.product ?? 0;
     });
@@ -377,7 +380,7 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
     filtered.forEach((row) => {
       const ts = new Date(row.timestamp);
       const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
-      timeMap[key] = (timeMap[key] || 0) + (row.time_on ?? 0) / 3600;
+      timeMap[key] = (timeMap[key] || 0) + rowRunHours(row);
       energyMap[key] = (energyMap[key] || 0) + rowEnergyKwh(row);
       outputMap[key] = (outputMap[key] || 0) + (row.product ?? 0);
     });
@@ -411,7 +414,7 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
       filtered.forEach((row) => {
         const ts = new Date(row.timestamp);
         const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
-        timeMap[key] = (timeMap[key] || 0) + (row.time_on ?? 0) / 3600;
+        timeMap[key] = (timeMap[key] || 0) + rowRunHours(row);
         energyMap[key] = (energyMap[key] || 0) + rowEnergyKwh(row);
         outputMap[key] = (outputMap[key] || 0) + (row.product ?? 0);
       });
@@ -439,7 +442,7 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
 
     filtered.forEach((row) => {
       const key = toLocalDateKey(row.timestamp);
-      timeMap[key] = (row.time_on ?? 0) / 3600;
+      timeMap[key] = rowRunHours(row);
       energyMap[key] = rowEnergyKwh(row);
       outputMap[key] = row.product ?? 0;
     });
@@ -465,7 +468,7 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
 
   filtered.forEach((row) => {
     const y = new Date(row.timestamp).getFullYear();
-    timeMap[y] = (timeMap[y] || 0) + (row.time_on ?? 0) / 3600;
+    timeMap[y] = (timeMap[y] || 0) + rowRunHours(row);
     energyMap[y] = (energyMap[y] || 0) + rowEnergyKwh(row);
     outputMap[y] = (outputMap[y] || 0) + (row.product ?? 0);
   });
