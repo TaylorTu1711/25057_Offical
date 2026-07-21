@@ -250,11 +250,14 @@ export default function MidaCncMachineDetail() {
     setLabelsChart3((prev) => (chartSeriesEqual(prev, labels) ? prev : labels));
     setStatusDataValuesChart3((prev) => (chartSeriesEqual(prev, mappedData) ? prev : mappedData));
 
+    // Biểu đồ công suất/dòng điện: cửa sổ 60 phút, độ phân giải 1 giây
+    const elecTo = new Date(now);
+    const elecFrom = getRollingFromDate(60, elecTo);
     const electrical = buildPowerCurrentTimelineChart(
       rawMachineData,
-      effectiveFrom,
-      effectiveTo,
-      5,
+      elecFrom,
+      elecTo,
+      1,
       powerKw,
       currentAvg,
     );

@@ -20,6 +20,28 @@ function alignToInterval(date, intervalMinutes, mode = 'floor') {
   );
 }
 
+/** Căn mốc theo interval mili-giây (dùng cho độ phân giải giây). */
+function alignToIntervalMs(date, intervalMs, mode = 'floor') {
+  const t = new Date(date).getTime();
+  if (!Number.isFinite(t) || intervalMs <= 0) return new Date(date);
+  return new Date(
+    mode === 'ceil' ? Math.ceil(t / intervalMs) * intervalMs : Math.floor(t / intervalMs) * intervalMs,
+  );
+}
+
+/** Sinh mốc thời gian theo bước mili-giây. */
+function generateTimestampsInRangeMs(start, end, intervalMs) {
+  const timestamps = [];
+  if (intervalMs <= 0) return timestamps;
+  let t = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  while (t <= endMs) {
+    timestamps.push(new Date(t));
+    t += intervalMs;
+  }
+  return timestamps;
+}
+
 /**
  * Biểu đồ trạng thái 24h — forward-fill theo mẫu telemetry.
  * Không tô quá khứ bằng trạng thái live; live chỉ gắn điểm cuối cửa sổ.
@@ -88,25 +110,27 @@ export function buildStatusTimelineChart(
 }
 
 /**
- * Biểu đồ công suất / dòng điện realtime 24h — forward-fill theo mẫu telemetry.
+ * Biểu đồ công suất / dòng điện realtime — forward-fill theo mẫu telemetry.
+ * Độ phân giải theo giây (intervalSeconds); nhãn hiển thị giờ:phút:giây.
  * livePower / liveCurrent: giá trị hiện tại (điểm cuối cửa sổ).
  */
 export function buildPowerCurrentTimelineChart(
   rawMachineData,
   effectiveFrom,
   effectiveTo,
-  intervalMinutes = 5,
+  intervalSeconds = 1,
   livePower = null,
   liveCurrent = null,
 ) {
-  const alignedTo = alignToInterval(effectiveTo, intervalMinutes, 'floor');
+  const intervalMs = Math.max(1000, Number(intervalSeconds) * 1000 || 1000);
+  const alignedTo = alignToIntervalMs(effectiveTo, intervalMs, 'floor');
   const windowMs = Math.max(
     0,
     new Date(effectiveTo).getTime() - new Date(effectiveFrom).getTime(),
   );
-  const alignedFrom = alignToInterval(
+  const alignedFrom = alignToIntervalMs(
     new Date(alignedTo.getTime() - windowMs),
-    intervalMinutes,
+    intervalMs,
     'floor',
   );
   const fromMs = alignedFrom.getTime();
@@ -114,7 +138,9 @@ export function buildPowerCurrentTimelineChart(
 
   const allSorted = (Array.isArray(rawMachineData) ? rawMachineData : [])
     .filter((d) => d?.timestamp)
-    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    .map((d) => ({ ...d, _ts: new Date(d.timestamp).getTime() }))
+    .filter((d) => Number.isFinite(d._ts))
+    .sort((a, b) => a._ts - b._ts);
 
   const toPower = (row) => {
     const v = Number(row?.power);
@@ -129,20 +155,16 @@ export function buildPowerCurrentTimelineChart(
   let lastCurrent = null;
 
   for (const d of allSorted) {
-    const ts = new Date(d.timestamp).getTime();
-    if (ts >= fromMs) break;
+    if (d._ts >= fromMs) break;
     const p = toPower(d);
     const c = toCurrent(d);
     if (p != null) lastPower = p;
     if (c != null) lastCurrent = c;
   }
 
-  const rangeFiltered = allSorted.filter((d) => {
-    const ts = new Date(d.timestamp).getTime();
-    return ts >= fromMs && ts <= toMs;
-  });
+  const rangeFiltered = allSorted.filter((d) => d._ts >= fromMs && d._ts <= toMs);
 
-  const rangeTimestamps = generateTimestampsInRange(alignedFrom, alignedTo, intervalMinutes);
+  const rangeTimestamps = generateTimestampsInRangeMs(alignedFrom, alignedTo, intervalMs);
   let ptr = 0;
 
   const power = [];
@@ -150,7 +172,7 @@ export function buildPowerCurrentTimelineChart(
 
   rangeTimestamps.forEach((t) => {
     const tMs = t.getTime();
-    while (ptr < rangeFiltered.length && new Date(rangeFiltered[ptr].timestamp).getTime() <= tMs) {
+    while (ptr < rangeFiltered.length && rangeFiltered[ptr]._ts <= tMs) {
       const p = toPower(rangeFiltered[ptr]);
       const c = toCurrent(rangeFiltered[ptr]);
       if (p != null) lastPower = p;
@@ -167,7 +189,7 @@ export function buildPowerCurrentTimelineChart(
   }
 
   const labels = rangeTimestamps.map((t) =>
-    t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
   );
 
   return { labels, power, current };
