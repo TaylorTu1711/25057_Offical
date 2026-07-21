@@ -168,7 +168,8 @@ export default function MidaCncMachineDetail() {
   const [energyKwhValues, setEnergyKwhValues] = useState([]);
   const [powerChartValues, setPowerChartValues] = useState([]);
   const [currentChartValues, setCurrentChartValues] = useState([]);
-  const [elecChartLabels, setElecChartLabels] = useState([]);
+  const [elecChartTimestamps, setElecChartTimestamps] = useState([]);
+  const [elecPaused, setElecPaused] = useState(false);
   const [labelsChart3, setLabelsChart3] = useState([]);
   const [statusDataValuesChart3, setStatusDataValuesChart3] = useState([]);
   const [modals, setModals] = useState({
@@ -260,6 +261,8 @@ export default function MidaCncMachineDetail() {
 
   // Biểu đồ công suất/dòng điện: cửa sổ 60 phút, độ phân giải 1 giây, dịch trái mỗi giây
   useEffect(() => {
+    // Đang tương tác (zoom/pan) — dừng cuộn realtime để giữ nguyên vùng zoom
+    if (elecPaused) return;
     const elecTo = new Date(elecNow);
     const elecFrom = getRollingFromDate(60, elecTo);
     const electrical = buildPowerCurrentTimelineChart(
@@ -270,8 +273,8 @@ export default function MidaCncMachineDetail() {
       powerKw,
       currentAvg,
     );
-    setElecChartLabels((prev) =>
-      chartSeriesEqual(prev, electrical.labels) ? prev : electrical.labels,
+    setElecChartTimestamps((prev) =>
+      chartSeriesEqual(prev, electrical.timestamps) ? prev : electrical.timestamps,
     );
     setPowerChartValues((prev) =>
       chartSeriesEqual(prev, electrical.power) ? prev : electrical.power,
@@ -284,6 +287,7 @@ export default function MidaCncMachineDetail() {
     elecNow,
     powerKw,
     currentAvg,
+    elecPaused,
   ]);
 
   const handleDelete = async () => {
@@ -597,14 +601,31 @@ export default function MidaCncMachineDetail() {
                 <div className="chart-title-brand machine-chart-head">
                   <div>CÔNG SUẤT VÀ DÒNG ĐIỆN</div>
                 </div>
-                <div className="machine-chart-plot">
+                <div
+                  className="machine-chart-plot"
+                  onMouseEnter={() => setElecPaused(true)}
+                  onMouseLeave={() => setElecPaused(false)}
+                  onTouchStart={() => setElecPaused(true)}
+                >
                   <div className="machine-chart-plot-inner">
                     <MidaPowerCurrentChart
-                      labels={elecChartLabels}
+                      timestamps={elecChartTimestamps}
                       powerValues={powerChartValues}
                       currentValues={currentChartValues}
+                      windowMs={60 * 60 * 1000}
+                      live={!elecPaused}
                     />
                   </div>
+                  {elecPaused && (
+                    <button
+                      type="button"
+                      className="mida-chart-resume-btn"
+                      onClick={() => setElecPaused(false)}
+                      title="Trở lại thời gian thực"
+                    >
+                      Tạm dừng — bấm để chạy lại
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

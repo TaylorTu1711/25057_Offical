@@ -3010,6 +3010,27 @@
 .mida-charts-cell .machine-chart-plot {
   flex: 1 1 auto;
   min-height: 0;
+  position: relative;
+}
+
+.mida-chart-resume-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--mida-brand-dark, #b91c1c), var(--mida-brand, #dc2626));
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+}
+
+.mida-chart-resume-btn:hover {
+  filter: brightness(1.05);
 }
 
 .mida-charts-cell--time .machine-chart-card,

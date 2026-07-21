@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Chart } from 'react-chartjs-2';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
@@ -14,15 +14,12 @@ import {
   Filler,
 } from 'chart.js';
 import useTheme from '../../hooks/useTheme';
-import useChartZoomPreserve from '../../hooks/useChartZoomPreserve';
 import useSyncChartTheme from '../../hooks/useSyncChartTheme';
 import {
   themedScale,
   themedXScale,
   chartStableRenderOptions,
-  getCategoryXAxisTickOptions,
   getChartLegendOptions,
-  getCategoryTooltipTitleCallback,
   formatChartTooltipValue,
   isDarkChartTheme,
 } from '../../utils/chartTheme';
@@ -40,13 +37,32 @@ ChartJS.register(
   ChartDataLabels,
 );
 
-const Y_AXIS_IDS = ['yPower', 'yCurrent'];
-
 /** Headroom trên đỉnh: công suất ít hơn → đường cao hơn; dòng điện nhiều hơn → đường thấp hơn, tránh trùng. */
 const Y_AXIS_HEADROOM = {
   yPower: 0.1,
   yCurrent: 0.42,
 };
+
+/** Các bước thời gian "đẹp" (ms) để canh mốc lưới theo giờ tròn. */
+const TIME_STEPS_MS = [1, 2, 5, 10, 15, 20, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600].map(
+  (s) => s * 1000,
+);
+
+/** Chọn bước lưới sao cho có ~6–8 mốc trong khoảng đang nhìn. */
+function chooseTimeStep(spanMs) {
+  for (const s of TIME_STEPS_MS) {
+    if (spanMs / s <= 8) return s;
+  }
+  return TIME_STEPS_MS[TIME_STEPS_MS.length - 1];
+}
+
+function formatClock(ms, withSeconds) {
+  return new Date(ms).toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    ...(withSeconds ? { second: '2-digit' } : {}),
+  });
+}
 
 /** Làm tròn lên theo 2 chữ số có nghĩa → thang đo "đẹp", ít đổi vặt. */
 function roundSigUp(v, sig = 2) {
@@ -66,9 +82,8 @@ function roundSigDown(v, sig = 2) {
 }
 
 /**
- * Tính min/max ổn định cho 1 trục từ mảng giá trị — có hysteresis:
- * giữ nguyên trần cũ nếu đỉnh còn trong [55%, 100%] trần; ngược lại tính lại.
- * Trả về null nếu không có dữ liệu (để Chart.js tự scale).
+ * Tính min/max ổn định cho 1 trục — có hysteresis: giữ trần cũ nếu đỉnh còn trong [55%,100%] trần.
+ * Trả null khi không có dữ liệu (để Chart.js tự scale).
  */
 function computeStableBound(values, headroom, prev) {
   let hi = -Infinity;
@@ -104,104 +119,27 @@ function computeStableBound(values, headroom, prev) {
 }
 
 /**
- * Tự chỉnh min/max trục Y theo khoảng X đang nhìn — có "hysteresis":
- * chỉ đổi thang khi dữ liệu vượt trần hiện tại hoặc tụt sâu (<55%),
- * tránh trục nhảy mỗi giây gây giật dọc.
- */
-function fitYAxesToVisibleX(chart) {
-  const xScale = chart?.scales?.x;
-  if (!xScale) return;
-
-  const n = chart.data?.labels?.length ?? 0;
-  if (n <= 0) return;
-
-  const i0 = Math.max(0, Math.floor(Math.min(xScale.min, xScale.max)));
-  const i1 = Math.min(n - 1, Math.ceil(Math.max(xScale.min, xScale.max)));
-
-  if (!chart.$yBounds) chart.$yBounds = {};
-  let changed = false;
-
-  for (const axisId of Y_AXIS_IDS) {
-    const scale = chart.scales[axisId];
-    if (!scale) continue;
-
-    let hi = -Infinity;
-    let lo = Infinity;
-
-    for (const ds of chart.data.datasets || []) {
-      if ((ds.yAxisID || 'y') !== axisId) continue;
-      const arr = ds.data || [];
-      for (let i = i0; i <= i1; i += 1) {
-        const v = Number(arr[i]);
-        if (!Number.isFinite(v)) continue;
-        if (v > hi) hi = v;
-        if (v < lo) lo = v;
-      }
-    }
-
-    // Không có số / toàn 0 → bỏ khóa min/max, để Chart.js tự scale
-    if (!Number.isFinite(hi) || !Number.isFinite(lo) || (hi <= 0 && lo >= 0)) {
-      chart.$yBounds[axisId] = null;
-      if (scale.options.min != null || scale.options.max != null) {
-        scale.options.min = undefined;
-        scale.options.max = undefined;
-        changed = true;
-      }
-      continue;
-    }
-
-    const headroom = Y_AXIS_HEADROOM[axisId] ?? 0.15;
-    const prev = chart.$yBounds[axisId];
-
-    // Trần: giữ nguyên nếu hi còn trong dải [55% trần, trần]; ngược lại tính lại
-    let nextMax;
-    if (prev && hi <= prev.max && hi >= prev.max * 0.55) {
-      nextMax = prev.max;
-    } else {
-      nextMax = roundSigUp(hi * (1 + headroom), 2);
-    }
-
-    // Sàn: dữ liệu dương → 0; có giá trị âm → làm tròn xuống, giữ hysteresis
-    let nextMin;
-    if (lo >= 0) {
-      nextMin = 0;
-    } else if (prev && prev.min < 0 && lo >= prev.min && lo <= prev.min * 0.55) {
-      nextMin = prev.min;
-    } else {
-      const pad = Math.max(Math.abs(hi - lo) * headroom, Math.abs(lo) * 0.05, 0.1);
-      nextMin = roundSigDown(lo - pad, 2);
-    }
-
-    chart.$yBounds[axisId] = { min: nextMin, max: nextMax };
-
-    if (scale.options.min !== nextMin || scale.options.max !== nextMax) {
-      scale.options.min = nextMin;
-      scale.options.max = nextMax;
-      changed = true;
-    }
-  }
-
-  if (changed) chart.update('none');
-}
-
-/**
- * Biểu đồ đường kép: Công suất (kW) + Dòng điện (A).
+ * Biểu đồ đường kép: Công suất (kW) + Dòng điện (A) — trục X thời gian tuyến tính (ms),
+ * cửa sổ trượt trái liên tục theo thời gian thực.
+ * @param {number[]} timestamps epoch-ms của từng mẫu
+ * @param {number} windowMs độ rộng cửa sổ hiển thị (ms); dùng để cuộn liên tục
+ * @param {boolean} live true = đang realtime (tự cuộn); false = đang tương tác (giữ nguyên vùng zoom)
  */
 export default function MidaPowerCurrentChart({
-  labels = [],
+  timestamps = [],
   powerValues = [],
   currentValues = [],
-  xTickMode = 'month',
-  categoryPrefix = '',
+  windowMs = null,
+  live = true,
 }) {
   const { theme } = useTheme();
   const isDark = isDarkChartTheme(theme);
-  const labelCount = labels?.length ?? 0;
+  const chartRef = useRef(null);
 
-  const { chartRef, zoomPluginOptions: baseZoomOptions } = useChartZoomPreserve(
-    [labels, powerValues, currentValues],
-    'x',
-  );
+  const liveRef = useRef(live);
+  liveRef.current = live;
+  const windowMsRef = useRef(windowMs);
+  windowMsRef.current = windowMs;
 
   // Thang Y ổn định (hysteresis) — tính trong React để không bị re-render mỗi giây ghi đè
   const yBoundsRef = useRef({ yPower: null, yCurrent: null });
@@ -212,89 +150,60 @@ export default function MidaPowerCurrentChart({
     return { yPower, yCurrent };
   }, [powerValues, currentValues]);
 
-  const handleZoomOrPan = useCallback((ctx) => {
-    fitYAxesToVisibleX(ctx.chart);
-  }, []);
-
-  const zoomPluginOptions = useMemo(
-    () => ({
-      pan: {
-        ...baseZoomOptions.pan,
-        onPanComplete: (ctx) => {
-          baseZoomOptions.pan?.onPanComplete?.(ctx);
-          handleZoomOrPan(ctx);
-        },
-      },
-      zoom: {
-        ...baseZoomOptions.zoom,
-        onZoomComplete: (ctx) => {
-          baseZoomOptions.zoom?.onZoomComplete?.(ctx);
-          handleZoomOrPan(ctx);
-        },
-      },
-    }),
-    [baseZoomOptions, handleZoomOrPan],
-  );
-
-  // Chỉ tự-fit theo vùng nhìn khi người dùng đã zoom (x không còn full range)
-  useLayoutEffect(() => {
-    const chart = chartRef.current;
-    if (!chart) return undefined;
-    const x = chart.scales?.x;
-    const n = chart.data?.labels?.length ?? 0;
-    const isFull = !x || n <= 1 || (x.min <= 0.01 && x.max >= n - 1.01);
-    if (isFull) return undefined;
-    const id = requestAnimationFrame(() => fitYAxesToVisibleX(chart));
-    return () => cancelAnimationFrame(id);
-  }, [chartRef, labels, powerValues, currentValues]);
-
-  const data = useMemo(
-    () => ({
-      labels,
+  const data = useMemo(() => {
+    const toPoints = (values) =>
+      timestamps.map((t, i) => {
+        const y = values[i];
+        return { x: t, y: Number.isFinite(Number(y)) ? Number(y) : null };
+      });
+    return {
       datasets: [
         {
           type: 'line',
           label: 'Công suất (kW)',
-          data: powerValues,
+          data: toPoints(powerValues),
           yAxisID: 'yPower',
           borderColor: '#7c3aed',
-          backgroundColor: 'rgba(124, 58, 237, 0.14)',
+          backgroundColor: 'rgba(124, 58, 237, 0.10)',
+          pointRadius: 0,
+          pointHoverRadius: 4,
           pointBackgroundColor: '#7c3aed',
           pointBorderColor: '#ffffff',
-          pointRadius: labelCount > 40 ? 0 : 2.5,
-          pointHoverRadius: 4,
-          borderWidth: 2.2,
-          tension: 0.35,
-          fill: true,
+          borderWidth: 2,
+          tension: 0,
+          fill: timestamps.length <= 600,
           spanGaps: true,
+          parsing: false,
+          normalized: true,
           datalabels: { display: false },
         },
         {
           type: 'line',
           label: 'Dòng điện (A)',
-          data: currentValues,
+          data: toPoints(currentValues),
           yAxisID: 'yCurrent',
           borderColor: '#ef5350',
-          backgroundColor: 'rgba(239, 83, 80, 0.14)',
+          backgroundColor: 'rgba(239, 83, 80, 0.10)',
+          pointRadius: 0,
+          pointHoverRadius: 4,
           pointBackgroundColor: '#ef5350',
           pointBorderColor: '#ffffff',
-          pointRadius: labelCount > 40 ? 0 : 2.5,
-          pointHoverRadius: 4,
-          borderWidth: 2.2,
-          tension: 0.35,
-          fill: true,
+          borderWidth: 2,
+          tension: 0,
+          fill: timestamps.length <= 600,
           spanGaps: true,
+          parsing: false,
+          normalized: true,
           datalabels: { display: false },
         },
       ],
-    }),
-    [labels, powerValues, currentValues, labelCount],
-  );
+    };
+  }, [timestamps, powerValues, currentValues]);
 
   const options = useMemo(
     () => ({
       ...chartStableRenderOptions,
-      // Realtime 1s: vẽ tức thì, không morph toàn đường (tránh giật); cửa sổ dịch trái từng giây
+      // Realtime: vẽ tức thì, không animation → cửa sổ trượt mượt do RAF điều khiển
       animation: false,
       animations: {},
       transitions: {
@@ -309,7 +218,10 @@ export default function MidaPowerCurrentChart({
         datalabels: { display: false },
         tooltip: {
           callbacks: {
-            title: getCategoryTooltipTitleCallback(labels, categoryPrefix),
+            title: (items) => {
+              const x = items?.[0]?.parsed?.x ?? items?.[0]?.raw?.x;
+              return Number.isFinite(x) ? formatClock(x, true) : '';
+            },
             label: (ctx) => {
               const v = ctx.parsed.y;
               if (v == null || Number.isNaN(v)) return null;
@@ -318,15 +230,45 @@ export default function MidaPowerCurrentChart({
             },
           },
         },
-        zoom: zoomPluginOptions,
+        zoom: {
+          pan: { enabled: true, mode: 'x' },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'x',
+          },
+        },
       },
       scales: {
         x: themedXScale(
           {
-            ticks: getCategoryXAxisTickOptions(labelCount, xTickMode),
+            type: 'linear',
+            bounds: 'data',
+            offset: false,
+            afterBuildTicks: (scale) => {
+              const { min, max } = scale;
+              if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return;
+              const step = chooseTimeStep(max - min);
+              const first = Math.ceil(min / step) * step;
+              const out = [];
+              for (let v = first; v <= max + 1; v += step) out.push({ value: v });
+              scale.ticks = out;
+            },
+            ticks: {
+              maxRotation: 0,
+              minRotation: 0,
+              autoSkip: false,
+              includeBounds: false,
+              font: { size: 9 },
+              padding: 2,
+              callback: function tickLabel(value) {
+                const span = this.max - this.min;
+                return formatClock(value, chooseTimeStep(span) < 60000);
+              },
+            },
           },
           undefined,
-          'category',
+          'linear',
           theme,
         ),
         yPower: themedScale(
@@ -360,7 +302,6 @@ export default function MidaPowerCurrentChart({
           {
             beginAtZero: true,
             position: 'right',
-            // Headroom đã tính sẵn trong yBounds → đường dòng điện thấp hơn, tách khỏi công suất
             min: yBounds.yCurrent?.min,
             max: yBounds.yCurrent?.max,
             title: {
@@ -387,8 +328,39 @@ export default function MidaPowerCurrentChart({
         ),
       },
     }),
-    [theme, isDark, xTickMode, labelCount, categoryPrefix, labels, zoomPluginOptions, yBounds],
+    [theme, isDark, yBounds],
   );
+
+  // Cuộn cửa sổ liên tục theo thời gian thực (chỉ khi live). Tự giảm nhịp cập nhật
+  // khi bước dịch < 0.5px (cửa sổ rộng) để không tốn CPU vô ích.
+  useEffect(() => {
+    let raf;
+    let lastApply = 0;
+    const tick = () => {
+      const chart = chartRef.current;
+      const w = windowMsRef.current;
+      if (chart && liveRef.current && Number.isFinite(w) && w > 0) {
+        const now = Date.now();
+        const area = chart.chartArea;
+        const widthPx = area ? Math.max(1, area.right - area.left) : 300;
+        const pxPerMs = widthPx / w;
+        if (lastApply === 0 || (now - lastApply) * pxPerMs >= 0.5) {
+          const x = chart.options?.scales?.x;
+          if (x) {
+            x.min = now - w;
+            x.max = now;
+            chart.update('none');
+            lastApply = now;
+          }
+        }
+      } else {
+        lastApply = 0;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   useSyncChartTheme(chartRef, theme, options);
 

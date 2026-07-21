@@ -191,6 +191,7 @@ export function buildPowerCurrentTimelineChart(
   const labels = rangeTimestamps.map((t) =>
     t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
   );
+  const timestamps = rangeTimestamps.map((t) => t.getTime());
 
-  return { labels, power, current };
+  return { labels, timestamps, power, current };
 }
