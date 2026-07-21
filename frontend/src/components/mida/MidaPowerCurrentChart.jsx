@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { Chart } from 'react-chartjs-2';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
@@ -48,7 +48,66 @@ const Y_AXIS_HEADROOM = {
   yCurrent: 0.42,
 };
 
-/** Tự chỉnh min/max trục Y theo khoảng X đang nhìn. */
+/** Làm tròn lên theo 2 chữ số có nghĩa → thang đo "đẹp", ít đổi vặt. */
+function roundSigUp(v, sig = 2) {
+  if (!Number.isFinite(v) || v <= 0) return 0;
+  const exp = Math.floor(Math.log10(v)) - (sig - 1);
+  const step = Math.pow(10, exp);
+  return Math.ceil(v / step) * step;
+}
+
+/** Làm tròn xuống theo 2 chữ số có nghĩa (cho min âm). */
+function roundSigDown(v, sig = 2) {
+  if (!Number.isFinite(v) || v === 0) return 0;
+  const abs = Math.abs(v);
+  const exp = Math.floor(Math.log10(abs)) - (sig - 1);
+  const step = Math.pow(10, exp);
+  return Math.sign(v) * Math.floor(abs / step) * step;
+}
+
+/**
+ * Tính min/max ổn định cho 1 trục từ mảng giá trị — có hysteresis:
+ * giữ nguyên trần cũ nếu đỉnh còn trong [55%, 100%] trần; ngược lại tính lại.
+ * Trả về null nếu không có dữ liệu (để Chart.js tự scale).
+ */
+function computeStableBound(values, headroom, prev) {
+  let hi = -Infinity;
+  let lo = Infinity;
+  for (const raw of values || []) {
+    const v = Number(raw);
+    if (!Number.isFinite(v)) continue;
+    if (v > hi) hi = v;
+    if (v < lo) lo = v;
+  }
+  if (!Number.isFinite(hi) || !Number.isFinite(lo) || (hi <= 0 && lo >= 0)) {
+    return null;
+  }
+
+  let max;
+  if (prev && hi <= prev.max && hi >= prev.max * 0.55) {
+    max = prev.max;
+  } else {
+    max = roundSigUp(hi * (1 + headroom), 2);
+  }
+
+  let min;
+  if (lo >= 0) {
+    min = 0;
+  } else if (prev && prev.min < 0 && lo >= prev.min && lo <= prev.min * 0.55) {
+    min = prev.min;
+  } else {
+    const pad = Math.max(Math.abs(hi - lo) * headroom, Math.abs(lo) * 0.05, 0.1);
+    min = roundSigDown(lo - pad, 2);
+  }
+
+  return { min, max };
+}
+
+/**
+ * Tự chỉnh min/max trục Y theo khoảng X đang nhìn — có "hysteresis":
+ * chỉ đổi thang khi dữ liệu vượt trần hiện tại hoặc tụt sâu (<55%),
+ * tránh trục nhảy mỗi giây gây giật dọc.
+ */
 function fitYAxesToVisibleX(chart) {
   const xScale = chart?.scales?.x;
   if (!xScale) return;
@@ -59,6 +118,7 @@ function fitYAxesToVisibleX(chart) {
   const i0 = Math.max(0, Math.floor(Math.min(xScale.min, xScale.max)));
   const i1 = Math.min(n - 1, Math.ceil(Math.max(xScale.min, xScale.max)));
 
+  if (!chart.$yBounds) chart.$yBounds = {};
   let changed = false;
 
   for (const axisId of Y_AXIS_IDS) {
@@ -81,6 +141,7 @@ function fitYAxesToVisibleX(chart) {
 
     // Không có số / toàn 0 → bỏ khóa min/max, để Chart.js tự scale
     if (!Number.isFinite(hi) || !Number.isFinite(lo) || (hi <= 0 && lo >= 0)) {
+      chart.$yBounds[axisId] = null;
       if (scale.options.min != null || scale.options.max != null) {
         scale.options.min = undefined;
         scale.options.max = undefined;
@@ -90,14 +151,28 @@ function fitYAxesToVisibleX(chart) {
     }
 
     const headroom = Y_AXIS_HEADROOM[axisId] ?? 0.15;
-    const span = hi - lo;
-    const pad =
-      span > 0
-        ? Math.max(span * headroom, Math.abs(hi) * 0.02)
-        : Math.max(Math.abs(hi) * Math.max(headroom, 0.15), 0.1);
-    const nextMin = lo >= 0 ? 0 : lo - pad;
-    // Current: thêm headroom trên đỉnh để đường thấp hơn so với công suất
-    const nextMax = hi + (hi > 0 ? hi * headroom : pad);
+    const prev = chart.$yBounds[axisId];
+
+    // Trần: giữ nguyên nếu hi còn trong dải [55% trần, trần]; ngược lại tính lại
+    let nextMax;
+    if (prev && hi <= prev.max && hi >= prev.max * 0.55) {
+      nextMax = prev.max;
+    } else {
+      nextMax = roundSigUp(hi * (1 + headroom), 2);
+    }
+
+    // Sàn: dữ liệu dương → 0; có giá trị âm → làm tròn xuống, giữ hysteresis
+    let nextMin;
+    if (lo >= 0) {
+      nextMin = 0;
+    } else if (prev && prev.min < 0 && lo >= prev.min && lo <= prev.min * 0.55) {
+      nextMin = prev.min;
+    } else {
+      const pad = Math.max(Math.abs(hi - lo) * headroom, Math.abs(lo) * 0.05, 0.1);
+      nextMin = roundSigDown(lo - pad, 2);
+    }
+
+    chart.$yBounds[axisId] = { min: nextMin, max: nextMax };
 
     if (scale.options.min !== nextMin || scale.options.max !== nextMax) {
       scale.options.min = nextMin;
@@ -128,6 +203,15 @@ export default function MidaPowerCurrentChart({
     'x',
   );
 
+  // Thang Y ổn định (hysteresis) — tính trong React để không bị re-render mỗi giây ghi đè
+  const yBoundsRef = useRef({ yPower: null, yCurrent: null });
+  const yBounds = useMemo(() => {
+    const yPower = computeStableBound(powerValues, Y_AXIS_HEADROOM.yPower, yBoundsRef.current.yPower);
+    const yCurrent = computeStableBound(currentValues, Y_AXIS_HEADROOM.yCurrent, yBoundsRef.current.yCurrent);
+    yBoundsRef.current = { yPower, yCurrent };
+    return { yPower, yCurrent };
+  }, [powerValues, currentValues]);
+
   const handleZoomOrPan = useCallback((ctx) => {
     fitYAxesToVisibleX(ctx.chart);
   }, []);
@@ -152,10 +236,14 @@ export default function MidaPowerCurrentChart({
     [baseZoomOptions, handleZoomOrPan],
   );
 
-  // Luôn chỉnh headroom: công suất cao hơn, dòng điện thấp hơn — tránh trùng đường
+  // Chỉ tự-fit theo vùng nhìn khi người dùng đã zoom (x không còn full range)
   useLayoutEffect(() => {
     const chart = chartRef.current;
-    if (!chart) return;
+    if (!chart) return undefined;
+    const x = chart.scales?.x;
+    const n = chart.data?.labels?.length ?? 0;
+    const isFull = !x || n <= 1 || (x.min <= 0.01 && x.max >= n - 1.01);
+    if (isFull) return undefined;
     const id = requestAnimationFrame(() => fitYAxesToVisibleX(chart));
     return () => cancelAnimationFrame(id);
   }, [chartRef, labels, powerValues, currentValues]);
@@ -245,7 +333,8 @@ export default function MidaPowerCurrentChart({
           {
             beginAtZero: true,
             position: 'left',
-            grace: '8%',
+            min: yBounds.yPower?.min,
+            max: yBounds.yPower?.max,
             title: {
               display: true,
               text: 'kW',
@@ -271,8 +360,9 @@ export default function MidaPowerCurrentChart({
           {
             beginAtZero: true,
             position: 'right',
-            // Headroom lớn hơn → đường dòng điện thấp hơn, tách khỏi công suất
-            grace: '45%',
+            // Headroom đã tính sẵn trong yBounds → đường dòng điện thấp hơn, tách khỏi công suất
+            min: yBounds.yCurrent?.min,
+            max: yBounds.yCurrent?.max,
             title: {
               display: true,
               text: 'A',
@@ -297,7 +387,7 @@ export default function MidaPowerCurrentChart({
         ),
       },
     }),
-    [theme, isDark, xTickMode, labelCount, categoryPrefix, labels, zoomPluginOptions],
+    [theme, isDark, xTickMode, labelCount, categoryPrefix, labels, zoomPluginOptions, yBounds],
   );
 
   useSyncChartTheme(chartRef, theme, options);
