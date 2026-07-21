@@ -83,6 +83,8 @@ export default function MidaCncMachineDetail() {
   const { machine_id } = useParams();
   const navigate = useNavigate();
   const now = useNow(POLL_INTERVALS.connectionTick);
+  // Nhịp 1s riêng cho biểu đồ công suất/dòng điện — dịch trái mượt từng giây
+  const elecNow = useNow(1000);
 
   const machineData = useMidaMachineData(machine_id);
   const {
@@ -249,9 +251,16 @@ export default function MidaCncMachineDetail() {
 
     setLabelsChart3((prev) => (chartSeriesEqual(prev, labels) ? prev : labels));
     setStatusDataValuesChart3((prev) => (chartSeriesEqual(prev, mappedData) ? prev : mappedData));
+  }, [
+    rawMachineData,
+    now,
+    statusMachine?.status,
+    machineInfo?.status,
+  ]);
 
-    // Biểu đồ công suất/dòng điện: cửa sổ 60 phút, độ phân giải 1 giây
-    const elecTo = new Date(now);
+  // Biểu đồ công suất/dòng điện: cửa sổ 60 phút, độ phân giải 1 giây, dịch trái mỗi giây
+  useEffect(() => {
+    const elecTo = new Date(elecNow);
     const elecFrom = getRollingFromDate(60, elecTo);
     const electrical = buildPowerCurrentTimelineChart(
       rawMachineData,
@@ -272,9 +281,7 @@ export default function MidaCncMachineDetail() {
     );
   }, [
     rawMachineData,
-    now,
-    statusMachine?.status,
-    machineInfo?.status,
+    elecNow,
     powerKw,
     currentAvg,
   ]);

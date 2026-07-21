@@ -206,6 +206,13 @@ export default function MidaPowerCurrentChart({
   const options = useMemo(
     () => ({
       ...chartStableRenderOptions,
+      // Realtime 1s: vẽ tức thì, không morph toàn đường (tránh giật); cửa sổ dịch trái từng giây
+      animation: false,
+      animations: {},
+      transitions: {
+        active: { animation: { duration: 150 } },
+        resize: { animation: { duration: 0 } },
+      },
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
