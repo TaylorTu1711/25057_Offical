@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Chart } from 'react-chartjs-2';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
@@ -110,7 +110,8 @@ function computeStableBound(values, headroom, prev) {
 }
 
 /**
- * Biểu đồ công suất / dòng điện theo khoảng thời gian (cùng kiểu biểu đồ trạng thái).
+ * Biểu đồ công suất / dòng điện theo khoảng thời gian.
+ * Zoom/pan → tự tạm dừng cập nhật live; bấm nút để chạy lại + reset zoom.
  */
 export default function MidaPowerCurrentChart({
   timestamps = [],
@@ -120,18 +121,62 @@ export default function MidaPowerCurrentChart({
   const { theme } = useTheme();
   const isDark = isDarkChartTheme(theme);
   const chartRef = useRef(null);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const latestPropsRef = useRef({ timestamps, powerValues, currentValues });
+  const frozenRef = useRef({
+    timestamps,
+    powerValues,
+    currentValues,
+  });
+
+  latestPropsRef.current = { timestamps, powerValues, currentValues };
+  pausedRef.current = paused;
+
+  // Khi đang chạy: luôn bám props mới. Khi tạm dừng: giữ snapshot.
+  useEffect(() => {
+    if (paused) return;
+    frozenRef.current = { timestamps, powerValues, currentValues };
+  }, [paused, timestamps, powerValues, currentValues]);
+
+  const display = paused
+    ? frozenRef.current
+    : { timestamps, powerValues, currentValues };
+
+  const pauseLive = useCallback(() => {
+    if (pausedRef.current) return;
+    frozenRef.current = { ...latestPropsRef.current };
+    setPaused(true);
+  }, []);
+
+  const resumeLive = useCallback(() => {
+    const chart = chartRef.current;
+    if (chart?.resetZoom) {
+      chart.resetZoom('none');
+    }
+    frozenRef.current = { ...latestPropsRef.current };
+    setPaused(false);
+  }, []);
 
   const yBoundsRef = useRef({ yPower: null, yCurrent: null });
   const yBounds = useMemo(() => {
-    const yPower = computeStableBound(powerValues, Y_AXIS_HEADROOM.yPower, yBoundsRef.current.yPower);
-    const yCurrent = computeStableBound(currentValues, Y_AXIS_HEADROOM.yCurrent, yBoundsRef.current.yCurrent);
+    const yPower = computeStableBound(
+      display.powerValues,
+      Y_AXIS_HEADROOM.yPower,
+      yBoundsRef.current.yPower,
+    );
+    const yCurrent = computeStableBound(
+      display.currentValues,
+      Y_AXIS_HEADROOM.yCurrent,
+      yBoundsRef.current.yCurrent,
+    );
     yBoundsRef.current = { yPower, yCurrent };
     return { yPower, yCurrent };
-  }, [powerValues, currentValues]);
+  }, [display.powerValues, display.currentValues]);
 
   const data = useMemo(() => {
     const toPoints = (values) =>
-      timestamps.map((t, i) => {
+      display.timestamps.map((t, i) => {
         const y = values[i];
         return { x: t, y: Number.isFinite(Number(y)) ? Number(y) : null };
       });
@@ -140,7 +185,7 @@ export default function MidaPowerCurrentChart({
         {
           type: 'line',
           label: 'Công suất (kW)',
-          data: toPoints(powerValues),
+          data: toPoints(display.powerValues),
           yAxisID: 'yPower',
           borderColor: '#7c3aed',
           backgroundColor: 'rgba(124, 58, 237, 0.10)',
@@ -150,7 +195,7 @@ export default function MidaPowerCurrentChart({
           pointBorderColor: '#ffffff',
           borderWidth: 2,
           tension: 0,
-          fill: timestamps.length <= 600,
+          fill: display.timestamps.length <= 600,
           spanGaps: true,
           parsing: false,
           normalized: true,
@@ -159,7 +204,7 @@ export default function MidaPowerCurrentChart({
         {
           type: 'line',
           label: 'Dòng điện (A)',
-          data: toPoints(currentValues),
+          data: toPoints(display.currentValues),
           yAxisID: 'yCurrent',
           borderColor: '#ef5350',
           backgroundColor: 'rgba(239, 83, 80, 0.10)',
@@ -169,7 +214,7 @@ export default function MidaPowerCurrentChart({
           pointBorderColor: '#ffffff',
           borderWidth: 2,
           tension: 0,
-          fill: timestamps.length <= 600,
+          fill: display.timestamps.length <= 600,
           spanGaps: true,
           parsing: false,
           normalized: true,
@@ -177,7 +222,7 @@ export default function MidaPowerCurrentChart({
         },
       ],
     };
-  }, [timestamps, powerValues, currentValues]);
+  }, [display.timestamps, display.powerValues, display.currentValues]);
 
   const options = useMemo(
     () => ({
@@ -210,7 +255,16 @@ export default function MidaPowerCurrentChart({
         },
         zoom: {
           limits: { x: { minRange: 10_000 } },
-          pan: { enabled: true, mode: 'x' },
+          pan: {
+            enabled: true,
+            mode: 'x',
+            onPanStart: () => {
+              pauseLive();
+            },
+            onPanComplete: () => {
+              pauseLive();
+            },
+          },
           zoom: {
             wheel: { enabled: true, speed: 0.1 },
             pinch: { enabled: true },
@@ -221,6 +275,12 @@ export default function MidaPowerCurrentChart({
               borderWidth: 1,
             },
             mode: 'x',
+            onZoomStart: () => {
+              pauseLive();
+            },
+            onZoomComplete: () => {
+              pauseLive();
+            },
           },
         },
       },
@@ -313,13 +373,31 @@ export default function MidaPowerCurrentChart({
         ),
       },
     }),
-    [theme, isDark, yBounds],
+    [theme, isDark, yBounds, pauseLive],
   );
 
   useSyncChartTheme(chartRef, theme, options);
 
   return (
-    <div style={{ height: '100%', width: '100%' }}>
+    <div
+      className="mida-power-chart"
+      onMouseEnter={pauseLive}
+      onMouseLeave={resumeLive}
+      onTouchStart={pauseLive}
+    >
+      {paused ? (
+        <button
+          type="button"
+          className="mida-power-chart__resume"
+          onClick={(e) => {
+            e.stopPropagation();
+            resumeLive();
+          }}
+          title="Chạy lại cập nhật realtime và reset zoom"
+        >
+          Tạm dừng — bấm để chạy lại
+        </button>
+      ) : null}
       <Chart
         ref={chartRef}
         key={theme}

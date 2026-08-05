@@ -876,6 +876,7 @@ export default function MidaCncMachineDetail() {
                 <div className="machine-chart-plot">
                   <div className="machine-chart-plot-inner">
                     <MidaPowerCurrentChart
+                      key={`${elecRangeMode}-${elecFrom?.getTime?.() ?? ''}-${elecTo?.getTime?.() ?? ''}`}
                       timestamps={elecChartTimestamps}
                       powerValues={powerChartValues}
                       currentValues={currentChartValues}

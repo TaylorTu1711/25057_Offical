@@ -3013,6 +3013,36 @@
   position: relative;
 }
 
+  /* Overlay tạm dừng biểu đồ công suất / dòng điện */
+.mida-power-chart {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.mida-power-chart__resume {
+  position: absolute;
+  z-index: 5;
+  top: 0.35rem;
+  right: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--mida-brand, #dc2626) 45%, transparent);
+  background: color-mix(in srgb, var(--mida-modal-bg, #fff) 92%, transparent);
+  color: var(--mida-brand, #dc2626);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0.28rem 0.5rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.mida-power-chart__resume:hover {
+  background: var(--mida-brand, #dc2626);
+  border-color: transparent;
+  color: #fff;
+}
+
 /* Bộ chọn khoảng thời gian biểu đồ trạng thái */
 .mida-status-chart-head {
   display: flex;
@@ -3399,55 +3429,90 @@
     width: 100% !important;
   }
 
+  /* Thẻ chọn tháng/năm trên mobile — chữ vừa, không phình quá so với thẻ cảnh báo */
   .mida-page--detail .machine-top-panel--mida .machine-time-range-panel {
     height: auto !important;
-    min-height: 180px !important;
+    min-height: 0 !important;
     max-height: none !important;
+    padding: 0.45rem 0.5rem !important;
   }
 
-  /* Thẻ chọn ngày/tháng full-width trên mobile → chữ to hơn cho cân thẻ */
+  /* Tránh body/grid flex co về 0px (overflow:hidden) → mất nút tháng 1–12 */
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-body {
+    flex: 0 0 auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-picker {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
   .mida-page--detail .machine-top-panel--mida .machine-view-mode-segment {
-    padding: 3px;
+    padding: 2px;
     gap: 2px;
-    border-radius: 10px;
+    border-radius: 8px;
   }
 
   .mida-page--detail .machine-top-panel--mida .machine-view-mode-segment__btn {
-    font-size: 0.92rem !important;
+    font-size: 0.72rem !important;
     line-height: 1.2 !important;
-    padding: 0.45rem 0.35rem !important;
-    border-radius: 7px;
+    padding: 0.32rem 0.28rem !important;
+    border-radius: 6px;
   }
 
   .mida-page--detail .machine-top-panel--mida .machine-view-mode-picker__caption {
-    font-size: 0.78rem !important;
+    font-size: 0.65rem !important;
     line-height: 1.25 !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-picker__grid {
+    flex: 0 0 auto !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    gap: 0.28rem !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-picker__grid--months {
+    grid-template-rows: repeat(3, minmax(1.65rem, auto)) !important;
+  }
+
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-picker__grid--years {
+    grid-auto-rows: minmax(1.65rem, auto) !important;
+    align-content: start !important;
   }
 
   .mida-page--detail .machine-top-panel--mida .machine-view-mode-chip {
-    font-size: 0.88rem !important;
-    border-radius: 6px;
-    min-height: 2.05rem;
+    font-size: 0.72rem !important;
+    line-height: 1.2 !important;
+    border-radius: 5px;
+    min-height: 1.65rem;
+    padding: 0.22rem 0.15rem !important;
   }
 
-  .mida-page--detail .machine-top-panel--mida .machine-view-mode-hint {
-    font-size: 0.78rem !important;
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-hint,
+  .mida-page--detail .machine-top-panel--mida .machine-view-mode-year-info {
+    font-size: 0.65rem !important;
     line-height: 1.3 !important;
   }
 
   .mida-page--detail .machine-top-panel--mida .machine-view-mode-range__granularity-btn {
-    font-size: 0.8rem !important;
-    padding: 0.35rem 0.2rem !important;
+    font-size: 0.68rem !important;
+    padding: 0.28rem 0.18rem !important;
   }
 
   .mida-page--detail .machine-top-panel--mida .machine-view-mode-range__label {
-    font-size: 0.8rem !important;
+    font-size: 0.68rem !important;
   }
 
   .mida-page--detail .machine-top-panel--mida .machine-view-mode-range__input {
-    font-size: 0.95rem !important;
-    min-height: 2.2rem;
-    padding: 0.35rem 0.45rem;
+    font-size: 0.75rem !important;
+    min-height: 1.85rem;
+    padding: 0.28rem 0.35rem;
   }
 
   /* Biểu đồ: flex column thay grid — hết chồng cột/hàng */
@@ -3497,6 +3562,13 @@
     margin: 0 !important;
     padding: 0 !important;
   }
+
+  /* Mobile: điện áp / công suất / dòng điện nằm dưới biểu đồ công suất & dòng điện */
+  .mida-page--detail .mida-charts-cell--gauges { order: 1; }
+  .mida-page--detail .mida-charts-cell--status { order: 2; }
+  .mida-page--detail .mida-charts-cell--time { order: 3; }
+  .mida-page--detail .mida-charts-cell--power { order: 4; }
+  .mida-page--detail .mida-charts-cell--elec { order: 5; }
 
   /* Gauge không ép min-height → hết khoảng trống phía dưới trước thẻ trạng thái */
   .mida-page--detail .mida-charts-cell--gauges {
