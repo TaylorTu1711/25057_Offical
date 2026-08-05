@@ -447,14 +447,29 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
     }
   }, [machineId, fetchMachineInfo, fetchErrors, fetchMachineParams, fetchPerformanceSummary, fetchMachines]);
 
-  const saveMachineInformation = useCallback(async (information) => {
+  const saveMachineInformation = useCallback(async (payload) => {
     if (!machineId) throw new Error('Thiếu mã máy');
+    const body = typeof payload === 'string'
+      ? { information: payload }
+      : {
+          information: payload?.information,
+          machine_name: payload?.machine_name,
+        };
     const res = await axios.patch(
       `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machineId)}/info`,
-      { information },
+      body,
       { headers: portalHeaders() },
     );
     applyMachineInfo(res.data);
+    setMachines((prev) =>
+      Array.isArray(prev)
+        ? prev.map((m) =>
+          m.machine_id === machineId
+            ? { ...m, machine_name: res.data.machine_name, information: res.data.information }
+            : m,
+        )
+        : prev,
+    );
     return res.data;
   }, [machineId, applyMachineInfo]);
 

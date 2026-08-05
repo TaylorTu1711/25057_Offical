@@ -372,11 +372,19 @@ export const deleteMidaCncMachine = async (req, res) => {
 
 export const updateMidaCncMachineInfo = async (req, res) => {
   const { machine_id } = req.params;
-  const { information } = req.body;
+  const { information, machine_name } = req.body;
   const { role, id: userId } = req.user;
 
   if (information !== undefined && information !== null && typeof information !== 'string') {
     return res.status(400).json({ error: 'information phải là chuỗi' });
+  }
+  if (machine_name !== undefined && machine_name !== null && typeof machine_name !== 'string') {
+    return res.status(400).json({ error: 'machine_name phải là chuỗi' });
+  }
+
+  const nextName = machine_name != null ? String(machine_name).trim() : undefined;
+  if (nextName !== undefined && !nextName) {
+    return res.status(400).json({ error: 'Tên máy không được để trống' });
   }
 
   try {
@@ -388,15 +396,19 @@ export const updateMidaCncMachineInfo = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy máy' });
     }
 
-    const nextInfo = information == null ? '' : String(information);
+    const nextInfo = information === undefined
+      ? machine.information ?? ''
+      : (information == null ? '' : String(information));
+    const nameToSave = nextName !== undefined ? nextName : machine.machine_name;
+
     const { rows } = await pool.query(
       `UPDATE ${MIDA_MACHINES}
-       SET information = $1
-       WHERE machine_id = $2
+       SET machine_name = $1, information = $2
+       WHERE machine_id = $3
        RETURNING machine_id, machine_name, location, image_url, status, last_updated,
                  information, output_name, output_unit, input_name, input_unit,
                  machine_category, layout_x, layout_y`,
-      [nextInfo, machine_id],
+      [nameToSave, nextInfo, machine_id],
     );
 
     res.json(rows[0]);

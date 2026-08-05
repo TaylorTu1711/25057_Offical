@@ -28,6 +28,7 @@ export default function MachineInfoModal({
   savingInformation = false,
 }) {
   const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState('');
   const [draft, setDraft] = useState('');
   const [saveError, setSaveError] = useState('');
 
@@ -37,10 +38,11 @@ export default function MachineInfoModal({
       setSaveError('');
       return;
     }
+    setDraftName(machineInfo?.machine_name ?? '');
     setDraft(machineInfo?.information ?? '');
     setEditing(false);
     setSaveError('');
-  }, [open, machineInfo?.information, machineInfo?.machine_id]);
+  }, [open, machineInfo?.information, machineInfo?.machine_name, machineInfo?.machine_id]);
 
   if (!open) return null;
 
@@ -50,9 +52,14 @@ export default function MachineInfoModal({
 
   const handleSave = async () => {
     if (!canEdit || savingInformation) return;
+    const name = String(draftName || '').trim();
+    if (!name) {
+      setSaveError('Tên máy không được để trống');
+      return;
+    }
     setSaveError('');
     try {
-      await onSaveInformation(draft);
+      await onSaveInformation({ machine_name: name, information: draft });
       setEditing(false);
     } catch (err) {
       setSaveError(
@@ -65,6 +72,7 @@ export default function MachineInfoModal({
   };
 
   const handleCancelEdit = () => {
+    setDraftName(machineInfo?.machine_name ?? '');
     setDraft(machineInfo?.information ?? '');
     setSaveError('');
     setEditing(false);
@@ -90,19 +98,8 @@ export default function MachineInfoModal({
           </div>
 
           <div className="mb-3">
-            <div className="app-modal-label">Trạng thái kết nối Wifi:</div>
-            <div
-              className={`app-modal-status ${
-                connected ? 'app-modal-status--connected' : 'app-modal-status--disconnected'
-              }`}
-            >
-              {connected ? '🟢 Đang kết nối' : '🔴 Mất kết nối'}
-            </div>
-          </div>
-
-          <div>
             <div className="d-flex justify-content-between align-items-center gap-2 mb-1">
-              <div className="app-modal-label mb-0">Thông tin khác:</div>
+              <div className="app-modal-label mb-0">Tên máy:</div>
               {canEdit && !editing && (
                 <button
                   type="button"
@@ -114,6 +111,34 @@ export default function MachineInfoModal({
                 </button>
               )}
             </div>
+            {editing ? (
+              <input
+                type="text"
+                className="form-control app-modal-input"
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
+                placeholder="Nhập tên máy"
+                disabled={savingInformation}
+                maxLength={120}
+              />
+            ) : (
+              <div className="app-modal-field">{machineInfo.machine_name || '—'}</div>
+            )}
+          </div>
+
+          <div className="mb-3">
+            <div className="app-modal-label">Trạng thái kết nối Wifi:</div>
+            <div
+              className={`app-modal-status ${
+                connected ? 'app-modal-status--connected' : 'app-modal-status--disconnected'
+              }`}
+            >
+              {connected ? '🟢 Đang kết nối' : '🔴 Mất kết nối'}
+            </div>
+          </div>
+
+          <div>
+            <div className="app-modal-label mb-1">Thông tin khác:</div>
 
             {editing ? (
               <>

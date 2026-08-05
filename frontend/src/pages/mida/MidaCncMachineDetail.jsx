@@ -523,10 +523,10 @@ export default function MidaCncMachineDetail() {
     }
   };
 
-  const handleSaveInformation = async (information) => {
+  const handleSaveInformation = async (payload) => {
     setSavingInformation(true);
     try {
-      await saveMachineInformation(information);
+      await saveMachineInformation(payload);
     } finally {
       setSavingInformation(false);
     }
