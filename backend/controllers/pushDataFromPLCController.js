@@ -52,6 +52,7 @@ export const pushDataFromPLC = async (req, res) => {
           [nr, machine_id, timestamp, alarm_code, alarm_id, alarm_name, check_get],
         );
       } else if (isCncTelemetry) {
+        // Live: luôn cập nhật registry. History: INSERT có throttle 10s / bắt buộc khi status đổi.
         const result = await saveCncTelemetryRow(pool, tableName, machine_id, row);
         if (result.reason === 'table_missing') {
           console.warn('Chưa có bảng telemetry CNC:', tableName);

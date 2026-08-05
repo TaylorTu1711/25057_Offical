@@ -43,14 +43,14 @@ function generateTimestampsInRangeMs(start, end, intervalMs) {
 }
 
 /**
- * Biểu đồ trạng thái 24h — forward-fill theo mẫu telemetry.
+ * Biểu đồ trạng thái — forward-fill theo mẫu telemetry (bucket mặc định 1 phút).
  * Không tô quá khứ bằng trạng thái live; live chỉ gắn điểm cuối cửa sổ.
  */
 export function buildStatusTimelineChart(
   rawMachineData,
   effectiveFrom,
   effectiveTo,
-  intervalMinutes = 5,
+  intervalMinutes = 1,
   currentStatus = null,
 ) {
   const alignedTo = alignToInterval(effectiveTo, intervalMinutes, 'floor');
@@ -102,39 +102,66 @@ export function buildStatusTimelineChart(
     mappedData[mappedData.length - 1] = live;
   }
 
+  const spanDays = windowMs / (24 * 60 * 60 * 1000);
   const labels = rangeTimestamps.map((t) =>
-    t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+    spanDays > 1.05
+      ? t.toLocaleString('vi-VN', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
   );
 
   return { labels, mappedData };
 }
 
+/** Sinh mốc thời gian: hôm nay mỗi 10s, các ngày trước mỗi 5 phút. */
+function generateAdaptivePowerTimestamps(start, end, todayRef = new Date()) {
+  const todayStart = new Date(todayRef);
+  todayStart.setHours(0, 0, 0, 0);
+  const todayStartMs = todayStart.getTime();
+  const endMs = new Date(end).getTime();
+  let t = new Date(start).getTime();
+  if (!Number.isFinite(t) || !Number.isFinite(endMs) || t > endMs) return [];
+
+  const stepAt = (ms) => (ms >= todayStartMs ? 10_000 : 300_000);
+  t = Math.floor(t / stepAt(t)) * stepAt(t);
+
+  const timestamps = [];
+  // Bảo vệ vòng lặp nếu step lỗi
+  let guard = 0;
+  while (t <= endMs && guard < 500_000) {
+    timestamps.push(new Date(t));
+    t += stepAt(t);
+    guard += 1;
+  }
+  return timestamps;
+}
+
 /**
- * Biểu đồ công suất / dòng điện realtime — forward-fill theo mẫu telemetry.
- * Độ phân giải theo giây (intervalSeconds); nhãn hiển thị giờ:phút:giây.
- * livePower / liveCurrent: giá trị hiện tại (điểm cuối cửa sổ).
+ * Biểu đồ công suất / dòng điện — forward-fill theo mẫu telemetry.
+ * intervalSeconds: số giây đều, hoặc 'adaptive' (hôm nay 10s / ngày cũ 5 phút).
+ * livePower / liveCurrent: giá trị hiện tại (điểm cuối cửa sổ, chỉ khi live).
  */
 export function buildPowerCurrentTimelineChart(
   rawMachineData,
   effectiveFrom,
   effectiveTo,
-  intervalSeconds = 1,
+  intervalSeconds = 10,
   livePower = null,
   liveCurrent = null,
 ) {
-  const intervalMs = Math.max(1000, Number(intervalSeconds) * 1000 || 1000);
-  const alignedTo = alignToIntervalMs(effectiveTo, intervalMs, 'floor');
-  const windowMs = Math.max(
-    0,
-    new Date(effectiveTo).getTime() - new Date(effectiveFrom).getTime(),
-  );
-  const alignedFrom = alignToIntervalMs(
-    new Date(alignedTo.getTime() - windowMs),
-    intervalMs,
-    'floor',
-  );
-  const fromMs = alignedFrom.getTime();
-  const toMs = alignedTo.getTime();
+  const adaptive = intervalSeconds === 'adaptive';
+  const intervalMs = adaptive
+    ? 10_000
+    : Math.max(1000, Number(intervalSeconds) * 1000 || 1000);
+
+  const toDate = new Date(effectiveTo);
+  const fromDate = new Date(effectiveFrom);
+  const fromMs = fromDate.getTime();
+  const toMs = toDate.getTime();
 
   const allSorted = (Array.isArray(rawMachineData) ? rawMachineData : [])
     .filter((d) => d?.timestamp)
@@ -164,9 +191,20 @@ export function buildPowerCurrentTimelineChart(
 
   const rangeFiltered = allSorted.filter((d) => d._ts >= fromMs && d._ts <= toMs);
 
-  const rangeTimestamps = generateTimestampsInRangeMs(alignedFrom, alignedTo, intervalMs);
-  let ptr = 0;
+  const rangeTimestamps = adaptive
+    ? generateAdaptivePowerTimestamps(fromDate, toDate, toDate)
+    : (() => {
+        const alignedTo = alignToIntervalMs(toDate, intervalMs, 'floor');
+        const windowMs = Math.max(0, toMs - fromMs);
+        const alignedFrom = alignToIntervalMs(
+          new Date(alignedTo.getTime() - windowMs),
+          intervalMs,
+          'floor',
+        );
+        return generateTimestampsInRangeMs(alignedFrom, alignedTo, intervalMs);
+      })();
 
+  let ptr = 0;
   const power = [];
   const current = [];
 
@@ -188,8 +226,16 @@ export function buildPowerCurrentTimelineChart(
     if (Number.isFinite(Number(liveCurrent))) current[current.length - 1] = Number(liveCurrent);
   }
 
+  const spanDays = (toMs - fromMs) / (24 * 60 * 60 * 1000);
   const labels = rangeTimestamps.map((t) =>
-    t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    spanDays > 1.05
+      ? t.toLocaleString('vi-VN', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : t.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
   );
   const timestamps = rangeTimestamps.map((t) => t.getTime());
 

@@ -27,8 +27,13 @@ function numOrNull(value) {
   return n;
 }
 
+/** Chu kỳ tối thiểu giữa 2 bản ghi lịch sử điện (PLC có thể gửi 1s). */
+export const CNC_TELEMETRY_MIN_INTERVAL_MS = 10_000;
+
 /**
  * Ghi một dòng telemetry điện vào bảng máy CNC (schema cnc).
+ * - Registry (live) được caller cập nhật mỗi lần nhận — độc lập với INSERT.
+ * - INSERT khi: chưa có dòng / status đổi / đủ ≥ 10s kể từ bản ghi gần nhất.
  * @returns {{ saved: boolean, reason?: string }}
  */
 export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
@@ -42,8 +47,9 @@ export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
 
   // Giữ nguyên chuỗi timestamp từ Orange Pi (vd: 2026-07-20 09:26:07.000)
   const timestamp = row.timestamp ?? null;
+  let rowTs = null;
   if (timestamp != null && timestamp !== '') {
-    const rowTs = new Date(timestamp);
+    rowTs = new Date(timestamp);
     if (Number.isNaN(rowTs.getTime())) {
       return { saved: false, reason: 'invalid_timestamp' };
     }
@@ -53,6 +59,31 @@ export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
   const status = row.status != null && row.status !== ''
     ? Number(row.status)
     : null;
+  const statusVal = Number.isFinite(status) ? status : null;
+
+  const { rows: lastRows } = await db.query(
+    `SELECT timestamp, status
+     FROM ${qualifiedTable}
+     ORDER BY timestamp DESC NULLS LAST, id DESC
+     LIMIT 1`,
+  );
+  const last = lastRows[0];
+  if (last) {
+    const lastTs = last.timestamp != null ? new Date(last.timestamp).getTime() : NaN;
+    const curTs = rowTs != null ? rowTs.getTime() : Date.now();
+    const lastStatus = last.status != null && last.status !== ''
+      ? Number(last.status)
+      : null;
+    const statusChanged =
+      statusVal != null
+      && (lastStatus == null || Number(lastStatus) !== statusVal);
+    const elapsedOk =
+      !Number.isFinite(lastTs) || (curTs - lastTs) >= CNC_TELEMETRY_MIN_INTERVAL_MS;
+
+    if (!statusChanged && !elapsedOk) {
+      return { saved: false, reason: 'throttled' };
+    }
+  }
 
   await db.query(
     `INSERT INTO ${qualifiedTable} (
@@ -83,11 +114,11 @@ export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
       numOrNull(row.power),
       numOrNull(row.power_consumption),
       frequency,
-      Number.isFinite(status) ? status : null,
+      statusVal,
     ],
   );
 
-  return { saved: true, reason: 'insert' };
+  return { saved: true, reason: statusVal != null && last && Number(last.status) !== statusVal ? 'status_change' : 'interval' };
 }
 
 export async function tableExists(db, schema, tableName) {
@@ -193,7 +224,7 @@ function normalizePayloadRow(row) {
   };
 }
 
-export async function fetchCncTelemetryRows(db, machineId, machine) {
+export async function fetchCncTelemetryRows(db, machineId, machine, options = {}) {
   const qualified = telemetryTableRef(machineId, machine);
   const { schema, tableName } = parseQualifiedTable(qualified);
 
@@ -209,13 +240,31 @@ export async function fetchCncTelemetryRows(db, machineId, machine) {
   const hasAvgV = await tableHasColumn(db, schema, tableName, 'avg_v');
   const hasPayload = await tableHasColumn(db, schema, tableName, 'payload');
 
+  const fromTs = options.from ? new Date(options.from) : null;
+  const toTs = options.to ? new Date(options.to) : null;
+  const fromOk = fromTs && !Number.isNaN(fromTs.getTime()) ? fromTs : null;
+  const toOk = toTs && !Number.isNaN(toTs.getTime()) ? toTs : null;
+
+  const whereParts = [];
+  const params = [];
+  if (fromOk) {
+    params.push(fromOk.toISOString().slice(0, 19).replace('T', ' '));
+    whereParts.push(`timestamp >= $${params.length}::timestamp`);
+  }
+  if (toOk) {
+    params.push(toOk.toISOString().slice(0, 19).replace('T', ' '));
+    whereParts.push(`timestamp <= $${params.length}::timestamp`);
+  }
+  const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';
+
   // Bảng CNC điện (frequency / avg_v) hoặc legacy (shoot): đọc flat SELECT *
   if (hasLegacyColumns || hasFrequency || hasAvgV) {
     if (!hasFrequency) {
       await ensureCncElectricalTelemetryColumns(db, qualified);
     }
     const { rows } = await db.query(
-      `SELECT * FROM ${qualified} ORDER BY timestamp ASC, id ASC`,
+      `SELECT * FROM ${qualified} ${whereSql} ORDER BY timestamp ASC, id ASC`,
+      params,
     );
     return rows;
   }
@@ -227,7 +276,9 @@ export async function fetchCncTelemetryRows(db, machineId, machine) {
   const { rows } = await db.query(
     `SELECT id, machine_id, timestamp, status, payload
      FROM ${qualified}
+     ${whereSql}
      ORDER BY timestamp ASC, id ASC`,
+    params,
   );
   return rows.map(normalizePayloadRow);
 }
@@ -249,6 +300,13 @@ export async function fetchCncAlarmRows(db, machineId, machine) {
   return rows;
 }
 
+/**
+ * Dọn telemetry CNC theo 2 mức:
+ * - Các ngày trước hôm nay: giữ ~1 mẫu / 5 phút
+ * - Hôm nay: giữ ~1 mẫu / 10 giây
+ * Mỗi bucket giữ bản ghi mới nhất.
+ * @returns {number} số dòng đã xóa
+ */
 export async function bootCncTelemetryTable(db, machineId, machine) {
   const qualified = telemetryTableRef(machineId, machine);
   const { schema, tableName } = parseQualifiedTable(qualified);
@@ -262,20 +320,39 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
     return 0;
   }
 
+  const hasId = await tableHasColumn(db, schema, tableName, 'id');
+  if (!hasId) {
+    return 0;
+  }
+
+  // Past days: 5 phút (300s); today: 10 giây
   const result = await db.query(`
     DELETE FROM ${qualified} AS t
-    USING (
-      SELECT
-        DATE("timestamp") AS date_day,
-        MIN("timestamp") AS min_time,
-        MAX("timestamp") AS max_time
-      FROM ${qualified}
-      WHERE DATE("timestamp") <> CURRENT_DATE
-      GROUP BY DATE("timestamp")
-    ) AS keep
-    WHERE DATE(t."timestamp") = keep.date_day
-      AND t."timestamp" NOT IN (keep.min_time, keep.max_time)
+    WHERE t.id NOT IN (
+      SELECT kept.id
+      FROM (
+        SELECT DISTINCT ON (day_part, bucket)
+          id
+        FROM (
+          SELECT
+            id,
+            "timestamp",
+            CASE
+              WHEN DATE("timestamp") = CURRENT_DATE THEN 'today'
+              ELSE 'past'
+            END AS day_part,
+            CASE
+              WHEN DATE("timestamp") = CURRENT_DATE
+                THEN floor(extract(epoch FROM "timestamp") / 10)::bigint
+              ELSE floor(extract(epoch FROM "timestamp") / 300)::bigint
+            END AS bucket
+          FROM ${qualified}
+          WHERE "timestamp" IS NOT NULL
+        ) AS src
+        ORDER BY day_part, bucket, "timestamp" DESC, id DESC
+      ) AS kept
+    )
   `);
 
-  return result.rowCount;
+  return result.rowCount ?? 0;
 }

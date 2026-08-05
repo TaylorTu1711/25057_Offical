@@ -1,22 +1,34 @@
-/** Vị trí marker trên sơ đồ nhà máy (%, theo ảnh 3 cột × 7 hàng). */
+/** Vị trí marker mặc định trên sơ đồ xưởng 3D (%, theo hàng máy chính). */
 function buildFactorySlots() {
-  const colLeftBack = [15.5, 37.5, 59.5];
-  const colLeftFront = [10.5, 32.5, 54.5];
-  const colTopBack = [17, 14, 11];
-  const colTopFront = [57, 54, 51];
-  const rows = 7;
-  const slots = [];
+  const rows = [
+    // Hàng trên cùng (sát tường bắc)
+    { top: 22, lefts: [34, 43, 52, 61, 70, 79, 88] },
+    // Hàng 2
+    { top: 36, lefts: [32, 40, 48, 56, 64, 72, 80, 88] },
+    // Hàng 3
+    { top: 50, lefts: [34, 43, 52, 61, 70, 79, 88] },
+    // Hàng 4
+    { top: 64, lefts: [32, 40, 48, 56, 64, 72, 80, 88] },
+    // Hàng dưới (4 máy lớn hơn, giãn cách)
+    { top: 82, lefts: [40, 54, 68, 84] },
+    // Khu sàn xanh (trái)
+    { top: null, lefts: [14, 14, 14, 14], tops: [38, 50, 62, 74] },
+    // 2 máy gần phòng server
+    { top: 30, lefts: [24, 30] },
+  ];
 
-  for (let col = 0; col < 3; col += 1) {
-    for (let row = 0; row < rows; row += 1) {
-      const t = row / (rows - 1);
-      slots.push({
-        left: colLeftBack[col] + (colLeftFront[col] - colLeftBack[col]) * t,
-        top: colTopBack[col] + (colTopFront[col] - colTopBack[col]) * t,
+  const slots = [];
+  for (const row of rows) {
+    if (row.tops) {
+      row.lefts.forEach((left, i) => {
+        slots.push({ left, top: row.tops[i] });
+      });
+    } else {
+      row.lefts.forEach((left) => {
+        slots.push({ left, top: row.top });
       });
     }
   }
-
   return slots;
 }
 

@@ -12,6 +12,7 @@ import CumulativeRuntimeDisplay from '../../components/machine/CumulativeRuntime
 import MachineInfoModal from '../../components/machine/MachineInfoModal';
 import MachineStatusIconPanel from '../../components/machine/MachineStatusIconPanel';
 import MachineTimeRangePanel from '../../components/machine/MachineTimeRangePanel';
+import TimeRangeModal from '../../components/machine/TimeRangeModal';
 import AutoFitMachineName from '../../components/machine/AutoFitMachineName';
 import ResizableTableHeader from '../../components/home/ResizableTableHeader';
 
@@ -73,6 +74,82 @@ const getRollingFromDate = (minutesAgo, to = new Date()) => {
   return d;
 };
 
+const STATUS_RANGE_PRESETS = [
+  { id: '1h', label: '1h', minutes: 60 },
+  { id: '6h', label: '6h', minutes: 360 },
+  { id: '12h', label: '12h', minutes: 720 },
+  { id: '24h', label: '24h', minutes: 1440 },
+  { id: 'today', label: 'Hôm nay' },
+];
+
+/** Resolve khoảng thời gian biểu đồ trạng thái theo preset / custom. */
+function resolveStatusRange(mode, customFrom, customTo, nowMs) {
+  const to = new Date(nowMs);
+  if (mode === 'custom' && customFrom && customTo) {
+    const from = new Date(customFrom);
+    const end = new Date(customTo);
+    if (from.getTime() <= end.getTime()) {
+      return { from, to: end, isLive: false };
+    }
+  }
+  if (mode === 'today') {
+    const from = new Date(to);
+    from.setHours(0, 0, 0, 0);
+    return { from, to, isLive: true };
+  }
+  const preset = STATUS_RANGE_PRESETS.find((p) => p.id === mode);
+  const minutes = preset?.minutes ?? 1440;
+  return { from: getRollingFromDate(minutes, to), to, isLive: true };
+}
+
+/** Độ phân giải bucket trạng thái cố định 1 phút. */
+const STATUS_CHART_INTERVAL_MINUTES = 1;
+
+/**
+ * Cửa sổ tải telemetry tối thiểu để đủ cho status + điện + biểu đồ tháng.
+ * Làm tròn theo phút để không refetch mỗi giây.
+ */
+function computeTelemetryFromIso({
+  statusRangeMode,
+  statusFrom,
+  elecRangeMode,
+  elecFrom,
+  selectedYear,
+  selectedMonth,
+  chartViewMode,
+  nowMinute,
+}) {
+  const nowMs = nowMinute * 60_000;
+  let earliest = nowMs - 24 * 60 * 60 * 1000;
+
+  const applyRange = (mode, customFrom) => {
+    if (mode === 'custom' && customFrom) {
+      earliest = Math.min(earliest, new Date(customFrom).getTime());
+    } else if (mode === 'today') {
+      const start = new Date(nowMs);
+      start.setHours(0, 0, 0, 0);
+      earliest = Math.min(earliest, start.getTime());
+    } else {
+      const preset = STATUS_RANGE_PRESETS.find((p) => p.id === mode);
+      if (preset?.minutes) {
+        earliest = Math.min(earliest, nowMs - preset.minutes * 60_000);
+      }
+    }
+  };
+
+  applyRange(statusRangeMode, statusFrom);
+  applyRange(elecRangeMode, elecFrom);
+
+  if (chartViewMode === CHART_VIEW_MODES.month) {
+    earliest = Math.min(earliest, new Date(selectedYear, 0, 1).getTime());
+  } else {
+    earliest = Math.min(earliest, new Date(selectedYear, selectedMonth - 1, 1).getTime());
+  }
+
+  earliest -= 5 * 60_000;
+  return new Date(earliest).toISOString();
+}
+
 const chartSeriesEqual = (a, b) => {
   if (a === b) return true;
   if (!a || !b || a.length !== b.length) return false;
@@ -83,10 +160,46 @@ export default function MidaCncMachineDetail() {
   const { machine_id } = useParams();
   const navigate = useNavigate();
   const now = useNow(POLL_INTERVALS.connectionTick);
-  // Nhịp 1s riêng cho biểu đồ công suất/dòng điện — dịch trái mượt từng giây
-  const elecNow = useNow(1000);
 
-  const machineData = useMidaMachineData(machine_id);
+  const [chartViewMode, setChartViewMode] = useState(CHART_VIEW_MODES.day);
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [rangeFrom, setRangeFrom] = useState(() => getDefaultRangeDates().from);
+  const [rangeTo, setRangeTo] = useState(() => getDefaultRangeDates().to);
+  const [rangeDisplay, setRangeDisplay] = useState(RANGE_DISPLAY_MODES.day);
+  const [statusRangeMode, setStatusRangeMode] = useState('24h');
+  const [statusFrom, setStatusFrom] = useState(null);
+  const [statusTo, setStatusTo] = useState(null);
+  const [elecRangeMode, setElecRangeMode] = useState('1h');
+  const [elecFrom, setElecFrom] = useState(null);
+  const [elecTo, setElecTo] = useState(null);
+
+  const nowMinute = Math.floor(now / 60_000);
+  const telemetryFrom = useMemo(
+    () =>
+      computeTelemetryFromIso({
+        statusRangeMode,
+        statusFrom,
+        elecRangeMode,
+        elecFrom,
+        selectedYear,
+        selectedMonth,
+        chartViewMode,
+        nowMinute,
+      }),
+    [
+      statusRangeMode,
+      statusFrom,
+      elecRangeMode,
+      elecFrom,
+      selectedYear,
+      selectedMonth,
+      chartViewMode,
+      nowMinute,
+    ],
+  );
+
+  const machineData = useMidaMachineData(machine_id, { telemetryFrom });
   const {
     machineInfo,
     rawMachineData,
@@ -105,6 +218,7 @@ export default function MidaCncMachineDetail() {
     currentAvg,
     isLoading,
     handleBootData,
+    refetchTelemetry,
   } = machineData;
 
   const [deleting, setDeleting] = useState(false);
@@ -157,24 +271,37 @@ export default function MidaCncMachineDetail() {
     ALARM_TABLE_MIN,
   );
 
-  const [chartViewMode, setChartViewMode] = useState(CHART_VIEW_MODES.day);
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
-  const [rangeFrom, setRangeFrom] = useState(() => getDefaultRangeDates().from);
-  const [rangeTo, setRangeTo] = useState(() => getDefaultRangeDates().to);
-  const [rangeDisplay, setRangeDisplay] = useState(RANGE_DISPLAY_MODES.day);
   const [chartLabels, setChartLabels] = useState([]);
   const [timeRunValues, setTimeRunValues] = useState([]);
   const [energyKwhValues, setEnergyKwhValues] = useState([]);
   const [powerChartValues, setPowerChartValues] = useState([]);
   const [currentChartValues, setCurrentChartValues] = useState([]);
   const [elecChartTimestamps, setElecChartTimestamps] = useState([]);
-  const [elecPaused, setElecPaused] = useState(false);
   const [labelsChart3, setLabelsChart3] = useState([]);
   const [statusDataValuesChart3, setStatusDataValuesChart3] = useState([]);
+  const [showStatusRangeModal, setShowStatusRangeModal] = useState(false);
+  const [tempStatusFrom, setTempStatusFrom] = useState(null);
+  const [tempStatusTo, setTempStatusTo] = useState(null);
+  const [showElecRangeModal, setShowElecRangeModal] = useState(false);
+  const [tempElecFrom, setTempElecFrom] = useState(null);
+  const [tempElecTo, setTempElecTo] = useState(null);
   const [modals, setModals] = useState({
     machineInfo: false,
   });
+
+  // Bỏ qua lần mount (fetchAll đã tải); chỉ refetch khi cửa sổ from đổi
+  const skipTelemetryRefetchRef = useRef(true);
+  useEffect(() => {
+    skipTelemetryRefetchRef.current = true;
+  }, [machine_id]);
+  useEffect(() => {
+    if (!refetchTelemetry) return;
+    if (skipTelemetryRefetchRef.current) {
+      skipTelemetryRefetchRef.current = false;
+      return;
+    }
+    refetchTelemetry();
+  }, [telemetryFrom, refetchTelemetry]);
 
   const currentMachineStatus =
     statusMachine?.status ?? machineInfo?.status ?? null;
@@ -199,6 +326,12 @@ export default function MidaCncMachineDetail() {
     setRangeFrom(defaultRange.from);
     setRangeTo(defaultRange.to);
     setRangeDisplay(RANGE_DISPLAY_MODES.day);
+    setStatusRangeMode('24h');
+    setStatusFrom(null);
+    setStatusTo(null);
+    setElecRangeMode('1h');
+    setElecFrom(null);
+    setElecTo(null);
   }, [machine_id]);
 
   const availableChartYears = useMemo(
@@ -239,39 +372,96 @@ export default function MidaCncMachineDetail() {
   const isConnected = (lastUpdated) => isMachineConnected(lastUpdated, now);
 
   useEffect(() => {
-    const effectiveTo = new Date(now);
-    const effectiveFrom = getRollingFromDate(1440, effectiveTo);
-    const liveStatus = statusMachine?.status ?? machineInfo?.status ?? null;
+    const { from, to, isLive } = resolveStatusRange(
+      statusRangeMode,
+      statusFrom,
+      statusTo,
+      now,
+    );
+    const liveStatus = isLive
+      ? (statusMachine?.status ?? machineInfo?.status ?? null)
+      : null;
     const { labels, mappedData } = buildStatusTimelineChart(
       rawMachineData,
-      effectiveFrom,
-      effectiveTo,
-      5,
+      from,
+      to,
+      STATUS_CHART_INTERVAL_MINUTES,
       liveStatus,
     );
 
     setLabelsChart3((prev) => (chartSeriesEqual(prev, labels) ? prev : labels));
-    setStatusDataValuesChart3((prev) => (chartSeriesEqual(prev, mappedData) ? prev : mappedData));
+    setStatusDataValuesChart3((prev) =>
+      chartSeriesEqual(prev, mappedData) ? prev : mappedData,
+    );
   }, [
     rawMachineData,
     now,
+    statusRangeMode,
+    statusFrom,
+    statusTo,
     statusMachine?.status,
     machineInfo?.status,
   ]);
 
-  // Biểu đồ công suất/dòng điện: cửa sổ 60 phút, độ phân giải 1 giây, dịch trái mỗi giây
+  const openStatusRangeModal = () => {
+    const { from, to } = resolveStatusRange(statusRangeMode, statusFrom, statusTo, Date.now());
+    setTempStatusFrom(from);
+    setTempStatusTo(to);
+    setShowStatusRangeModal(true);
+  };
+
+  const applyCustomStatusRange = () => {
+    if (!tempStatusFrom || !tempStatusTo) {
+      window.alert('Vui lòng chọn đủ thời gian bắt đầu và kết thúc');
+      return false;
+    }
+    if (tempStatusFrom.getTime() > tempStatusTo.getTime()) {
+      window.alert('Thời gian bắt đầu phải trước thời gian kết thúc');
+      return false;
+    }
+    setStatusFrom(tempStatusFrom);
+    setStatusTo(tempStatusTo);
+    setStatusRangeMode('custom');
+    return true;
+  };
+
+  const openElecRangeModal = () => {
+    const { from, to } = resolveStatusRange(elecRangeMode, elecFrom, elecTo, Date.now());
+    setTempElecFrom(from);
+    setTempElecTo(to);
+    setShowElecRangeModal(true);
+  };
+
+  const applyCustomElecRange = () => {
+    if (!tempElecFrom || !tempElecTo) {
+      window.alert('Vui lòng chọn đủ thời gian bắt đầu và kết thúc');
+      return false;
+    }
+    if (tempElecFrom.getTime() > tempElecTo.getTime()) {
+      window.alert('Thời gian bắt đầu phải trước thời gian kết thúc');
+      return false;
+    }
+    setElecFrom(tempElecFrom);
+    setElecTo(tempElecTo);
+    setElecRangeMode('custom');
+    return true;
+  };
+
+  // Biểu đồ công suất/dòng điện — cùng kiểu trạng thái: khoảng chọn + adaptive 10s/5 phút
   useEffect(() => {
-    // Đang tương tác (zoom/pan) — dừng cuộn realtime để giữ nguyên vùng zoom
-    if (elecPaused) return;
-    const elecTo = new Date(elecNow);
-    const elecFrom = getRollingFromDate(60, elecTo);
-    const electrical = buildPowerCurrentTimelineChart(
-      rawMachineData,
+    const { from, to, isLive } = resolveStatusRange(
+      elecRangeMode,
       elecFrom,
       elecTo,
-      1,
-      powerKw,
-      currentAvg,
+      now,
+    );
+    const electrical = buildPowerCurrentTimelineChart(
+      rawMachineData,
+      from,
+      to,
+      'adaptive',
+      isLive ? powerKw : null,
+      isLive ? currentAvg : null,
     );
     setElecChartTimestamps((prev) =>
       chartSeriesEqual(prev, electrical.timestamps) ? prev : electrical.timestamps,
@@ -284,10 +474,12 @@ export default function MidaCncMachineDetail() {
     );
   }, [
     rawMachineData,
-    elecNow,
+    now,
+    elecRangeMode,
+    elecFrom,
+    elecTo,
     powerKw,
     currentAvg,
-    elecPaused,
   ]);
 
   const handleDelete = async () => {
@@ -412,7 +604,7 @@ export default function MidaCncMachineDetail() {
 
                     <div className="col-4">
                       <div className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box">
-                        <p className="fw-semibold mb-0 text-brand">THỜI GIAN CHẠY LŨY KẾ</p>
+                        <p className="fw-semibold mb-0 text-brand">THỜI GIAN CẮT GỌT LŨY KẾ</p>
                         <div className="flex-grow-1 d-flex align-items-center justify-content-center px-1">
                           <CumulativeRuntimeDisplay
                             serverSeconds={totalTimeRunningSeconds}
@@ -530,22 +722,46 @@ export default function MidaCncMachineDetail() {
             <div className="mida-charts-cell mida-charts-cell--gauges">
               <div className="mida-gauge-pair">
                 <MidaGaugeChart
+                  value={performanceMachine}
+                  label="HIỆU SUẤT SỬ DỤNG"
+                  variant="performance"
+                />
+                <MidaGaugeChart
                   value={utilizationMachine}
                   label="HIỆU SUẤT VẬN HÀNH"
                   variant="utilization"
-                />
-                <MidaGaugeChart
-                  value={performanceMachine}
-                  label="HIỆU SUẤT KHAI THÁC"
-                  variant="performance"
                 />
               </div>
             </div>
 
             <div className="mida-charts-cell mida-charts-cell--status">
               <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--status">
-                <div className="chart-title-brand machine-chart-head">
+                <div className="chart-title-brand machine-chart-head mida-status-chart-head">
                   <div>BIỂU ĐỒ TRẠNG THÁI</div>
+                  <div className="mida-status-range" role="group" aria-label="Khoảng thời gian trạng thái">
+                    {STATUS_RANGE_PRESETS.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`mida-status-range__btn${
+                          statusRangeMode === p.id ? ' is-active' : ''
+                        }`}
+                        onClick={() => setStatusRangeMode(p.id)}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className={`mida-status-range__btn mida-status-range__btn--custom${
+                        statusRangeMode === 'custom' ? ' is-active' : ''
+                      }`}
+                      onClick={openStatusRangeModal}
+                      title="Chọn khoảng thời gian tùy chỉnh"
+                    >
+                      Tuỳ chọn
+                    </button>
+                  </div>
                 </div>
                 <div className="machine-chart-plot">
                   <div className="machine-chart-plot-inner">
@@ -598,34 +814,41 @@ export default function MidaCncMachineDetail() {
 
             <div className="mida-charts-cell mida-charts-cell--power">
               <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--tall">
-                <div className="chart-title-brand machine-chart-head">
+                <div className="chart-title-brand machine-chart-head mida-status-chart-head">
                   <div>CÔNG SUẤT VÀ DÒNG ĐIỆN</div>
+                  <div className="mida-status-range" role="group" aria-label="Khoảng thời gian công suất">
+                    {STATUS_RANGE_PRESETS.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`mida-status-range__btn${
+                          elecRangeMode === p.id ? ' is-active' : ''
+                        }`}
+                        onClick={() => setElecRangeMode(p.id)}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className={`mida-status-range__btn mida-status-range__btn--custom${
+                        elecRangeMode === 'custom' ? ' is-active' : ''
+                      }`}
+                      onClick={openElecRangeModal}
+                      title="Chọn khoảng thời gian tùy chỉnh"
+                    >
+                      Tuỳ chọn
+                    </button>
+                  </div>
                 </div>
-                <div
-                  className="machine-chart-plot"
-                  onMouseEnter={() => setElecPaused(true)}
-                  onMouseLeave={() => setElecPaused(false)}
-                  onTouchStart={() => setElecPaused(true)}
-                >
+                <div className="machine-chart-plot">
                   <div className="machine-chart-plot-inner">
                     <MidaPowerCurrentChart
                       timestamps={elecChartTimestamps}
                       powerValues={powerChartValues}
                       currentValues={currentChartValues}
-                      windowMs={60 * 60 * 1000}
-                      live={!elecPaused}
                     />
                   </div>
-                  {elecPaused && (
-                    <button
-                      type="button"
-                      className="mida-chart-resume-btn"
-                      onClick={() => setElecPaused(false)}
-                      title="Trở lại thời gian thực"
-                    >
-                      Tạm dừng — bấm để chạy lại
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -643,6 +866,36 @@ export default function MidaCncMachineDetail() {
         onBoot={handleBootData}
         onDelete={handleDelete}
         deleting={deleting}
+      />
+
+      <TimeRangeModal
+        open={showStatusRangeModal}
+        title="Khoảng thời gian trạng thái"
+        fromDate={tempStatusFrom}
+        toDate={tempStatusTo}
+        onFromDateChange={setTempStatusFrom}
+        onToDateChange={setTempStatusTo}
+        showTimeSelect
+        overlayClassName="mida-modal-overlay"
+        panelClassName="mida-modal-panel"
+        onCancel={() => setShowStatusRangeModal(false)}
+        onUpdate={applyCustomStatusRange}
+        onClose={() => setShowStatusRangeModal(false)}
+      />
+
+      <TimeRangeModal
+        open={showElecRangeModal}
+        title="Khoảng thời gian công suất / dòng điện"
+        fromDate={tempElecFrom}
+        toDate={tempElecTo}
+        onFromDateChange={setTempElecFrom}
+        onToDateChange={setTempElecTo}
+        showTimeSelect
+        overlayClassName="mida-modal-overlay"
+        panelClassName="mida-modal-panel"
+        onCancel={() => setShowElecRangeModal(false)}
+        onUpdate={applyCustomElecRange}
+        onClose={() => setShowElecRangeModal(false)}
       />
 
       {width < 1200 && (

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Chart } from 'react-chartjs-2';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
@@ -37,18 +37,15 @@ ChartJS.register(
   ChartDataLabels,
 );
 
-/** Headroom trên đỉnh: công suất ít hơn → đường cao hơn; dòng điện nhiều hơn → đường thấp hơn, tránh trùng. */
 const Y_AXIS_HEADROOM = {
   yPower: 0.1,
   yCurrent: 0.42,
 };
 
-/** Các bước thời gian "đẹp" (ms) để canh mốc lưới theo giờ tròn. */
 const TIME_STEPS_MS = [1, 2, 5, 10, 15, 20, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600].map(
   (s) => s * 1000,
 );
 
-/** Chọn bước lưới sao cho có ~6–8 mốc trong khoảng đang nhìn. */
 function chooseTimeStep(spanMs) {
   for (const s of TIME_STEPS_MS) {
     if (spanMs / s <= 8) return s;
@@ -64,7 +61,6 @@ function formatClock(ms, withSeconds) {
   });
 }
 
-/** Làm tròn lên theo 2 chữ số có nghĩa → thang đo "đẹp", ít đổi vặt. */
 function roundSigUp(v, sig = 2) {
   if (!Number.isFinite(v) || v <= 0) return 0;
   const exp = Math.floor(Math.log10(v)) - (sig - 1);
@@ -72,7 +68,6 @@ function roundSigUp(v, sig = 2) {
   return Math.ceil(v / step) * step;
 }
 
-/** Làm tròn xuống theo 2 chữ số có nghĩa (cho min âm). */
 function roundSigDown(v, sig = 2) {
   if (!Number.isFinite(v) || v === 0) return 0;
   const abs = Math.abs(v);
@@ -81,10 +76,6 @@ function roundSigDown(v, sig = 2) {
   return Math.sign(v) * Math.floor(abs / step) * step;
 }
 
-/**
- * Tính min/max ổn định cho 1 trục — có hysteresis: giữ trần cũ nếu đỉnh còn trong [55%,100%] trần.
- * Trả null khi không có dữ liệu (để Chart.js tự scale).
- */
 function computeStableBound(values, headroom, prev) {
   let hi = -Infinity;
   let lo = Infinity;
@@ -119,29 +110,17 @@ function computeStableBound(values, headroom, prev) {
 }
 
 /**
- * Biểu đồ đường kép: Công suất (kW) + Dòng điện (A) — trục X thời gian tuyến tính (ms),
- * cửa sổ trượt trái liên tục theo thời gian thực.
- * @param {number[]} timestamps epoch-ms của từng mẫu
- * @param {number} windowMs độ rộng cửa sổ hiển thị (ms); dùng để cuộn liên tục
- * @param {boolean} live true = đang realtime (tự cuộn); false = đang tương tác (giữ nguyên vùng zoom)
+ * Biểu đồ công suất / dòng điện theo khoảng thời gian (cùng kiểu biểu đồ trạng thái).
  */
 export default function MidaPowerCurrentChart({
   timestamps = [],
   powerValues = [],
   currentValues = [],
-  windowMs = null,
-  live = true,
 }) {
   const { theme } = useTheme();
   const isDark = isDarkChartTheme(theme);
   const chartRef = useRef(null);
 
-  const liveRef = useRef(live);
-  liveRef.current = live;
-  const windowMsRef = useRef(windowMs);
-  windowMsRef.current = windowMs;
-
-  // Thang Y ổn định (hysteresis) — tính trong React để không bị re-render mỗi giây ghi đè
   const yBoundsRef = useRef({ yPower: null, yCurrent: null });
   const yBounds = useMemo(() => {
     const yPower = computeStableBound(powerValues, Y_AXIS_HEADROOM.yPower, yBoundsRef.current.yPower);
@@ -203,7 +182,6 @@ export default function MidaPowerCurrentChart({
   const options = useMemo(
     () => ({
       ...chartStableRenderOptions,
-      // Realtime: vẽ tức thì, không animation → cửa sổ trượt mượt do RAF điều khiển
       animation: false,
       animations: {},
       transitions: {
@@ -231,10 +209,17 @@ export default function MidaPowerCurrentChart({
           },
         },
         zoom: {
+          limits: { x: { minRange: 10_000 } },
           pan: { enabled: true, mode: 'x' },
           zoom: {
-            wheel: { enabled: true },
+            wheel: { enabled: true, speed: 0.1 },
             pinch: { enabled: true },
+            drag: {
+              enabled: true,
+              backgroundColor: 'rgba(220, 38, 38, 0.12)',
+              borderColor: 'rgba(220, 38, 38, 0.45)',
+              borderWidth: 1,
+            },
             mode: 'x',
           },
         },
@@ -330,37 +315,6 @@ export default function MidaPowerCurrentChart({
     }),
     [theme, isDark, yBounds],
   );
-
-  // Cuộn cửa sổ liên tục theo thời gian thực (chỉ khi live). Tự giảm nhịp cập nhật
-  // khi bước dịch < 0.5px (cửa sổ rộng) để không tốn CPU vô ích.
-  useEffect(() => {
-    let raf;
-    let lastApply = 0;
-    const tick = () => {
-      const chart = chartRef.current;
-      const w = windowMsRef.current;
-      if (chart && liveRef.current && Number.isFinite(w) && w > 0) {
-        const now = Date.now();
-        const area = chart.chartArea;
-        const widthPx = area ? Math.max(1, area.right - area.left) : 300;
-        const pxPerMs = widthPx / w;
-        if (lastApply === 0 || (now - lastApply) * pxPerMs >= 0.5) {
-          const x = chart.options?.scales?.x;
-          if (x) {
-            x.min = now - w;
-            x.max = now;
-            chart.update('none');
-            lastApply = now;
-          }
-        }
-      } else {
-        lastApply = 0;
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
 
   useSyncChartTheme(chartRef, theme, options);
 

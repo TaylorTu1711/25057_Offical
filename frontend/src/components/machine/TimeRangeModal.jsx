@@ -12,6 +12,8 @@ export default function TimeRangeModal({
   viewMode,
   onViewModeChange,
   showTimeSelect = false,
+  overlayClassName = '',
+  panelClassName = '',
   onCancel,
   onUpdate,
   onClose,
@@ -21,9 +23,12 @@ export default function TimeRangeModal({
   const dateFormat = showTimeSelect ? 'dd/MM/yyyy HH:mm' : 'dd/MM/yyyy';
 
   return (
-    <div className="app-modal app-modal-overlay" onClick={onClose}>
+    <div
+      className={`app-modal app-modal-overlay ${overlayClassName}`.trim()}
+      onClick={onClose}
+    >
       <div
-        className="app-modal-panel app-modal-panel--time"
+        className={`app-modal-panel app-modal-panel--time ${panelClassName}`.trim()}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="d-flex justify-content-between align-items-center">
@@ -90,8 +95,8 @@ export default function TimeRangeModal({
             type="button"
             className="btn app-modal-btn-primary px-4"
             onClick={() => {
-              onUpdate();
-              onClose();
+              const ok = onUpdate?.();
+              if (ok !== false) onClose();
             }}
           >
             Cập nhật

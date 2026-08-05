@@ -3013,6 +3013,59 @@
   position: relative;
 }
 
+/* Bộ chọn khoảng thời gian biểu đồ trạng thái */
+.mida-status-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.mida-status-range {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.mida-status-range__btn {
+  border: 1px solid color-mix(in srgb, var(--mida-brand, #dc2626) 35%, transparent);
+  background: transparent;
+  color: var(--mida-text, #e5e7eb);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mida-status-range__btn:hover {
+  border-color: var(--mida-brand, #dc2626);
+  color: var(--mida-brand, #dc2626);
+}
+
+.mida-status-range__btn.is-active {
+  background: linear-gradient(135deg, var(--mida-brand-dark, #b91c1c), var(--mida-brand, #dc2626));
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.mida-status-range__btn--custom {
+  min-width: 4.2rem;
+}
+
+[data-theme='light'] .mida-status-range__btn {
+  color: #334155;
+  border-color: color-mix(in srgb, var(--mida-brand, #dc2626) 28%, #cbd5e1);
+}
+
+[data-theme='light'] .mida-status-range__btn:hover {
+  color: var(--mida-brand-dark, #b91c1c);
+}
+
 .mida-chart-resume-btn {
   position: absolute;
   top: 8px;

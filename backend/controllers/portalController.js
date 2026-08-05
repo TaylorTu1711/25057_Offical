@@ -131,7 +131,10 @@ export const getMidaCncMachineTelemetry = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy máy' });
     }
 
-    const rows = await fetchCncTelemetryRows(pool, machine_id, machine);
+    const rows = await fetchCncTelemetryRows(pool, machine_id, machine, {
+      from: req.query.from || new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString(),
+      to: req.query.to || undefined,
+    });
     res.json(rows);
   } catch (err) {
     console.error('getMidaCncMachineTelemetry error:', err.message);
@@ -172,7 +175,9 @@ export const bootMidaCncMachineData = async (req, res) => {
     }
 
     const deleted = await bootCncTelemetryTable(pool, machine_id, machine);
-    res.status(200).send(`Đã xóa ${deleted} bản ghi, giữ lại min/max mỗi ngày của bảng ${machine_id}`);
+    res.status(200).send(
+      `Đã xóa ${deleted} bản ghi; ngày cũ ~5 phút/mẫu, hôm nay ~10 giây/mẫu (${machine_id})`,
+    );
   } catch (err) {
     console.error('bootMidaCncMachineData error:', err.message);
     res.status(500).send('Lỗi server');

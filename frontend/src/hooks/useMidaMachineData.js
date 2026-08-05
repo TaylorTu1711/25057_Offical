@@ -214,7 +214,7 @@ const buildPerformance = (dailyData, rawData) => {
 
 const portalHeaders = () => authHeaders();
 
-export default function useMidaMachineData(machineId) {
+export default function useMidaMachineData(machineId, { telemetryFrom = null, telemetryTo = null } = {}) {
   const [machineInfo, setMachineInfo] = useState(null);
   const [statusMachine, setStatusMachine] = useState(null);
   const [errorsMachine, setErrorsMachine] = useState([]);
@@ -237,6 +237,10 @@ export default function useMidaMachineData(machineId) {
   const [frequencyHz, setFrequencyHz] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const hasChartDataRef = useRef(false);
+  const telemetryFromRef = useRef(telemetryFrom);
+  const telemetryToRef = useRef(telemetryTo);
+  telemetryFromRef.current = telemetryFrom;
+  telemetryToRef.current = telemetryTo;
 
   useEffect(() => {
     setTotalTimeOn(0);
@@ -337,9 +341,12 @@ export default function useMidaMachineData(machineId) {
       if (!machineId) return;
       if (!silent) setIsLoading(true);
       try {
+        const params = {};
+        if (telemetryFromRef.current) params.from = telemetryFromRef.current;
+        if (telemetryToRef.current) params.to = telemetryToRef.current;
         const res = await axios.get(
           `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machineId)}/telemetry`,
-          { headers: portalHeaders() },
+          { headers: portalHeaders(), params },
         );
         applyMachineParams(res.data);
       } catch (err) {
@@ -368,7 +375,9 @@ export default function useMidaMachineData(machineId) {
   }, [fetchErrors, fetchMachineParams]);
 
   const handleBootData = useCallback(async () => {
-    if (!window.confirm('Bạn có chắc muốn dọn dữ liệu cũ?')) return;
+    if (!window.confirm(
+      'Dọn dữ liệu: ngày trước giữ ~5 phút/mẫu, hôm nay giữ ~10 giây/mẫu. Tiếp tục?',
+    )) return;
     const res = await axios.delete(
       `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machineId)}/boot`,
       { headers: portalHeaders(), responseType: 'text' },
@@ -393,6 +402,11 @@ export default function useMidaMachineData(machineId) {
       setIsLoading(false);
     }
   }, [machineId, fetchMachineInfo, fetchErrors, fetchMachineParams, fetchMachines]);
+
+  const refetchTelemetry = useCallback(
+    () => fetchMachineParams({ silent: true }),
+    [fetchMachineParams],
+  );
 
   useEffect(() => {
     fetchAllMachineData();
@@ -426,5 +440,6 @@ export default function useMidaMachineData(machineId) {
     isLoading,
     fetchAllMachineData,
     handleBootData,
+    refetchTelemetry,
   };
 }
