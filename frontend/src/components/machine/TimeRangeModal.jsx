@@ -1,6 +1,22 @@
 import React from 'react';
 import DatePicker from 'react-datepicker';
 
+function isSameLocalDay(a, b) {
+  if (!a || !b) return true;
+  return (
+    a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate()
+  );
+}
+
+function withTimeOnDay(daySource, timeSource) {
+  const next = new Date(daySource);
+  const t = timeSource instanceof Date ? timeSource : daySource;
+  next.setHours(t.getHours(), t.getMinutes(), t.getSeconds(), t.getMilliseconds());
+  return next;
+}
+
 export default function TimeRangeModal({
   open,
   title,
@@ -12,6 +28,8 @@ export default function TimeRangeModal({
   viewMode,
   onViewModeChange,
   showTimeSelect = false,
+  /** Chỉ cho phép chọn trong cùng một ngày lịch (00:00–23:59). */
+  sameCalendarDayOnly = false,
   overlayClassName = '',
   panelClassName = '',
   onCancel,
@@ -21,6 +39,37 @@ export default function TimeRangeModal({
   if (!open) return null;
 
   const dateFormat = showTimeSelect ? 'dd/MM/yyyy HH:mm' : 'dd/MM/yyyy';
+
+  const handleFromChange = (date) => {
+    if (!date) {
+      onFromDateChange?.(date);
+      return;
+    }
+    onFromDateChange?.(date);
+    if (sameCalendarDayOnly && toDate && !isSameLocalDay(date, toDate)) {
+      let nextTo = withTimeOnDay(date, toDate);
+      if (nextTo.getTime() < date.getTime()) {
+        nextTo = withTimeOnDay(date, date);
+        nextTo.setHours(23, 59, 0, 0);
+        if (nextTo.getTime() < date.getTime()) nextTo = new Date(date);
+      }
+      onToDateChange?.(nextTo);
+    }
+  };
+
+  const handleToChange = (date) => {
+    if (!date) {
+      onToDateChange?.(date);
+      return;
+    }
+    if (sameCalendarDayOnly && fromDate && !isSameLocalDay(date, fromDate)) {
+      let nextTo = withTimeOnDay(fromDate, date);
+      if (nextTo.getTime() < fromDate.getTime()) nextTo = new Date(fromDate);
+      onToDateChange?.(nextTo);
+      return;
+    }
+    onToDateChange?.(date);
+  };
 
   return (
     <div
@@ -38,11 +87,17 @@ export default function TimeRangeModal({
 
         <hr />
 
+        {sameCalendarDayOnly && (
+          <p className="app-modal-hint mb-0 mt-1" style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+            Chỉ chọn trong cùng một ngày (tối đa 00:00–23:59).
+          </p>
+        )}
+
         <div className="mt-3">
           <label className="app-modal-label">Từ ngày:</label>
           <DatePicker
             selected={fromDate}
-            onChange={onFromDateChange}
+            onChange={handleFromChange}
             dateFormat={dateFormat}
             showTimeSelect={showTimeSelect}
             timeFormat="HH:mm"
@@ -56,11 +111,13 @@ export default function TimeRangeModal({
           <label className="app-modal-label">Đến ngày:</label>
           <DatePicker
             selected={toDate}
-            onChange={onToDateChange}
+            onChange={handleToChange}
             dateFormat={dateFormat}
             showTimeSelect={showTimeSelect}
             timeFormat="HH:mm"
             timeIntervals={15}
+            minDate={sameCalendarDayOnly ? fromDate : undefined}
+            maxDate={sameCalendarDayOnly ? fromDate : undefined}
             className="form-control app-modal-input"
             placeholderText="Chọn ngày kết thúc"
           />

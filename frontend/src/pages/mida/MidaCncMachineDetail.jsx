@@ -82,12 +82,25 @@ const STATUS_RANGE_PRESETS = [
   { id: 'today', label: 'Hôm nay' },
 ];
 
+function isSameLocalDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate()
+  );
+}
+
 /** Resolve khoảng thời gian biểu đồ trạng thái theo preset / custom. */
 function resolveStatusRange(mode, customFrom, customTo, nowMs) {
   const to = new Date(nowMs);
   if (mode === 'custom' && customFrom && customTo) {
     const from = new Date(customFrom);
-    const end = new Date(customTo);
+    let end = new Date(customTo);
+    // Tuỳ chọn: chỉ hiển thị trong cùng một ngày lịch
+    if (!isSameLocalDay(from, end)) {
+      end = new Date(from);
+      end.setHours(23, 59, 59, 999);
+    }
     if (from.getTime() <= end.getTime()) {
       return { from, to: end, isLive: false };
     }
@@ -419,6 +432,10 @@ export default function MidaCncMachineDetail() {
       window.alert('Thời gian bắt đầu phải trước thời gian kết thúc');
       return false;
     }
+    if (!isSameLocalDay(tempStatusFrom, tempStatusTo)) {
+      window.alert('Chỉ được chọn trong cùng một ngày (00:00–23:59).');
+      return false;
+    }
     setStatusFrom(tempStatusFrom);
     setStatusTo(tempStatusTo);
     setStatusRangeMode('custom');
@@ -439,6 +456,10 @@ export default function MidaCncMachineDetail() {
     }
     if (tempElecFrom.getTime() > tempElecTo.getTime()) {
       window.alert('Thời gian bắt đầu phải trước thời gian kết thúc');
+      return false;
+    }
+    if (!isSameLocalDay(tempElecFrom, tempElecTo)) {
+      window.alert('Chỉ được chọn trong cùng một ngày (00:00–23:59).');
       return false;
     }
     setElecFrom(tempElecFrom);
@@ -876,6 +897,7 @@ export default function MidaCncMachineDetail() {
         onFromDateChange={setTempStatusFrom}
         onToDateChange={setTempStatusTo}
         showTimeSelect
+        sameCalendarDayOnly
         overlayClassName="mida-modal-overlay"
         panelClassName="mida-modal-panel"
         onCancel={() => setShowStatusRangeModal(false)}
@@ -891,6 +913,7 @@ export default function MidaCncMachineDetail() {
         onFromDateChange={setTempElecFrom}
         onToDateChange={setTempElecTo}
         showTimeSelect
+        sameCalendarDayOnly
         overlayClassName="mida-modal-overlay"
         panelClassName="mida-modal-panel"
         onCancel={() => setShowElecRangeModal(false)}
