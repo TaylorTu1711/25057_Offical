@@ -283,6 +283,73 @@ export async function fetchCncTelemetryRows(db, machineId, machine, options = {}
   return rows.map(normalizePayloadRow);
 }
 
+/**
+ * Tóm tắt hiệu suất trên TOÀN BỘ lịch sử (không cắt theo tháng/cửa sổ biểu đồ).
+ * Dùng bộ đếm lũy kế mới nhất + mốc thời gian mẫu đầu/cuối.
+ */
+export async function fetchCncPerformanceSummary(db, machineId, machine) {
+  const qualified = telemetryTableRef(machineId, machine);
+  const { schema, tableName } = parseQualifiedTable(qualified);
+
+  if (!(await tableExists(db, schema, tableName))) {
+    return {
+      first_timestamp: null,
+      last_timestamp: null,
+      time_on: 0,
+      time_running: 0,
+    };
+  }
+
+  await ensureTimestampWithoutTz(db, qualified, schema, tableName);
+
+  const hasTimeOn = await tableHasColumn(db, schema, tableName, 'time_on');
+  const hasTimeRunning = await tableHasColumn(db, schema, tableName, 'time_running');
+  const hasPayload = await tableHasColumn(db, schema, tableName, 'payload');
+
+  const { rows: boundRows } = await db.query(`
+    SELECT
+      MIN("timestamp") AS first_ts,
+      MAX("timestamp") AS last_ts
+    FROM ${qualified}
+    WHERE "timestamp" IS NOT NULL
+  `);
+
+  let timeOn = 0;
+  let timeRunning = 0;
+
+  if (hasTimeOn || hasTimeRunning) {
+    const selectParts = ['"timestamp"'];
+    if (hasTimeOn) selectParts.push('time_on');
+    if (hasTimeRunning) selectParts.push('time_running');
+    const { rows } = await db.query(`
+      SELECT ${selectParts.join(', ')}
+      FROM ${qualified}
+      ORDER BY "timestamp" DESC NULLS LAST, id DESC
+      LIMIT 1
+    `);
+    const latest = rows[0] || {};
+    timeOn = Number(latest.time_on) || 0;
+    timeRunning = Number(latest.time_running) || 0;
+  } else if (hasPayload) {
+    const { rows } = await db.query(`
+      SELECT payload, "timestamp"
+      FROM ${qualified}
+      ORDER BY "timestamp" DESC NULLS LAST, id DESC
+      LIMIT 1
+    `);
+    const normalized = rows[0] ? normalizePayloadRow(rows[0]) : null;
+    timeOn = Number(normalized?.time_on) || 0;
+    timeRunning = Number(normalized?.time_running) || 0;
+  }
+
+  return {
+    first_timestamp: boundRows[0]?.first_ts ?? null,
+    last_timestamp: boundRows[0]?.last_ts ?? null,
+    time_on: timeOn,
+    time_running: timeRunning,
+  };
+}
+
 export async function fetchCncAlarmRows(db, machineId, machine) {
   const qualified = alarmTableRef(machineId, machine);
   const { schema, tableName } = parseQualifiedTable(qualified);

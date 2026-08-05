@@ -5,7 +5,7 @@ import { authHeaders } from '../utils/auth';
 import { POLL_INTERVALS } from '../config/polling';
 import usePolling from './usePolling';
 import { buildErrorStats } from '../utils/errorStats';
-import { calcUsagePerformancePct } from '../utils/machinePerformance';
+import { calcUsagePerformancePctFromSpan } from '../utils/machinePerformance';
 
 const normalizeDate = (iso) => new Date(iso).toISOString().split('T')[0];
 
@@ -144,6 +144,30 @@ const buildDailyData = (data) => {
 
 const clampPct = (value) => Math.min(100, Math.max(0, Number(value.toFixed(1))));
 
+/** Gauge hiệu suất — chỉ từ summary toàn lịch sử (không theo tháng/biểu đồ). */
+const buildLifetimeGauges = (summary) => {
+  const timeOn = Number(summary?.time_on) || 0;
+  const timeRunning = Number(summary?.time_running) || 0;
+
+  const utilizationMachine = timeOn > 0
+    ? clampPct((timeRunning / timeOn) * 100)
+    : 0;
+
+  const performanceMachine = calcUsagePerformancePctFromSpan(
+    timeRunning,
+    summary?.first_timestamp,
+    summary?.last_timestamp,
+  );
+
+  return {
+    totalTimeOn: (timeOn / 3600).toFixed(1),
+    totalTimeOnSeconds: timeOn,
+    totalTimeRunningSeconds: timeRunning,
+    performanceMachine,
+    utilizationMachine,
+  };
+};
+
 const buildPerformance = (dailyData, rawData) => {
   const totalTimeOnSeconds = dailyData.reduce(
     (sum, item) => sum + (Number(item.time_on) || 0),
@@ -154,7 +178,7 @@ const buildPerformance = (dailyData, rawData) => {
     0,
   );
 
-  // Ưu tiên giá trị lũy kế mới nhất từ telemetry CNC
+  // Ưu tiên giá trị lũy kế mới nhất từ telemetry CNC (cửa sổ biểu đồ — chỉ cho số liệu điện)
   const latestRaw = [...rawData].sort(
     (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
   )[0];
@@ -162,20 +186,6 @@ const buildPerformance = (dailyData, rawData) => {
   const latestTimeRunning = Number(latestRaw?.time_running) || totalTimeRunningSeconds;
 
   const totalTimeOn = (latestTimeOn / 3600).toFixed(1);
-
-  // Hiệu suất vận hành = Σ time_running / Σ time_on × 100 (cộng dồn theo ngày trong dữ liệu tải)
-  const utilizationMachine = totalTimeOnSeconds > 0
-    ? clampPct((totalTimeRunningSeconds / totalTimeOnSeconds) * 100)
-    : (latestTimeOn > 0
-      ? clampPct((latestTimeRunning / latestTimeOn) * 100)
-      : 0);
-
-  // Hiệu suất sử dụng = time_running / (mẫu đầu → mẫu mới nhất) × 100
-  const performanceMachine = calcUsagePerformancePct(
-    latestTimeRunning || totalTimeRunningSeconds,
-    rawData,
-    dailyData,
-  );
 
   // Lũy kế kWh = ∫ power · d(time_running); fallback 1 mẫu: power × time_running
   let cumulativeEnergyKwh = energyKwhFromPowerAndTimeRun(rawData);
@@ -206,8 +216,6 @@ const buildPerformance = (dailyData, rawData) => {
     voltageAvg: latestVoltage,
     currentAvg: latestCurrent,
     frequencyHz: latestFrequency,
-    performanceMachine,
-    utilizationMachine,
     latestDate: normalizeDate(
       rawData[rawData.length - 1]?.timestamp || new Date().toISOString(),
     ),
@@ -326,17 +334,30 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
     setRawData(dailyData);
 
     const perf = buildPerformance(dailyData, data);
-    setTotalTimeOn(perf.totalTimeOn);
-    setTotalTimeOnSeconds(perf.totalTimeOnSeconds);
-    setTotalTimeRunningSeconds(perf.totalTimeRunningSeconds);
     setShootMachine(perf.shootMachine);
     setPowerKw(perf.powerKw);
     setVoltageAvg(perf.voltageAvg);
     setCurrentAvg(perf.currentAvg);
     setFrequencyHz(perf.frequencyHz);
-    setPerformanceMachine(perf.performanceMachine);
-    setUtilizationMachine(perf.utilizationMachine);
   }, []);
+
+  const applyPerformanceSummary = useCallback((summary) => {
+    const gauges = buildLifetimeGauges(summary);
+    setTotalTimeOn(gauges.totalTimeOn);
+    setTotalTimeOnSeconds(gauges.totalTimeOnSeconds);
+    setTotalTimeRunningSeconds(gauges.totalTimeRunningSeconds);
+    setPerformanceMachine(gauges.performanceMachine);
+    setUtilizationMachine(gauges.utilizationMachine);
+  }, []);
+
+  const fetchPerformanceSummary = useCallback(async () => {
+    if (!machineId) return;
+    const res = await axios.get(
+      `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machineId)}/performance`,
+      { headers: portalHeaders() },
+    );
+    applyPerformanceSummary(res.data);
+  }, [machineId, applyPerformanceSummary]);
 
   const fetchMachineParams = useCallback(
     async ({ silent = false } = {}) => {
@@ -370,11 +391,15 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
 
   const fetchLiveData = useCallback(async () => {
     try {
-      await Promise.all([fetchErrors(), fetchMachineParams({ silent: true })]);
+      await Promise.all([
+        fetchErrors(),
+        fetchMachineParams({ silent: true }),
+        fetchPerformanceSummary(),
+      ]);
     } catch (err) {
       console.error(err.message);
     }
-  }, [fetchErrors, fetchMachineParams]);
+  }, [fetchErrors, fetchMachineParams, fetchPerformanceSummary]);
 
   const handleBootData = useCallback(async () => {
     if (!window.confirm(
@@ -391,7 +416,7 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
       );
       const msg = typeof res.data === 'string' ? res.data : String(res.data ?? '');
       alert(msg || 'Boot xong.');
-      await fetchMachineParams();
+      await Promise.all([fetchMachineParams(), fetchPerformanceSummary()]);
     } catch (err) {
       const data = err.response?.data;
       const raw = typeof data === 'string' ? data : (data?.error || err.message || '');
@@ -402,7 +427,7 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
           : (raw && !/<html/i.test(String(raw)) ? raw : `Boot thất bại: ${err.message || 'lỗi mạng'}`),
       );
     }
-  }, [machineId, fetchMachineParams]);
+  }, [machineId, fetchMachineParams, fetchPerformanceSummary]);
 
   const fetchAllMachineData = useCallback(async () => {
     if (!machineId) return;
@@ -412,6 +437,7 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
         fetchMachineInfo(),
         fetchErrors(),
         fetchMachineParams({ silent: true }),
+        fetchPerformanceSummary(),
         fetchMachines(),
       ]);
     } catch (err) {
@@ -419,7 +445,7 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
     } finally {
       setIsLoading(false);
     }
-  }, [machineId, fetchMachineInfo, fetchErrors, fetchMachineParams, fetchMachines]);
+  }, [machineId, fetchMachineInfo, fetchErrors, fetchMachineParams, fetchPerformanceSummary, fetchMachines]);
 
   const saveMachineInformation = useCallback(async (information) => {
     if (!machineId) throw new Error('Thiếu mã máy');

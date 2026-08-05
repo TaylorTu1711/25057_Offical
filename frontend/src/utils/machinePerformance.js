@@ -62,14 +62,23 @@ export const getFirstOperationDate = (rawRows = [], dailyRows = []) => {
  * MIDA CNC: truyền time_running. Portal khác có thể truyền time_on.
  */
 export function calcUsagePerformancePct(totalSeconds, rawRows, dailyRows) {
+  const firstTs = getFirstDataTimestamp(rawRows, dailyRows);
+  const latestTs = getLatestDataTimestamp(rawRows, dailyRows);
+  return calcUsagePerformancePctFromSpan(totalSeconds, firstTs, latestTs);
+}
+
+/** Hiệu suất sử dụng từ mốc đầu/cuối đã biết (toàn lịch sử). */
+export function calcUsagePerformancePctFromSpan(totalSeconds, firstTs, latestTs) {
   const sec = Number(totalSeconds) || 0;
   if (sec <= 0) return 0;
 
-  const firstTs = getFirstDataTimestamp(rawRows, dailyRows);
-  const latestTs = getLatestDataTimestamp(rawRows, dailyRows);
-  if (!firstTs || !latestTs) return 0;
+  const first = firstTs instanceof Date ? firstTs : (firstTs ? new Date(firstTs) : null);
+  const latest = latestTs instanceof Date ? latestTs : (latestTs ? new Date(latestTs) : null);
+  if (!first || !latest || Number.isNaN(first.getTime()) || Number.isNaN(latest.getTime())) {
+    return 0;
+  }
 
-  const elapsedSec = (latestTs.getTime() - firstTs.getTime()) / 1000;
+  const elapsedSec = (latest.getTime() - first.getTime()) / 1000;
   if (elapsedSec <= 0) return 0;
 
   const pct = (sec / elapsedSec) * 100;

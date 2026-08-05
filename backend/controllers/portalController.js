@@ -5,6 +5,7 @@ import {
   bootCncTelemetryTable,
   ensureCncElectricalTelemetryColumns,
   fetchCncAlarmRows,
+  fetchCncPerformanceSummary,
   fetchCncTelemetryRows,
 } from '../utils/cncTelemetry.js';
 
@@ -138,6 +139,26 @@ export const getMidaCncMachineTelemetry = async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('getMidaCncMachineTelemetry error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+};
+
+export const getMidaCncMachinePerformance = async (req, res) => {
+  try {
+    const { machine_id } = req.params;
+    const { role, id: userId } = req.user;
+    const scope = await resolveCncScope(userId, role);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
+    const machine = await findAuthorizedMidaMachine(machine_id, scope.locations);
+    if (!machine) {
+      return res.status(404).json({ error: 'Không tìm thấy máy' });
+    }
+
+    const summary = await fetchCncPerformanceSummary(pool, machine_id, machine);
+    res.json(summary);
+  } catch (err) {
+    console.error('getMidaCncMachinePerformance error:', err.message);
     res.status(500).json({ error: 'Lỗi server' });
   }
 };
