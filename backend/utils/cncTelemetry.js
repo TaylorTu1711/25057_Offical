@@ -305,6 +305,7 @@ export async function fetchCncAlarmRows(db, machineId, machine) {
  * - Các ngày trước hôm nay: giữ ~1 mẫu / 5 phút
  * - Hôm nay: giữ ~1 mẫu / 10 giây
  * Mỗi bucket giữ bản ghi mới nhất.
+ * Dùng temp keep-ids + anti-join (tránh DELETE NOT IN gây chậm/502 trên bảng lớn).
  * @returns {number} số dòng đã xóa
  */
 export async function bootCncTelemetryTable(db, machineId, machine) {
@@ -325,34 +326,55 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
     return 0;
   }
 
-  // Past days: 5 phút (300s); today: 10 giây
-  const result = await db.query(`
-    DELETE FROM ${qualified} AS t
-    WHERE t.id NOT IN (
-      SELECT kept.id
-      FROM (
-        SELECT DISTINCT ON (day_part, bucket)
-          id
-        FROM (
-          SELECT
-            id,
-            "timestamp",
-            CASE
-              WHEN DATE("timestamp") = CURRENT_DATE THEN 'today'
-              ELSE 'past'
-            END AS day_part,
-            CASE
-              WHEN DATE("timestamp") = CURRENT_DATE
-                THEN floor(extract(epoch FROM "timestamp") / 10)::bigint
-              ELSE floor(extract(epoch FROM "timestamp") / 300)::bigint
-            END AS bucket
-          FROM ${qualified}
-          WHERE "timestamp" IS NOT NULL
-        ) AS src
-        ORDER BY day_part, bucket, "timestamp" DESC, id DESC
-      ) AS kept
-    )
-  `);
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`
+      CREATE TEMP TABLE _mida_boot_keep (
+        id bigint PRIMARY KEY
+      ) ON COMMIT DROP
+    `);
 
-  return result.rowCount ?? 0;
+    // Past days: 5 phút (300s); today: 10 giây
+    await client.query(`
+      INSERT INTO _mida_boot_keep (id)
+      SELECT DISTINCT ON (day_part, bucket) id
+      FROM (
+        SELECT
+          id,
+          CASE
+            WHEN DATE("timestamp") = CURRENT_DATE THEN 1
+            ELSE 0
+          END AS day_part,
+          CASE
+            WHEN DATE("timestamp") = CURRENT_DATE
+              THEN floor(extract(epoch FROM "timestamp") / 10)::bigint
+            ELSE floor(extract(epoch FROM "timestamp") / 300)::bigint
+          END AS bucket,
+          "timestamp"
+        FROM ${qualified}
+        WHERE "timestamp" IS NOT NULL
+      ) AS src
+      ORDER BY day_part, bucket, "timestamp" DESC, id DESC
+    `);
+
+    const result = await client.query(`
+      DELETE FROM ${qualified} AS t
+      WHERE NOT EXISTS (
+        SELECT 1 FROM _mida_boot_keep AS k WHERE k.id = t.id
+      )
+    `);
+
+    await client.query('COMMIT');
+    return result.rowCount ?? 0;
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      /* ignore */
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
 }

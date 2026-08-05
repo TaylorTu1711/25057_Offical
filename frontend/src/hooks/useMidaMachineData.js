@@ -378,12 +378,28 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
     if (!window.confirm(
       'Dọn dữ liệu: ngày trước giữ ~5 phút/mẫu, hôm nay giữ ~10 giây/mẫu. Tiếp tục?',
     )) return;
-    const res = await axios.delete(
-      `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machineId)}/boot`,
-      { headers: portalHeaders(), responseType: 'text' },
-    );
-    alert(res.data);
-    await fetchMachineParams();
+    try {
+      const res = await axios.delete(
+        `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machineId)}/boot`,
+        {
+          headers: portalHeaders(),
+          responseType: 'text',
+          timeout: 300_000,
+        },
+      );
+      const msg = typeof res.data === 'string' ? res.data : String(res.data ?? '');
+      alert(msg || 'Boot xong.');
+      await fetchMachineParams();
+    } catch (err) {
+      const data = err.response?.data;
+      const raw = typeof data === 'string' ? data : (data?.error || err.message || '');
+      const is502 = err.response?.status === 502 || /502|Bad Gateway|<html/i.test(String(raw));
+      alert(
+        is502
+          ? 'Boot thất bại: máy chủ timeout (502). Dữ liệu quá lớn hoặc proxy hết hạn — thử lại sau khi cập nhật backend.'
+          : (raw && !/<html/i.test(String(raw)) ? raw : `Boot thất bại: ${err.message || 'lỗi mạng'}`),
+      );
+    }
   }, [machineId, fetchMachineParams]);
 
   const fetchAllMachineData = useCallback(async () => {
