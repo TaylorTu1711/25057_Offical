@@ -57,12 +57,13 @@ export const getFirstOperationDate = (rawRows = [], dailyRows = []) => {
 };
 
 /**
- * Hiệu suất khai thác (%) =
- * time_on / (thời gian từ mẫu đầu tiên → mẫu mới nhất) × 100
+ * Hiệu suất theo cửa sổ dữ liệu (%) =
+ * tổng thời gian (giây) / (timestamp mẫu mới nhất − mẫu đầu tiên) × 100
+ * MIDA CNC: truyền time_running. Portal khác có thể truyền time_on.
  */
-export function calcUsagePerformancePct(totalTimeOnSeconds, rawRows, dailyRows) {
-  const onSec = Number(totalTimeOnSeconds) || 0;
-  if (onSec <= 0) return 0;
+export function calcUsagePerformancePct(totalSeconds, rawRows, dailyRows) {
+  const sec = Number(totalSeconds) || 0;
+  if (sec <= 0) return 0;
 
   const firstTs = getFirstDataTimestamp(rawRows, dailyRows);
   const latestTs = getLatestDataTimestamp(rawRows, dailyRows);
@@ -71,6 +72,6 @@ export function calcUsagePerformancePct(totalTimeOnSeconds, rawRows, dailyRows) 
   const elapsedSec = (latestTs.getTime() - firstTs.getTime()) / 1000;
   if (elapsedSec <= 0) return 0;
 
-  const pct = (onSec / elapsedSec) * 100;
+  const pct = (sec / elapsedSec) * 100;
   return Math.min(100, Number(pct.toFixed(1)));
 }

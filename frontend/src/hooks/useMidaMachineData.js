@@ -163,14 +163,16 @@ const buildPerformance = (dailyData, rawData) => {
 
   const totalTimeOn = (latestTimeOn / 3600).toFixed(1);
 
-  // Hiệu suất vận hành = thời gian chạy / thời gian bật máy × 100
-  const utilizationMachine = latestTimeOn > 0
-    ? clampPct((latestTimeRunning / latestTimeOn) * 100)
-    : 0;
+  // Hiệu suất vận hành = Σ time_running / Σ time_on × 100 (cộng dồn theo ngày trong dữ liệu tải)
+  const utilizationMachine = totalTimeOnSeconds > 0
+    ? clampPct((totalTimeRunningSeconds / totalTimeOnSeconds) * 100)
+    : (latestTimeOn > 0
+      ? clampPct((latestTimeRunning / latestTimeOn) * 100)
+      : 0);
 
-  // Hiệu suất khai thác = time_on / (mẫu đầu → mẫu mới nhất) × 100
+  // Hiệu suất sử dụng = time_running / (mẫu đầu → mẫu mới nhất) × 100
   const performanceMachine = calcUsagePerformancePct(
-    latestTimeOn || totalTimeOnSeconds,
+    latestTimeRunning || totalTimeRunningSeconds,
     rawData,
     dailyData,
   );
@@ -419,6 +421,17 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
     }
   }, [machineId, fetchMachineInfo, fetchErrors, fetchMachineParams, fetchMachines]);
 
+  const saveMachineInformation = useCallback(async (information) => {
+    if (!machineId) throw new Error('Thiếu mã máy');
+    const res = await axios.patch(
+      `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machineId)}/info`,
+      { information },
+      { headers: portalHeaders() },
+    );
+    applyMachineInfo(res.data);
+    return res.data;
+  }, [machineId, applyMachineInfo]);
+
   const refetchTelemetry = useCallback(
     () => fetchMachineParams({ silent: true }),
     [fetchMachineParams],
@@ -456,6 +469,7 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
     isLoading,
     fetchAllMachineData,
     handleBootData,
+    saveMachineInformation,
     refetchTelemetry,
   };
 }

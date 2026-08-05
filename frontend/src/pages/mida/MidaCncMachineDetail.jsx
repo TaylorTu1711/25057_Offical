@@ -231,10 +231,12 @@ export default function MidaCncMachineDetail() {
     currentAvg,
     isLoading,
     handleBootData,
+    saveMachineInformation,
     refetchTelemetry,
   } = machineData;
 
   const [deleting, setDeleting] = useState(false);
+  const [savingInformation, setSavingInformation] = useState(false);
   const [width, setWidth] = useState(window.innerWidth);
   const offcanvasRef = useRef(null);
   const [offcanvasInstance, setOffcanvasInstance] = useState(null);
@@ -518,6 +520,15 @@ export default function MidaCncMachineDetail() {
       alert(err.response?.data?.error || 'Không thể xoá máy. Vui lòng thử lại.');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleSaveInformation = async (information) => {
+    setSavingInformation(true);
+    try {
+      await saveMachineInformation(information);
+    } finally {
+      setSavingInformation(false);
     }
   };
 
@@ -887,6 +898,8 @@ export default function MidaCncMachineDetail() {
         onBoot={handleBootData}
         onDelete={handleDelete}
         deleting={deleting}
+        onSaveInformation={handleSaveInformation}
+        savingInformation={savingInformation}
       />
 
       <TimeRangeModal

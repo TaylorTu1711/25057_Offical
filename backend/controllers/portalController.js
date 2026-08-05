@@ -349,6 +349,42 @@ export const deleteMidaCncMachine = async (req, res) => {
   }
 };
 
+export const updateMidaCncMachineInfo = async (req, res) => {
+  const { machine_id } = req.params;
+  const { information } = req.body;
+  const { role, id: userId } = req.user;
+
+  if (information !== undefined && information !== null && typeof information !== 'string') {
+    return res.status(400).json({ error: 'information phải là chuỗi' });
+  }
+
+  try {
+    const scope = await resolveCncScope(userId, role);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
+    const machine = await findAuthorizedMidaMachine(machine_id, scope.locations);
+    if (!machine) {
+      return res.status(404).json({ error: 'Không tìm thấy máy' });
+    }
+
+    const nextInfo = information == null ? '' : String(information);
+    const { rows } = await pool.query(
+      `UPDATE ${MIDA_MACHINES}
+       SET information = $1
+       WHERE machine_id = $2
+       RETURNING machine_id, machine_name, location, image_url, status, last_updated,
+                 information, output_name, output_unit, input_name, input_unit,
+                 machine_category, layout_x, layout_y`,
+      [nextInfo, machine_id],
+    );
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('updateMidaCncMachineInfo error:', err.message);
+    res.status(500).json({ error: 'Lỗi cập nhật thông tin máy' });
+  }
+};
+
 export const updateMidaMachineLayout = async (req, res) => {
   const { machine_id } = req.params;
   const { layout_x, layout_y } = req.body;

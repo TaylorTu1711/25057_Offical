@@ -1,5 +1,20 @@
-import React from 'react';
-import { Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
+
+function parseInfoLines(information) {
+  if (!information || typeof information !== 'string') return [];
+  return information
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => {
+      const idx = line.indexOf(':');
+      if (idx === -1) return { key: line.trim(), value: '' };
+      return {
+        key: line.slice(0, idx).trim(),
+        value: line.slice(idx + 1).trim(),
+      };
+    });
+}
 
 export default function MachineInfoModal({
   open,
@@ -9,10 +24,51 @@ export default function MachineInfoModal({
   onBoot,
   onDelete,
   deleting = false,
+  onSaveInformation,
+  savingInformation = false,
 }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saveError, setSaveError] = useState('');
+
+  useEffect(() => {
+    if (!open) {
+      setEditing(false);
+      setSaveError('');
+      return;
+    }
+    setDraft(machineInfo?.information ?? '');
+    setEditing(false);
+    setSaveError('');
+  }, [open, machineInfo?.information, machineInfo?.machine_id]);
+
   if (!open) return null;
 
   const connected = isConnected(machineInfo.last_updated);
+  const canEdit = typeof onSaveInformation === 'function';
+  const rows = parseInfoLines(machineInfo?.information);
+
+  const handleSave = async () => {
+    if (!canEdit || savingInformation) return;
+    setSaveError('');
+    try {
+      await onSaveInformation(draft);
+      setEditing(false);
+    } catch (err) {
+      setSaveError(
+        err.response?.data?.error
+          || err.response?.data?.message
+          || err.message
+          || 'Không thể lưu thông tin máy',
+      );
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setDraft(machineInfo?.information ?? '');
+    setSaveError('');
+    setEditing(false);
+  };
 
   return (
     <div className="app-modal app-modal-overlay" onClick={onClose}>
@@ -45,27 +101,75 @@ export default function MachineInfoModal({
           </div>
 
           <div>
-            <div className="app-modal-label">Thông tin khác:</div>
-            <div className="app-modal-info-box">
-              <table className="table table-sm table-bordered mb-0">
-                <tbody>
-                  {machineInfo.information
-                    ?.split('\n')
-                    .filter((line) => line.trim())
-                    .map((line, index) => {
-                      const [key, value] = line.split(':');
-                      return (
-                        <tr key={index}>
-                          <td className="fw-semibold" style={{ width: '40%' }}>
-                            {key?.trim()}
-                          </td>
-                          <td>{value?.trim()}</td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
+            <div className="d-flex justify-content-between align-items-center gap-2 mb-1">
+              <div className="app-modal-label mb-0">Thông tin khác:</div>
+              {canEdit && !editing && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                  onClick={() => setEditing(true)}
+                >
+                  <Pencil size={14} aria-hidden="true" />
+                  Sửa
+                </button>
+              )}
             </div>
+
+            {editing ? (
+              <>
+                <textarea
+                  className="form-control app-modal-input"
+                  rows={8}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder={'Mỗi dòng một mục, ví dụ:\nModel: XXX\nCông suất: 10kW'}
+                  disabled={savingInformation}
+                />
+                <div className="form-text mt-1">
+                  Mỗi dòng dạng <code>Tên: Giá trị</code> để hiển thị đúng bảng.
+                </div>
+                {saveError ? (
+                  <div className="text-danger small mt-2">{saveError}</div>
+                ) : null}
+                <div className="d-flex justify-content-end gap-2 mt-2 flex-wrap">
+                  <button
+                    type="button"
+                    className="btn btn-secondary px-3"
+                    onClick={handleCancelEdit}
+                    disabled={savingInformation}
+                  >
+                    Huỷ
+                  </button>
+                  <button
+                    type="button"
+                    className="btn app-modal-btn-primary px-3"
+                    onClick={handleSave}
+                    disabled={savingInformation}
+                  >
+                    {savingInformation ? 'Đang lưu...' : 'Lưu'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="app-modal-info-box">
+                {rows.length === 0 ? (
+                  <div className="text-muted small px-2 py-2">Chưa có thông tin khác.</div>
+                ) : (
+                  <table className="table table-sm table-bordered mb-0">
+                    <tbody>
+                      {rows.map((row, index) => (
+                        <tr key={`${row.key}-${index}`}>
+                          <td className="fw-semibold" style={{ width: '40%' }}>
+                            {row.key}
+                          </td>
+                          <td>{row.value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -75,7 +179,7 @@ export default function MachineInfoModal({
               type="button"
               className="btn btn-outline-danger px-3 d-inline-flex align-items-center gap-2"
               onClick={onDelete}
-              disabled={deleting}
+              disabled={deleting || savingInformation}
               aria-label="Xoá máy"
             >
               <Trash2 size={16} aria-hidden="true" />
@@ -85,7 +189,12 @@ export default function MachineInfoModal({
             <span />
           )}
           <div className="d-flex gap-2 flex-wrap ms-auto">
-            <button type="button" className="btn app-modal-btn-primary px-3" onClick={onBoot}>
+            <button
+              type="button"
+              className="btn app-modal-btn-primary px-3"
+              onClick={onBoot}
+              disabled={savingInformation}
+            >
               Boot
             </button>
             <button type="button" className="btn btn-secondary px-4" onClick={onClose}>
