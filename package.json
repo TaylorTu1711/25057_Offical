@@ -4,7 +4,8 @@
   "main": "backend/server.js",
   "scripts": {
     "dev": "nodemon backend/server.js",
-    "build": "npm install && npm install --prefix frontend && npm run build --prefix frontend",
+    "build": "npm install && npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend && npm run seed:mida-admin",
+    "seed:mida-admin": "node backend/scripts/create-mida-admin.js",
     "start": "node backend/server.js",
     "migrate:shoot-real": "node backend/scripts/migrate-shoot-to-real.js",
     "migrate:shoot-real:sql": "psql -U \"${DB_USER:-postgres}\" -d \"${DB_NAME:-postgres}\" -f backend/scripts/migrate-shoot-to-real.sql",
@@ -19,6 +20,7 @@
   "dependencies": {
     "@arcjet/node": "^1.0.0-beta.7",
     "@neondatabase/serverless": "^1.0.0",
+    "bcrypt": "^6.0.0",
     "chartjs-plugin-zoom": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",

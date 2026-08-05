@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Boxes, Pause, Play, WifiOff } from 'lucide-react';
 import axios from 'axios';
 import { BASE_URL } from '../../config/config';
-import { authHeaders } from '../../utils/auth';
+import { authHeaders, getRole } from '../../utils/auth';
 import { POLL_INTERVALS } from '../../config/polling';
 import usePolling from '../../hooks/usePolling';
 import useNow from '../../hooks/useNow';
@@ -24,6 +24,7 @@ const MACHINE_TABS = [
 
 export default function MidaCncDashboard() {
   const now = useNow(POLL_INTERVALS.connectionTick);
+  const isAdmin = getRole() === 'admin';
   const activeTab = ACTIVE_MACHINE_TYPE;
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +128,7 @@ export default function MidaCncDashboard() {
             onLayoutSaved={fetchMachines}
             statLabel={tabMeta.statLabel}
             stats={stats}
-            onCreateClick={() => setIsCreateOpen(true)}
+            onCreateClick={isAdmin ? () => setIsCreateOpen(true) : undefined}
             createOpen={isCreateOpen}
           />
         )}
@@ -139,18 +140,20 @@ export default function MidaCncDashboard() {
                 machine={m}
                 now={now}
                 machineType={activeTab}
-                onDelete={handleDeleteMachine}
+                onDelete={isAdmin ? handleDeleteMachine : undefined}
               />
             ))}
           </div>
         )}
       </main>
-      <MidaCreateMachineModal
-        open={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onCreated={fetchMachines}
-        machineType={activeTab}
-      />
+      {isAdmin ? (
+        <MidaCreateMachineModal
+          open={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          onCreated={fetchMachines}
+          machineType={activeTab}
+        />
+      ) : null}
     </div>
   );
 }

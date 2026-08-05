@@ -26,7 +26,8 @@ export function requirePortal(...allowedPortals) {
 }
 
 export function getPostLoginPath(portal, role) {
-  if (portal === PORTALS.MIDA_CNC && role !== 'admin') {
+  // Admin/user thuộc portal CNC → vào trang CNC
+  if (portal === PORTALS.MIDA_CNC) {
     return '/mida/cnc';
   }
   return '/';

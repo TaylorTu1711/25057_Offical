@@ -26,6 +26,8 @@ export default function MachineInfoModal({
   deleting = false,
   onSaveInformation,
   savingInformation = false,
+  overlayClassName = '',
+  panelClassName = '',
 }) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState('');
@@ -79,9 +81,12 @@ export default function MachineInfoModal({
   };
 
   return (
-    <div className="app-modal app-modal-overlay" onClick={onClose}>
+    <div
+      className={`app-modal app-modal-overlay ${overlayClassName}`.trim()}
+      onClick={onClose}
+    >
       <div
-        className="app-modal-panel app-modal-panel--md"
+        className={`app-modal-panel app-modal-panel--md ${panelClassName}`.trim()}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="d-flex justify-content-between align-items-center">
@@ -214,14 +219,16 @@ export default function MachineInfoModal({
             <span />
           )}
           <div className="d-flex gap-2 flex-wrap ms-auto">
-            <button
-              type="button"
-              className="btn app-modal-btn-primary px-3"
-              onClick={onBoot}
-              disabled={savingInformation}
-            >
-              Boot
-            </button>
+            {typeof onBoot === 'function' ? (
+              <button
+                type="button"
+                className="btn app-modal-btn-primary px-3"
+                onClick={onBoot}
+                disabled={savingInformation}
+              >
+                Boot
+              </button>
+            ) : null}
             <button type="button" className="btn btn-secondary px-4" onClick={onClose}>
               Đóng
             </button>

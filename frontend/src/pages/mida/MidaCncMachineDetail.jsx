@@ -29,7 +29,7 @@ import useStableMachineRunning from '../../hooks/useStableMachineRunning';
 import useResizableTableColumns from '../../hooks/useResizableTableColumns';
 
 import { BASE_URL } from '../../config/config';
-import { authHeaders } from '../../utils/auth';
+import { authHeaders, getRole } from '../../utils/auth';
 import { POLL_INTERVALS } from '../../config/polling';
 import {
   getMachineStatusLabel,
@@ -173,6 +173,7 @@ export default function MidaCncMachineDetail() {
   const { machine_id } = useParams();
   const navigate = useNavigate();
   const now = useNow(POLL_INTERVALS.connectionTick);
+  const isAdmin = getRole() === 'admin';
 
   const [chartViewMode, setChartViewMode] = useState(CHART_VIEW_MODES.day);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
@@ -896,11 +897,13 @@ export default function MidaCncMachineDetail() {
         machineInfo={machineInfo || {}}
         isConnected={isConnected}
         onClose={() => setModals((prev) => ({ ...prev, machineInfo: false }))}
-        onBoot={handleBootData}
-        onDelete={handleDelete}
+        onBoot={isAdmin ? handleBootData : undefined}
+        onDelete={isAdmin ? handleDelete : undefined}
         deleting={deleting}
         onSaveInformation={handleSaveInformation}
         savingInformation={savingInformation}
+        overlayClassName="mida-modal-overlay"
+        panelClassName="mida-modal-panel"
       />
 
       <TimeRangeModal

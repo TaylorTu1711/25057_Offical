@@ -3096,6 +3096,13 @@
   color: var(--mida-brand-dark, #b91c1c);
 }
 
+/* Light theme ghi đè color nền → giữ chữ trắng khi đang chọn */
+[data-theme='light'] .mida-status-range__btn.is-active,
+[data-theme='light'] .mida-status-range__btn.is-active:hover,
+.mida-status-range__btn.is-active:hover {
+  color: #ffffff;
+}
+
 .mida-chart-resume-btn {
   position: absolute;
   top: 8px;
