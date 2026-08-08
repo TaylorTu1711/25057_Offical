@@ -57,9 +57,10 @@ export const getFirstOperationDate = (rawRows = [], dailyRows = []) => {
 };
 
 /**
- * Hiệu suất theo cửa sổ dữ liệu (%) =
- * tổng thời gian (giây) / (timestamp mẫu mới nhất − mẫu đầu tiên) × 100
- * MIDA CNC: truyền time_running. Portal khác có thể truyền time_on.
+ * Hiệu suất sử dụng (%) =
+ * thời gian chạy / thời gian đưa máy vào hoạt động × 100
+ * (thời gian đưa máy vào hoạt động ≈ mẫu telemetry đầu → mẫu mới nhất)
+ * MIDA CNC: truyền time_running.
  */
 export function calcUsagePerformancePct(totalSeconds, rawRows, dailyRows) {
   const firstTs = getFirstDataTimestamp(rawRows, dailyRows);
@@ -67,7 +68,7 @@ export function calcUsagePerformancePct(totalSeconds, rawRows, dailyRows) {
   return calcUsagePerformancePctFromSpan(totalSeconds, firstTs, latestTs);
 }
 
-/** Hiệu suất sử dụng từ mốc đầu/cuối đã biết (toàn lịch sử). */
+/** Hiệu suất sử dụng từ mốc đầu/cuối (toàn lịch sử). */
 export function calcUsagePerformancePctFromSpan(totalSeconds, firstTs, latestTs) {
   const sec = Number(totalSeconds) || 0;
   if (sec <= 0) return 0;

@@ -37,10 +37,7 @@ ChartJS.register(
   ChartDataLabels,
 );
 
-const Y_AXIS_HEADROOM = {
-  yPower: 0.1,
-  yCurrent: 0.42,
-};
+const Y_POWER_HEADROOM = 0.1;
 
 const TIME_STEPS_MS = [1, 2, 5, 10, 15, 20, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600].map(
   (s) => s * 1000,
@@ -110,38 +107,36 @@ function computeStableBound(values, headroom, prev) {
 }
 
 /**
- * Biểu đồ công suất / dòng điện theo khoảng thời gian.
+ * Biểu đồ công suất theo khoảng thời gian.
  * Zoom/pan → tự tạm dừng cập nhật live; bấm nút để chạy lại + reset zoom.
  */
 export default function MidaPowerCurrentChart({
   timestamps = [],
   powerValues = [],
-  currentValues = [],
 }) {
   const { theme } = useTheme();
   const isDark = isDarkChartTheme(theme);
   const chartRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
-  const latestPropsRef = useRef({ timestamps, powerValues, currentValues });
+  const latestPropsRef = useRef({ timestamps, powerValues });
   const frozenRef = useRef({
     timestamps,
     powerValues,
-    currentValues,
   });
 
-  latestPropsRef.current = { timestamps, powerValues, currentValues };
+  latestPropsRef.current = { timestamps, powerValues };
   pausedRef.current = paused;
 
   // Khi đang chạy: luôn bám props mới. Khi tạm dừng: giữ snapshot.
   useEffect(() => {
     if (paused) return;
-    frozenRef.current = { timestamps, powerValues, currentValues };
-  }, [paused, timestamps, powerValues, currentValues]);
+    frozenRef.current = { timestamps, powerValues };
+  }, [paused, timestamps, powerValues]);
 
   const display = paused
     ? frozenRef.current
-    : { timestamps, powerValues, currentValues };
+    : { timestamps, powerValues };
 
   const pauseLive = useCallback(() => {
     if (pausedRef.current) return;
@@ -158,21 +153,16 @@ export default function MidaPowerCurrentChart({
     setPaused(false);
   }, []);
 
-  const yBoundsRef = useRef({ yPower: null, yCurrent: null });
+  const yBoundsRef = useRef({ yPower: null });
   const yBounds = useMemo(() => {
     const yPower = computeStableBound(
       display.powerValues,
-      Y_AXIS_HEADROOM.yPower,
+      Y_POWER_HEADROOM,
       yBoundsRef.current.yPower,
     );
-    const yCurrent = computeStableBound(
-      display.currentValues,
-      Y_AXIS_HEADROOM.yCurrent,
-      yBoundsRef.current.yCurrent,
-    );
-    yBoundsRef.current = { yPower, yCurrent };
-    return { yPower, yCurrent };
-  }, [display.powerValues, display.currentValues]);
+    yBoundsRef.current = { yPower };
+    return { yPower };
+  }, [display.powerValues]);
 
   const data = useMemo(() => {
     const toPoints = (values) =>
@@ -201,28 +191,9 @@ export default function MidaPowerCurrentChart({
           normalized: true,
           datalabels: { display: false },
         },
-        {
-          type: 'line',
-          label: 'Dòng điện (A)',
-          data: toPoints(display.currentValues),
-          yAxisID: 'yCurrent',
-          borderColor: '#ef5350',
-          backgroundColor: 'rgba(239, 83, 80, 0.10)',
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          pointBackgroundColor: '#ef5350',
-          pointBorderColor: '#ffffff',
-          borderWidth: 2,
-          tension: 0,
-          fill: display.timestamps.length <= 600,
-          spanGaps: true,
-          parsing: false,
-          normalized: true,
-          datalabels: { display: false },
-        },
       ],
     };
-  }, [display.timestamps, display.powerValues, display.currentValues]);
+  }, [display.timestamps, display.powerValues]);
 
   const options = useMemo(
     () => ({
@@ -248,8 +219,7 @@ export default function MidaPowerCurrentChart({
             label: (ctx) => {
               const v = ctx.parsed.y;
               if (v == null || Number.isNaN(v)) return null;
-              const unit = ctx.dataset.yAxisID === 'yCurrent' ? 'A' : 'kW';
-              return `${ctx.dataset.label}: ${formatChartTooltipValue(v)} ${unit}`;
+              return `${ctx.dataset.label}: ${formatChartTooltipValue(v)} kW`;
             },
           },
         },
@@ -328,34 +298,6 @@ export default function MidaPowerCurrentChart({
               color: isDark ? '#c4b5fd' : '#7c3aed',
               font: { size: 11, weight: '600' },
             },
-            ticks: {
-              padding: 4,
-              precision: 0,
-              callback: (value) => {
-                const n = Number(value);
-                if (!Number.isFinite(n)) return value;
-                if (Math.abs(n - Math.round(n)) > 1e-6) return '';
-                return String(Math.round(n));
-              },
-            },
-          },
-          undefined,
-          'linear',
-          theme,
-        ),
-        yCurrent: themedScale(
-          {
-            beginAtZero: true,
-            position: 'right',
-            min: yBounds.yCurrent?.min,
-            max: yBounds.yCurrent?.max,
-            title: {
-              display: true,
-              text: 'A',
-              color: isDark ? '#ffab91' : '#ef5350',
-              font: { size: 11, weight: '600' },
-            },
-            grid: { drawOnChartArea: false },
             ticks: {
               padding: 4,
               precision: 0,

@@ -14,7 +14,6 @@ import MachineStatusIconPanel from '../../components/machine/MachineStatusIconPa
 import MachineTimeRangePanel from '../../components/machine/MachineTimeRangePanel';
 import TimeRangeModal from '../../components/machine/TimeRangeModal';
 import AutoFitMachineName from '../../components/machine/AutoFitMachineName';
-import ResizableTableHeader from '../../components/home/ResizableTableHeader';
 
 import MidaNavbar from '../../components/mida/MidaNavbar';
 import MidaMachineSidebar from '../../components/mida/MidaMachineSidebar';
@@ -22,11 +21,11 @@ import MidaMachineSidebarMobile from '../../components/mida/MidaMachineSidebarMo
 import MidaGaugeChart from '../../components/mida/MidaGaugeChart';
 import MidaElectricalCards from '../../components/mida/MidaElectricalCards';
 import MidaPowerCurrentChart from '../../components/mida/MidaPowerCurrentChart';
+import MidaEfficiencyChart from '../../components/mida/MidaEfficiencyChart';
 
 import useMidaMachineData from '../../hooks/useMidaMachineData';
 import useNow from '../../hooks/useNow';
 import useStableMachineRunning from '../../hooks/useStableMachineRunning';
-import useResizableTableColumns from '../../hooks/useResizableTableColumns';
 
 import { BASE_URL } from '../../config/config';
 import { authHeaders, getRole } from '../../utils/auth';
@@ -41,6 +40,7 @@ import {
   RANGE_DISPLAY_MODES,
   getDefaultRangeDates,
   buildTimeSeries,
+  buildEfficiencySeries,
   toErrorChartTickMode,
   getChartCategoryPrefix,
   getYearKeysFromData,
@@ -53,20 +53,6 @@ import {
 
 import '../../css/Machine.css';
 import '../../css/MidaCnc.css';
-
-const ALARM_TABLE_COLUMN_ORDER = ['code', 'description', 'timestamp'];
-
-const ALARM_TABLE_COLUMNS = {
-  code: 18,
-  description: 52,
-  timestamp: 30,
-};
-
-const ALARM_TABLE_MIN = {
-  code: 12,
-  description: 22,
-  timestamp: 18,
-};
 
 const getRollingFromDate = (minutesAgo, to = new Date()) => {
   const d = new Date(to);
@@ -219,7 +205,6 @@ export default function MidaCncMachineDetail() {
     rawMachineData,
     rawData,
     statusMachine,
-    errorsMachine,
     allErrorsMachine,
     machines,
     totalTimeOnSeconds,
@@ -276,22 +261,13 @@ export default function MidaCncMachineDetail() {
   }, [isOpen, offcanvasInstance]);
 
 
-  const {
-    widthsPercent: alarmColWidths,
-    resizingKey: alarmResizingKey,
-    onResizeStart: onAlarmColResizeStart,
-  } = useResizableTableColumns(
-    'mida_machine_alarm_table_column_percent',
-    ALARM_TABLE_COLUMN_ORDER,
-    ALARM_TABLE_COLUMNS,
-    ALARM_TABLE_MIN,
-  );
-
   const [chartLabels, setChartLabels] = useState([]);
   const [timeRunValues, setTimeRunValues] = useState([]);
   const [energyKwhValues, setEnergyKwhValues] = useState([]);
+  const [efficiencyLabels, setEfficiencyLabels] = useState([]);
+  const [utilizationChartValues, setUtilizationChartValues] = useState([]);
+  const [usageChartValues, setUsageChartValues] = useState([]);
   const [powerChartValues, setPowerChartValues] = useState([]);
-  const [currentChartValues, setCurrentChartValues] = useState([]);
   const [elecChartTimestamps, setElecChartTimestamps] = useState([]);
   const [labelsChart3, setLabelsChart3] = useState([]);
   const [statusDataValuesChart3, setStatusDataValuesChart3] = useState([]);
@@ -383,6 +359,17 @@ export default function MidaCncMachineDetail() {
     setEnergyKwhValues((prev) =>
       chartSeriesEqual(prev, time.energyKwh) ? prev : time.energyKwh,
     );
+
+    const eff = buildEfficiencySeries(rawData, chartViewMode, chartSelection);
+    setEfficiencyLabels((prev) =>
+      chartSeriesEqual(prev, eff.labels) ? prev : eff.labels,
+    );
+    setUtilizationChartValues((prev) =>
+      chartSeriesEqual(prev, eff.utilization) ? prev : eff.utilization,
+    );
+    setUsageChartValues((prev) =>
+      chartSeriesEqual(prev, eff.usage) ? prev : eff.usage,
+    );
   }, [rawData, chartViewMode, chartSelection]);
 
   const isConnected = (lastUpdated) => isMachineConnected(lastUpdated, now);
@@ -471,7 +458,7 @@ export default function MidaCncMachineDetail() {
     return true;
   };
 
-  // Biểu đồ công suất/dòng điện — cùng kiểu trạng thái: khoảng chọn + adaptive 10s/5 phút
+  // Biểu đồ công suất — khoảng chọn, mẫu đều 10 giây
   useEffect(() => {
     const { from, to, isLive } = resolveStatusRange(
       elecRangeMode,
@@ -483,18 +470,15 @@ export default function MidaCncMachineDetail() {
       rawMachineData,
       from,
       to,
-      'adaptive',
+      10,
       isLive ? powerKw : null,
-      isLive ? currentAvg : null,
+      null,
     );
     setElecChartTimestamps((prev) =>
       chartSeriesEqual(prev, electrical.timestamps) ? prev : electrical.timestamps,
     );
     setPowerChartValues((prev) =>
       chartSeriesEqual(prev, electrical.power) ? prev : electrical.power,
-    );
-    setCurrentChartValues((prev) =>
-      chartSeriesEqual(prev, electrical.current) ? prev : electrical.current,
     );
   }, [
     rawMachineData,
@@ -503,7 +487,6 @@ export default function MidaCncMachineDetail() {
     elecFrom,
     elecTo,
     powerKw,
-    currentAvg,
   ]);
 
   const handleDelete = async () => {
@@ -557,7 +540,7 @@ export default function MidaCncMachineDetail() {
             </div>
           ) : (
           <>
-          {/* Phần thông tin máy và cảnh báo */}
+          {/* Phần thông tin máy + ảnh + biểu đồ trạng thái */}
           <div className="row flex-shrink-0 machine-top-panel machine-top-panel--mida">
             <div className="machine-top-panel__col-left">
               <div className="row machine-top-panel__main-row">
@@ -652,7 +635,7 @@ export default function MidaCncMachineDetail() {
               </div>
             </div>
 
-            {/* Ảnh máy + danh sách cảnh báo — cùng độ rộng cột biểu đồ trạng thái */}
+            {/* Ảnh máy + biểu đồ trạng thái */}
             <div className="machine-top-panel__center">
               <div className="machine-top-panel__image-col machine-top-panel__image-col--mid">
                 <div className="bg-white border rounded shadow w-100 machine-top-panel__image-wrap">
@@ -671,65 +654,39 @@ export default function MidaCncMachineDetail() {
                 </div>
               </div>
 
-              <div className="machine-top-panel__alarms-wrap d-flex min-h-0">
-                <div className="card shadow rounded machine-top-panel__alarms machine-top-panel__alarms--list w-100">
-                  <div className="d-flex align-items-center mb-2 flex-shrink-0 card-header-row">
-                    <h6 className="text-danger fw-bold mb-0">DANH SÁCH CẢNH BÁO</h6>
+              <div className="machine-top-panel__status-wrap d-flex min-h-0">
+                <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--status machine-top-panel__status-chart w-100">
+                  <div className="chart-title-brand machine-chart-head mida-status-chart-head">
+                    <div>BIỂU ĐỒ TRẠNG THÁI</div>
+                    <div className="mida-status-range" role="group" aria-label="Khoảng thời gian trạng thái">
+                      {STATUS_RANGE_PRESETS.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className={`mida-status-range__btn${
+                            statusRangeMode === p.id ? ' is-active' : ''
+                          }`}
+                          onClick={() => setStatusRangeMode(p.id)}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className={`mida-status-range__btn mida-status-range__btn--custom${
+                          statusRangeMode === 'custom' ? ' is-active' : ''
+                        }`}
+                        onClick={openStatusRangeModal}
+                        title="Chọn khoảng thời gian tùy chỉnh"
+                      >
+                        Tuỳ chọn
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="flex-grow-1" style={{ overflowY: 'auto', overflowX: 'hidden', minWidth: 0 }}>
-                    <table className="table table-sm table-bordered mb-0 resizable-table machine-alarm-table">
-                      <colgroup>
-                        <col style={{ width: alarmColWidths.code }} />
-                        <col style={{ width: alarmColWidths.description }} />
-                        <col style={{ width: alarmColWidths.timestamp }} />
-                      </colgroup>
-                      <thead className="table-light" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                        <tr>
-                          <ResizableTableHeader
-                            columnKey="code"
-                            width={alarmColWidths.code}
-                            label="Mã"
-                            onResizeStart={onAlarmColResizeStart}
-                            isResizing={alarmResizingKey === 'code'}
-                          />
-                          <ResizableTableHeader
-                            columnKey="description"
-                            width={alarmColWidths.description}
-                            label="Mô tả"
-                            onResizeStart={onAlarmColResizeStart}
-                            isResizing={alarmResizingKey === 'description'}
-                          />
-                          <ResizableTableHeader
-                            columnKey="timestamp"
-                            width={alarmColWidths.timestamp}
-                            label="Thời điểm"
-                            resizable={false}
-                          />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {errorsMachine?.length > 0 ? (
-                          errorsMachine.map((err) => (
-                            <tr key={err.id}>
-                              <td title={String(err.alarm_id)}>{err.alarm_id}</td>
-                              <td className="resizable-table__cell--wrap" title={err.alarm_name}>
-                                {err.alarm_name}
-                              </td>
-                              <td title={new Date(err.timestamp).toLocaleString()}>
-                                {new Date(err.timestamp).toLocaleString()}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="3" className="text-center text-muted">
-                              Không có lỗi
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                  <div className="machine-chart-plot">
+                    <div className="machine-chart-plot-inner">
+                      <BarChartStatus labels={labelsChart3} line1={statusDataValuesChart3} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -758,60 +715,31 @@ export default function MidaCncMachineDetail() {
                   value={performanceMachine}
                   label="HIỆU SUẤT SỬ DỤNG"
                   variant="performance"
+                  formula="Thời gian chạy / Thời gian đưa máy vào hoạt động × 100%"
                 />
                 <MidaGaugeChart
                   value={utilizationMachine}
                   label="HIỆU SUẤT VẬN HÀNH"
                   variant="utilization"
+                  formula="Thời gian chạy / Thời gian bật máy × 100%"
                 />
               </div>
             </div>
 
-            <div className="mida-charts-cell mida-charts-cell--status">
+            <div className="mida-charts-cell mida-charts-cell--efficiency">
               <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--status">
-                <div className="chart-title-brand machine-chart-head mida-status-chart-head">
-                  <div>BIỂU ĐỒ TRẠNG THÁI</div>
-                  <div className="mida-status-range" role="group" aria-label="Khoảng thời gian trạng thái">
-                    {STATUS_RANGE_PRESETS.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className={`mida-status-range__btn${
-                          statusRangeMode === p.id ? ' is-active' : ''
-                        }`}
-                        onClick={() => setStatusRangeMode(p.id)}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      className={`mida-status-range__btn mida-status-range__btn--custom${
-                        statusRangeMode === 'custom' ? ' is-active' : ''
-                      }`}
-                      onClick={openStatusRangeModal}
-                      title="Chọn khoảng thời gian tùy chỉnh"
-                    >
-                      Tuỳ chọn
-                    </button>
-                  </div>
+                <div className="chart-title-brand machine-chart-head">
+                  <div>BIỂU ĐỒ HIỆU SUẤT</div>
                 </div>
                 <div className="machine-chart-plot">
                   <div className="machine-chart-plot-inner">
-                    <BarChartStatus labels={labelsChart3} line1={statusDataValuesChart3} />
-                  </div>
-                </div>
-                <div
-                  className="d-flex justify-content-between flex-wrap machine-chart-foot machine-chart-foot--balance"
-                  aria-hidden="true"
-                >
-                  <div className="text-brand" style={{ fontWeight: 'bold' }}>
-                    &nbsp;
-                  </div>
-                  <div className="d-flex gap-1 flex-wrap">
-                    <div>min: 0</div>
-                    <div>max: 0</div>
-                    <div>avg: 0</div>
+                    <MidaEfficiencyChart
+                      labels={efficiencyLabels}
+                      utilizationValues={utilizationChartValues}
+                      usageValues={usageChartValues}
+                      xTickMode={chartXTickMode}
+                      categoryPrefix={chartCategoryPrefix}
+                    />
                   </div>
                 </div>
               </div>
@@ -848,7 +776,7 @@ export default function MidaCncMachineDetail() {
             <div className="mida-charts-cell mida-charts-cell--power">
               <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--tall">
                 <div className="chart-title-brand machine-chart-head mida-status-chart-head">
-                  <div>CÔNG SUẤT VÀ DÒNG ĐIỆN</div>
+                  <div>BIỂU ĐỒ CÔNG SUẤT</div>
                   <div className="mida-status-range" role="group" aria-label="Khoảng thời gian công suất">
                     {STATUS_RANGE_PRESETS.map((p) => (
                       <button
@@ -880,7 +808,6 @@ export default function MidaCncMachineDetail() {
                       key={`${elecRangeMode}-${elecFrom?.getTime?.() ?? ''}-${elecTo?.getTime?.() ?? ''}`}
                       timestamps={elecChartTimestamps}
                       powerValues={powerChartValues}
-                      currentValues={currentChartValues}
                     />
                   </div>
                 </div>
@@ -924,7 +851,7 @@ export default function MidaCncMachineDetail() {
 
       <TimeRangeModal
         open={showElecRangeModal}
-        title="Khoảng thời gian công suất / dòng điện"
+        title="Khoảng thời gian công suất"
         fromDate={tempElecFrom}
         toDate={tempElecTo}
         onFromDateChange={setTempElecFrom}

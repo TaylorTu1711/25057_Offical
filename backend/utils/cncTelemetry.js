@@ -368,9 +368,7 @@ export async function fetchCncAlarmRows(db, machineId, machine) {
 }
 
 /**
- * Dọn telemetry CNC theo 2 mức:
- * - Các ngày trước hôm nay: giữ ~1 mẫu / 5 phút
- * - Hôm nay: giữ ~1 mẫu / 10 giây
+ * Dọn telemetry CNC: giữ ~1 mẫu / 10 giây (mọi ngày).
  * Mỗi bucket giữ bản ghi mới nhất.
  * Dùng temp keep-ids + anti-join (tránh DELETE NOT IN gây chậm/502 trên bảng lớn).
  * @returns {number} số dòng đã xóa
@@ -402,27 +400,19 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
       ) ON COMMIT DROP
     `);
 
-    // Past days: 5 phút (300s); today: 10 giây
+    // Mọi ngày: 10 giây / mẫu
     await client.query(`
       INSERT INTO _mida_boot_keep (id)
-      SELECT DISTINCT ON (day_part, bucket) id
+      SELECT DISTINCT ON (bucket) id
       FROM (
         SELECT
           id,
-          CASE
-            WHEN DATE("timestamp") = CURRENT_DATE THEN 1
-            ELSE 0
-          END AS day_part,
-          CASE
-            WHEN DATE("timestamp") = CURRENT_DATE
-              THEN floor(extract(epoch FROM "timestamp") / 10)::bigint
-            ELSE floor(extract(epoch FROM "timestamp") / 300)::bigint
-          END AS bucket,
+          floor(extract(epoch FROM "timestamp") / 10)::bigint AS bucket,
           "timestamp"
         FROM ${qualified}
         WHERE "timestamp" IS NOT NULL
       ) AS src
-      ORDER BY day_part, bucket, "timestamp" DESC, id DESC
+      ORDER BY bucket, "timestamp" DESC, id DESC
     `);
 
     const result = await client.query(`

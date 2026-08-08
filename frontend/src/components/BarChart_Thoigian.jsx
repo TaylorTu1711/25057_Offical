@@ -350,7 +350,7 @@ const LineChart_TimeOn = ({
             position: 'left',
             title: {
               display: true,
-              text: 'giờ',
+              text: 'Giờ',
               font: {
                 size: 11,
                 weight: '600',

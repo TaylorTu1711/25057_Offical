@@ -487,6 +487,154 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
   };
 }
 
+const clampEffPct = (value) => Math.min(100, Math.max(0, Number(value.toFixed(1))));
+
+const SEC_PER_DAY = 24 * 3600;
+
+/** Hiệu suất vận hành % = thời gian chạy / thời gian bật máy (null nếu không bật máy). */
+const calcUtilizationPct = (runSec, onSec) => {
+  const on = Number(onSec) || 0;
+  if (on <= 0) return null;
+  return clampEffPct(((Number(runSec) || 0) / on) * 100);
+};
+
+/** Hiệu suất sử dụng theo ngày % = thời gian chạy / 24h. */
+const calcUsagePctPerDay = (runSec) =>
+  clampEffPct(((Number(runSec) || 0) / SEC_PER_DAY) * 100);
+
+/**
+ * Biểu đồ hiệu suất theo ngày/tháng/năm (cùng bộ chọn với thời gian & điện năng).
+ * Theo ngày:
+ * - vận hành = time_running / time_on trong ngày
+ * - sử dụng = time_running / 24h
+ * Theo tháng:
+ * - vận hành = time_running / time_on trong tháng
+ * - sử dụng = time_running / (số ngày trong tháng × 24h)
+ * Theo năm: cộng dồn tương tự (sử dụng ÷ số ngày năm × 24h).
+ */
+export function buildEfficiencySeries(rawData, viewMode, selection = {}) {
+  const rowRunSec = (row) => Number(row.time_running) || 0;
+  const rowOnSec = (row) => Number(row.time_on) || 0;
+
+  if (viewMode === CHART_VIEW_MODES.day) {
+    const { from, to, year, month } = getSelectionRange(viewMode, selection);
+    const filtered = filterInRange(rawData, from, to);
+    const days = getDaysInMonth(year, month - 1);
+    const runMap = {};
+    const onMap = {};
+
+    filtered.forEach((row) => {
+      const key = toLocalDateKey(row.timestamp);
+      runMap[key] = rowRunSec(row);
+      onMap[key] = rowOnSec(row);
+    });
+
+    return {
+      labels: days.map(formatDayLabel),
+      utilization: days.map((d) => {
+        const key = toLocalDateKey(d);
+        return calcUtilizationPct(runMap[key], onMap[key]);
+      }),
+      usage: days.map((d) => calcUsagePctPerDay(runMap[toLocalDateKey(d)] ?? 0)),
+    };
+  }
+
+  if (viewMode === CHART_VIEW_MODES.month) {
+    const { from, to, year } = getSelectionRange(viewMode, selection);
+    const filtered = filterInRange(rawData, from, to);
+    const monthKeys = getMonthKeysInYear(year);
+    const runMap = {};
+    const onMap = {};
+
+    filtered.forEach((row) => {
+      const ts = new Date(row.timestamp);
+      const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
+      runMap[key] = (runMap[key] || 0) + rowRunSec(row);
+      onMap[key] = (onMap[key] || 0) + rowOnSec(row);
+    });
+
+    return {
+      labels: monthKeys.map(formatMonthLabel),
+      utilization: monthKeys.map((key) => calcUtilizationPct(runMap[key], onMap[key])),
+      usage: monthKeys.map((key) => {
+        const [, month] = key.split('-');
+        const daysInMonth = new Date(year, parseInt(month, 10), 0).getDate();
+        return clampEffPct(((runMap[key] ?? 0) / (daysInMonth * SEC_PER_DAY)) * 100);
+      }),
+    };
+  }
+
+  if (viewMode === CHART_VIEW_MODES.range) {
+    const { from, to } = getSelectionRange(viewMode, selection);
+    const filtered = filterInRange(rawData, from, to);
+
+    if (isRangeByMonth(selection)) {
+      const months = getMonthsInRange(from, to);
+      const spansMultipleYears = new Set(months.map((m) => m.year)).size > 1;
+      const runMap = {};
+      const onMap = {};
+
+      filtered.forEach((row) => {
+        const ts = new Date(row.timestamp);
+        const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
+        runMap[key] = (runMap[key] || 0) + rowRunSec(row);
+        onMap[key] = (onMap[key] || 0) + rowOnSec(row);
+      });
+
+      return {
+        labels: months.map((m) => formatRangeMonthLabel(m, spansMultipleYears)),
+        utilization: months.map((m) => calcUtilizationPct(runMap[m.key], onMap[m.key])),
+        usage: months.map((m) => {
+          const days = countDaysInRangeMonth(from, to, m.year, m.monthIndex);
+          if (days <= 0) return 0;
+          return clampEffPct(((runMap[m.key] ?? 0) / (days * SEC_PER_DAY)) * 100);
+        }),
+      };
+    }
+
+    const days = getDaysInRange(from, to);
+    const runMap = {};
+    const onMap = {};
+
+    filtered.forEach((row) => {
+      const key = toLocalDateKey(row.timestamp);
+      runMap[key] = rowRunSec(row);
+      onMap[key] = rowOnSec(row);
+    });
+
+    return {
+      labels: days.map((d) => formatRangeDayLabel(d, days.length)),
+      utilization: days.map((d) => {
+        const key = toLocalDateKey(d);
+        return calcUtilizationPct(runMap[key], onMap[key]);
+      }),
+      usage: days.map((d) => calcUsagePctPerDay(runMap[toLocalDateKey(d)] ?? 0)),
+    };
+  }
+
+  const { from, to } = getSelectionRange(viewMode, selection);
+  const years = getYearKeysFromData(rawData, [], new Date());
+  const filtered = filterInRange(rawData, from, to);
+  const runMap = {};
+  const onMap = {};
+
+  filtered.forEach((row) => {
+    const y = new Date(row.timestamp).getFullYear();
+    runMap[y] = (runMap[y] || 0) + rowRunSec(row);
+    onMap[y] = (onMap[y] || 0) + rowOnSec(row);
+  });
+
+  return {
+    labels: years.map(formatYearLabel),
+    utilization: years.map((y) => calcUtilizationPct(runMap[y], onMap[y])),
+    usage: years.map((y) => {
+      const isLeap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+      const days = isLeap ? 366 : 365;
+      return clampEffPct(((runMap[y] ?? 0) / (days * SEC_PER_DAY)) * 100);
+    }),
+  };
+}
+
 export function buildErrorSeries(allErrors, viewMode, selection = {}) {
   if (viewMode === CHART_VIEW_MODES.day) {
     const { from, to, year, month } = getSelectionRange(viewMode, selection);

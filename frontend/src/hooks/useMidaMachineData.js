@@ -153,6 +153,7 @@ const buildLifetimeGauges = (summary) => {
     ? clampPct((timeRunning / timeOn) * 100)
     : 0;
 
+  // Hiệu suất sử dụng = time_running / thời gian đưa máy vào hoạt động × 100
   const performanceMachine = calcUsagePerformancePctFromSpan(
     timeRunning,
     summary?.first_timestamp,
@@ -403,7 +404,7 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
 
   const handleBootData = useCallback(async () => {
     if (!window.confirm(
-      'Dọn dữ liệu: ngày trước giữ ~5 phút/mẫu, hôm nay giữ ~10 giây/mẫu. Tiếp tục?',
+      'Dọn dữ liệu: giữ ~10 giây/mẫu (mọi ngày). Tiếp tục?',
     )) return;
     try {
       const res = await axios.delete(

@@ -197,7 +197,7 @@ export const bootMidaCncMachineData = async (req, res) => {
 
     const deleted = await bootCncTelemetryTable(pool, machine_id, machine);
     res.status(200).send(
-      `Đã xóa ${deleted} bản ghi; ngày cũ ~5 phút/mẫu, hôm nay ~10 giây/mẫu (${machine_id})`,
+      `Đã xóa ${deleted} bản ghi; giữ ~10 giây/mẫu (${machine_id})`,
     );
   } catch (err) {
     console.error('bootMidaCncMachineData error:', err.message);

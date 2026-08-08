@@ -18,17 +18,26 @@ const STYLES = {
  * @param {number} value - 0..100
  * @param {string} label
  * @param {'utilization'|'performance'} variant
+ * @param {string} [formula] - công thức hiện khi hover
  */
-export default function MidaGaugeChart({ value = 0, label = '', variant = 'performance' }) {
+export default function MidaGaugeChart({
+  value = 0,
+  label = '',
+  variant = 'performance',
+  formula = '',
+}) {
   const pct = Math.max(0, Math.min(100, Number(value) || 0));
   const display = Number.isInteger(pct) ? String(pct) : pct.toFixed(1);
   const style = STYLES[variant] || STYLES.performance;
+  const tooltip = formula
+    ? `${label}: ${display}%\n${formula}`
+    : `${label}: ${display}%`;
 
   return (
     <div
-      className={`mida-gauge mida-gauge--${variant} mida-gauge--radial`}
+      className={`mida-gauge mida-gauge--${variant} mida-gauge--radial${formula ? ' mida-gauge--has-formula' : ''}`}
       style={{ ['--mida-elec-color']: style.color }}
-      title={`${label}: ${display}%`}
+      title={tooltip}
     >
       {label ? <div className="mida-gauge__label">{label}</div> : null}
       <div className="mida-gauge__chart mida-gauge__chart--radial">
@@ -40,6 +49,12 @@ export default function MidaGaugeChart({ value = 0, label = '', variant = 'perfo
           fullCircle
         />
       </div>
+      {formula ? (
+        <div className="mida-gauge__formula" role="tooltip">
+          <div className="mida-gauge__formula-title">{label}</div>
+          <div className="mida-gauge__formula-text">{formula}</div>
+        </div>
+      ) : null}
     </div>
   );
 }
