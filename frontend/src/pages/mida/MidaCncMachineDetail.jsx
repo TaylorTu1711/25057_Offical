@@ -225,6 +225,7 @@ export default function MidaCncMachineDetail() {
   const offcanvasRef = useRef(null);
   const [offcanvasInstance, setOffcanvasInstance] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const showMachineListToggle = width < 1200;
 
   useEffect(() => {
     const handleResize = () => setWidth(window.innerWidth);
@@ -233,30 +234,34 @@ export default function MidaCncMachineDetail() {
   }, []);
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!offcanvasRef.current) return;
+    if (!showMachineListToggle || !offcanvasRef.current) {
+      setOffcanvasInstance(null);
+      setIsOpen(false);
+      return undefined;
+    }
 
-      if (e.clientX < 10 && !isOpen) {
-        const instance = Offcanvas.getOrCreateInstance(offcanvasRef.current);
-        instance.show();
-        setOffcanvasInstance(instance);
-        setIsOpen(true);
+    const el = offcanvasRef.current;
+    const instance = Offcanvas.getOrCreateInstance(el);
+    setOffcanvasInstance(instance);
 
-        offcanvasRef.current.addEventListener(
-          'hidden.bs.offcanvas',
-          () => setIsOpen(false),
-          { once: true },
-        );
-      }
+    const handleShown = () => setIsOpen(true);
+    const handleHidden = () => setIsOpen(false);
+    el.addEventListener('shown.bs.offcanvas', handleShown);
+    el.addEventListener('hidden.bs.offcanvas', handleHidden);
 
-      if (e.clientX > 400 && isOpen && offcanvasInstance) {
-        offcanvasInstance.hide();
-      }
+    return () => {
+      el.removeEventListener('shown.bs.offcanvas', handleShown);
+      el.removeEventListener('hidden.bs.offcanvas', handleHidden);
     };
+  }, [showMachineListToggle]);
 
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [isOpen, offcanvasInstance]);
+  const toggleMachineList = () => {
+    if (!offcanvasRef.current) return;
+    const instance = Offcanvas.getOrCreateInstance(offcanvasRef.current);
+    setOffcanvasInstance(instance);
+    if (isOpen) instance.hide();
+    else instance.show();
+  };
 
 
   const [chartLabels, setChartLabels] = useState([]);
@@ -522,6 +527,20 @@ export default function MidaCncMachineDetail() {
   return (
     <div className="mida-page mida-page--detail">
       <MidaNavbar />
+
+      {showMachineListToggle && !isOpen && (
+        <button
+          type="button"
+          className="mida-sidebar-pull"
+          onClick={toggleMachineList}
+          aria-label="Mở danh sách máy"
+          aria-controls="offcanvasMidaMachinesList"
+          title="Danh sách máy"
+        >
+          <span className="mida-sidebar-pull__grip" aria-hidden="true" />
+          <i className="bi bi-chevron-right mida-sidebar-pull__icon" aria-hidden="true" />
+        </button>
+      )}
 
       <div className="mida-page__body d-flex flex-nowrap mida-page__body--detail">
         <MidaMachineSidebar
@@ -871,29 +890,31 @@ export default function MidaCncMachineDetail() {
 
       {width < 1200 && (
         <div
-          className="offcanvas offcanvas-start"
+          className="offcanvas offcanvas-start mida-machines-offcanvas"
           tabIndex="-1"
           id="offcanvasMidaMachinesList"
           ref={offcanvasRef}
-          style={{ width: '265px' }}
           aria-labelledby="offcanvasMidaMachinesListLabel"
-          data-bs-backdrop="static"
-          data-bs-keyboard="false"
+          data-bs-backdrop="true"
+          data-bs-keyboard="true"
         >
-          <div className="offcanvas-header py-1 px-2 mt-1" style={{ marginBottom: '-8px' }}>
+          <div className="offcanvas-header mida-machines-offcanvas__header">
+            <h5 className="machine-tree-sidebar__title" id="offcanvasMidaMachinesListLabel">
+              Danh sách máy CNC
+            </h5>
             <button
               type="button"
-              className="btn-close ms-auto"
+              className="btn-close"
               data-bs-dismiss="offcanvas"
-              aria-label="Close"
-              style={{ scale: '0.9' }}
+              aria-label="Đóng"
             />
           </div>
-          <div className="offcanvas-body px-2 pt-1">
+          <div className="offcanvas-body mida-machines-offcanvas__body">
             <MidaMachineSidebarMobile
               machines={machines}
               navigate={navigate}
               selectedMachineId={machine_id}
+              onNavigate={() => offcanvasInstance?.hide()}
             />
           </div>
         </div>

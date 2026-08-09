@@ -39,7 +39,7 @@ export default function MidaNavbar() {
       <Link to="/mida/cnc" className="mida-navbar__logo-link" aria-label="MIDA Precision Mold">
         <img src={midaLogo} alt="MIDA Precision Mold" className="mida-navbar__logo" />
       </Link>
-      <h1 className="mida-navbar__title">HỆ SCADA CÁC MÁY MIDA</h1>
+      <h1 className="mida-navbar__title">HỆ SCADA CÁC MÁY CNC MIDA</h1>
       <div className="mida-navbar__actions mida-navbar__actions--desktop">
         <button
           type="button"

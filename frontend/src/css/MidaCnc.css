@@ -417,6 +417,122 @@
   box-shadow: none !important;
 }
 
+/* Drawer danh sách máy trên mobile */
+.mida-page--detail .mida-machines-offcanvas {
+  width: min(86vw, 320px) !important;
+  border-right: 1px solid var(--mida-brand-border);
+  box-shadow: 8px 0 28px rgba(15, 23, 42, 0.18);
+}
+
+.mida-page--detail .mida-machines-offcanvas__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.95rem 0.9rem 0.55rem;
+  border-bottom: 1px solid var(--mida-border);
+}
+
+.mida-page--detail .mida-machines-offcanvas__header .machine-tree-sidebar__title {
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 1.18rem;
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--mida-brand);
+  letter-spacing: 0.01em;
+}
+
+.mida-page--detail .mida-machines-offcanvas__header .btn-close {
+  flex: 0 0 auto;
+  margin: 0;
+  opacity: 0.75;
+}
+
+.mida-page--detail .mida-machines-offcanvas__body {
+  padding: 0.75rem 0.85rem 1rem;
+  overflow-x: hidden;
+}
+
+[data-theme='light'] .mida-page--detail .mida-machines-offcanvas {
+  background:
+    radial-gradient(ellipse 90% 40% at 0% 0%, rgba(211, 47, 47, 0.1) 0%, transparent 55%),
+    linear-gradient(180deg, #fff8f8 0%, #f8f0f0 55%, #f3e8e8 100%);
+}
+
+[data-theme='dark'] .mida-page--detail .mida-machines-offcanvas {
+  background:
+    radial-gradient(ellipse 90% 40% at 0% 0%, rgba(239, 83, 80, 0.18) 0%, transparent 55%),
+    linear-gradient(180deg, #2a1818 0%, #241818 55%, #1a1010 100%);
+}
+
+/* Tab kéo mép trái — lộ nhỏ, hover thì trượt ra */
+.mida-sidebar-pull {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  z-index: 1045;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  width: 1.55rem;
+  height: 4.4rem;
+  padding: 0;
+  margin: 0;
+  border: 1px solid rgba(211, 47, 47, 0.45);
+  border-left: none;
+  border-radius: 0 0.7rem 0.7rem 0;
+  background: linear-gradient(180deg, var(--mida-brand-light), var(--mida-brand-dark));
+  color: #fff;
+  box-shadow: 2px 0 12px rgba(183, 28, 28, 0.28);
+  transform: translate(-0.72rem, -50%);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, width 0.22s ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mida-sidebar-pull__grip {
+  width: 0.22rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 4px 0 0 rgba(255, 255, 255, 0.35);
+}
+
+.mida-sidebar-pull__icon {
+  font-size: 0.72rem;
+  line-height: 1;
+  opacity: 0.95;
+}
+
+.mida-sidebar-pull:hover,
+.mida-sidebar-pull:focus-visible {
+  transform: translate(0, -50%);
+  width: 1.85rem;
+  box-shadow: 4px 0 16px rgba(183, 28, 28, 0.38);
+  outline: none;
+}
+
+.mida-sidebar-pull:active {
+  filter: brightness(0.96);
+}
+
+@media (hover: none) {
+  /* Mobile/touch: luôn lộ vừa đủ để bấm, không phụ thuộc hover */
+  .mida-sidebar-pull {
+    transform: translate(-0.35rem, -50%);
+    width: 1.7rem;
+  }
+
+  .mida-sidebar-pull:active {
+    transform: translate(0, -50%);
+  }
+}
+
 .mida-page--detail .machine-view-mode-segment__btn:hover:not(.machine-view-mode-segment__btn--active),
 .mida-page--detail .machine-view-mode-chip:hover:not(.machine-view-mode-chip--active) {
   color: var(--mida-brand) !important;

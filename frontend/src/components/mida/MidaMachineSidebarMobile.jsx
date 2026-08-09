@@ -60,7 +60,7 @@ const TreeNode = ({ node, level = 0, onMachineClick, selectedMachineId }) => {
       </div>
 
       {hasChildren && shouldExpand && (
-        <div className="tree-children tree-children--mobile">
+        <div className={`tree-children tree-children--mobile tree-children--level-${level + 1}`}>
           {node.children.map((child, index) => (
             <TreeNode
               key={index}
@@ -105,37 +105,38 @@ export default function MidaMachineSidebarMobile({
   machines = [],
   navigate,
   selectedMachineId,
+  onNavigate,
 }) {
   const treeData = useMemo(() => buildMidaTree(machines), [machines]);
 
   const handleMachineClick = (machineId) => {
+    onNavigate?.();
     navigate(`/mida/cnc/${machineId}`);
   };
 
-  if (!treeData.length) {
-    return (
-      <div className="text-center py-4">
-        <i className="bi bi-inbox tree-empty-icon" />
-        <p className="text-muted mb-0 mt-2" style={{ fontSize: '13px' }}>
-          Không có máy CNC nào
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="machine-tree">
-      <h6 className="fw-bold mb-2" style={{ color: 'var(--mida-primary, #dc2626)' }}>
-        Danh sách máy CNC
-      </h6>
-      {treeData.map((node, index) => (
-        <TreeNode
-          key={index}
-          node={node}
-          onMachineClick={handleMachineClick}
-          selectedMachineId={selectedMachineId}
-        />
-      ))}
+    <div className="machine-tree-sidebar machine-tree-sidebar--mobile">
+      <div className="machine-tree-sidebar__inner">
+        {treeData.length > 0 ? (
+          <div className="machine-tree">
+            {treeData.map((node, index) => (
+              <TreeNode
+                key={index}
+                node={node}
+                onMachineClick={handleMachineClick}
+                selectedMachineId={selectedMachineId}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <i className="bi bi-inbox tree-empty-icon" />
+            <p className="text-muted mb-0 mt-2" style={{ fontSize: '13px' }}>
+              Không có máy CNC nào
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
