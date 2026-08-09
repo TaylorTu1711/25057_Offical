@@ -10,12 +10,12 @@ const THEMES = {
     faded: 'rgba(59, 130, 246, 0.18)',
   },
   current: {
-    label: 'DÒNG ĐIỆN',
+    label: 'DÒNG ĐIỆN TRỤC SPINDLE',
     color: '#ef5350',
     faded: 'rgba(239, 83, 80, 0.18)',
   },
   power: {
-    label: 'CÔNG SUẤT',
+    label: 'CÔNG SUẤT TRỤC SPINDLE',
     color: '#7c3aed',
     faded: 'rgba(124, 58, 237, 0.18)',
   },
@@ -64,7 +64,7 @@ function MetricCard({ theme, children, className = '' }) {
 }
 
 /**
- * Thẻ điện — ĐIỆN ÁP full-width; CÔNG SUẤT | DÒNG ĐIỆN.
+ * Thẻ điện — ĐIỆN ÁP full-width; CÔNG SUẤT TRỤC SPINDLE | DÒNG ĐIỆN TRỤC SPINDLE.
  */
 export default function MidaElectricalCards({
   voltage = 0,

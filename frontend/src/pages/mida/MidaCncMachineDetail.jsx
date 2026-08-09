@@ -62,8 +62,6 @@ const getRollingFromDate = (minutesAgo, to = new Date()) => {
 
 const STATUS_RANGE_PRESETS = [
   { id: '1h', label: '1h', minutes: 60 },
-  { id: '6h', label: '6h', minutes: 360 },
-  { id: '12h', label: '12h', minutes: 720 },
   { id: '24h', label: '24h', minutes: 1440 },
   { id: 'today', label: 'Hôm nay' },
 ];
@@ -782,8 +780,8 @@ export default function MidaCncMachineDetail() {
             <div className="mida-charts-cell mida-charts-cell--power">
               <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--tall">
                 <div className="chart-title-brand machine-chart-head mida-status-chart-head">
-                  <div>BIỂU ĐỒ CÔNG SUẤT</div>
-                  <div className="mida-status-range" role="group" aria-label="Khoảng thời gian công suất">
+                  <div>CÔNG SUẤT TRỤC SPINDLE</div>
+                  <div className="mida-status-range" role="group" aria-label="Khoảng thời gian công suất trục spindle">
                     {STATUS_RANGE_PRESETS.map((p) => (
                       <button
                         key={p.id}
@@ -841,7 +839,7 @@ export default function MidaCncMachineDetail() {
 
       <TimeRangeModal
         open={showStatusRangeModal}
-        title="Khoảng thời gian trạng thái"
+        title="Chọn khoảng thời gian"
         fromDate={tempStatusFrom}
         toDate={tempStatusTo}
         onFromDateChange={setTempStatusFrom}
@@ -849,7 +847,7 @@ export default function MidaCncMachineDetail() {
         showTimeSelect
         sameCalendarDayOnly
         overlayClassName="mida-modal-overlay"
-        panelClassName="mida-modal-panel"
+        panelClassName="mida-modal-panel mida-modal-panel--time"
         onCancel={() => setShowStatusRangeModal(false)}
         onUpdate={applyCustomStatusRange}
         onClose={() => setShowStatusRangeModal(false)}
@@ -857,7 +855,7 @@ export default function MidaCncMachineDetail() {
 
       <TimeRangeModal
         open={showElecRangeModal}
-        title="Khoảng thời gian công suất"
+        title="Chọn khoảng thời gian"
         fromDate={tempElecFrom}
         toDate={tempElecTo}
         onFromDateChange={setTempElecFrom}
@@ -865,7 +863,7 @@ export default function MidaCncMachineDetail() {
         showTimeSelect
         sameCalendarDayOnly
         overlayClassName="mida-modal-overlay"
-        panelClassName="mida-modal-panel"
+        panelClassName="mida-modal-panel mida-modal-panel--time"
         onCancel={() => setShowElecRangeModal(false)}
         onUpdate={applyCustomElecRange}
         onClose={() => setShowElecRangeModal(false)}

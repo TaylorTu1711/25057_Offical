@@ -159,7 +159,7 @@ export default function MidaPowerCurrentChart({
       datasets: [
         {
           type: 'line',
-          label: 'Công suất (kW)',
+          label: 'Công suất trục spindle (kW)',
           data: toPoints(display.powerValues),
           yAxisID: 'yPower',
           borderColor: '#7c3aed',

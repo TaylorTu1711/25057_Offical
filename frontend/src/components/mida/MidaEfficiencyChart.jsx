@@ -11,6 +11,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js';
 import useTheme from '../../hooks/useTheme';
 import useChartZoomPreserve from '../../hooks/useChartZoomPreserve';
@@ -34,12 +35,13 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
+  Filler,
   zoomPlugin,
   ChartDataLabels,
 );
 
 /**
- * Biểu đồ hiệu suất theo ngày/tháng — 2 đường % (vận hành + sử dụng).
+ * Biểu đồ hiệu suất theo ngày/tháng — 2 đường % + đổ bóng dưới đường.
  */
 export default function MidaEfficiencyChart({
   labels = [],
@@ -53,14 +55,12 @@ export default function MidaEfficiencyChart({
   const usageLine = useMemo(
     () => ({
       borderColor: NEON_LINES.green.border,
-      backgroundColor: NEON_LINES.green.background,
       pointBackgroundColor: NEON_LINES.green.point,
       pointBorderColor: NEON_LINES.green.point,
       borderWidth: 1.5,
     }),
     [],
   );
-  const labelCount = labels?.length ?? 0;
 
   const { chartRef, zoomPluginOptions } = useChartZoomPreserve(
     [labels, utilizationValues, usageValues],
@@ -68,18 +68,18 @@ export default function MidaEfficiencyChart({
   );
 
   const data = useMemo(() => {
-    const lineOpts = (style) => ({
+    const lineOpts = (style, fillColor) => ({
       type: 'line',
       yAxisID: 'y',
       borderColor: style.borderColor,
-      backgroundColor: style.backgroundColor,
+      backgroundColor: fillColor,
       borderWidth: style.borderWidth ?? 2,
       tension: 0.35,
-      fill: false,
-      clip: false,
+      fill: 'origin',
+      clip: true,
       spanGaps: true,
-      pointRadius: labelCount <= 48 ? 2.5 : 0,
-      pointHoverRadius: 5,
+      pointRadius: 0,
+      pointHoverRadius: 4,
       pointHitRadius: 12,
       pointBackgroundColor: style.pointBackgroundColor ?? style.borderColor,
       pointBorderColor: '#fff',
@@ -94,20 +94,20 @@ export default function MidaEfficiencyChart({
       labels,
       datasets: [
         {
-          ...lineOpts(utilizationLine),
+          ...lineOpts(utilizationLine, 'rgba(56, 189, 248, 0.20)'),
           label: 'Hiệu suất vận hành (%)',
           data: utilizationValues,
-          order: 0,
+          order: 1,
         },
         {
-          ...lineOpts(usageLine),
+          ...lineOpts(usageLine, 'rgba(74, 222, 128, 0.18)'),
           label: 'Hiệu suất sử dụng (%)',
           data: usageValues,
-          order: 1,
+          order: 0,
         },
       ],
     };
-  }, [labels, utilizationValues, usageValues, labelCount, utilizationLine, usageLine]);
+  }, [labels, utilizationValues, usageValues, utilizationLine, usageLine]);
 
   const options = useMemo(
     () => ({
@@ -115,9 +115,16 @@ export default function MidaEfficiencyChart({
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      layout: {
+        padding: 0,
+      },
       plugins: {
+        filler: {
+          propagate: false,
+        },
         datalabels: { display: false },
         legend: getChartLegendOptions({ labels: { padding: 6, font: { size: 10 } } }, theme),
+        title: { display: false },
         tooltip: {
           callbacks: {
             title: getCategoryTooltipTitleCallback(labels, categoryPrefix),

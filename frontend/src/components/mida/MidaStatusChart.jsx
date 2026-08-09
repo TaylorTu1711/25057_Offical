@@ -40,7 +40,7 @@ ChartJS.register(
   ChartDataLabels,
 );
 
-const STATUS_CHART_TICKS = { 1: 'Stop', 2: 'Auto' };
+const STATUS_CHART_TICKS = { 1: 'Dừng', 2: 'Quay' };
 
 /** Nén đỉnh bước để đường ngang/dọc gọn, không tô kín như sample 10s dày. */
 function toStatusStepPoints(timestamps, values) {

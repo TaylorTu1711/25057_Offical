@@ -39,6 +39,7 @@ export default function TimeRangeModal({
   if (!open) return null;
 
   const dateFormat = showTimeSelect ? 'dd/MM/yyyy HH:mm' : 'dd/MM/yyyy';
+  const isMida = /\bmida-modal-panel\b/.test(panelClassName);
 
   const handleFromChange = (date) => {
     if (!date) {
@@ -79,68 +80,88 @@ export default function TimeRangeModal({
       <div
         className={`app-modal-panel app-modal-panel--time ${panelClassName}`.trim()}
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="time-range-modal-title"
       >
-        <div className="d-flex justify-content-between align-items-center">
-          <h5 className="app-modal-title">{title}</h5>
-          <button type="button" className="btn-close" onClick={onClose} aria-label="Đóng" />
-        </div>
-
-        <hr />
-
-        {sameCalendarDayOnly && (
-          <p className="app-modal-hint mb-0 mt-1" style={{ fontSize: '0.875rem', opacity: 0.8 }}>
-            Chỉ chọn trong cùng một ngày (tối đa 00:00–23:59).
-          </p>
-        )}
-
-        <div className="mt-3">
-          <label className="app-modal-label">Từ ngày:</label>
-          <DatePicker
-            selected={fromDate}
-            onChange={handleFromChange}
-            dateFormat={dateFormat}
-            showTimeSelect={showTimeSelect}
-            timeFormat="HH:mm"
-            timeIntervals={15}
-            className="form-control app-modal-input"
-            placeholderText="Chọn ngày bắt đầu"
-          />
-        </div>
-
-        <div className="mt-3">
-          <label className="app-modal-label">Đến ngày:</label>
-          <DatePicker
-            selected={toDate}
-            onChange={handleToChange}
-            dateFormat={dateFormat}
-            showTimeSelect={showTimeSelect}
-            timeFormat="HH:mm"
-            timeIntervals={15}
-            minDate={sameCalendarDayOnly ? fromDate : undefined}
-            maxDate={sameCalendarDayOnly ? fromDate : undefined}
-            className="form-control app-modal-input"
-            placeholderText="Chọn ngày kết thúc"
-          />
-        </div>
-
-        {showViewMode && (
-          <div className="mt-3">
-            <label className="app-modal-label">Hiển thị:</label>
-            <select
-              className="form-select app-modal-input"
-              value={viewMode}
-              onChange={(e) => onViewModeChange(e.target.value)}
-            >
-              <option value="month">Từng ngày</option>
-              <option value="year">Từng tháng</option>
-            </select>
+        <header className="app-modal-time__header">
+          <div className="app-modal-time__heading">
+            <h5 id="time-range-modal-title" className="app-modal-title app-modal-time__title">
+              {title}
+            </h5>
           </div>
-        )}
+          <button type="button" className="btn-close" onClick={onClose} aria-label="Đóng" />
+        </header>
 
-        <div className="d-flex justify-content-end mt-4 gap-2 flex-wrap">
+        <div className="app-modal-time__body">
+          <div className={`app-modal-time__fields${showTimeSelect ? ' app-modal-time__fields--timed' : ''}`}>
+            <div className="app-modal-time__field">
+              <label className="app-modal-label" htmlFor="time-range-from">
+                Bắt đầu
+              </label>
+              <DatePicker
+                id="time-range-from"
+                selected={fromDate}
+                onChange={handleFromChange}
+                dateFormat={dateFormat}
+                showTimeSelect={showTimeSelect}
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                timeCaption="Giờ"
+                className="form-control app-modal-input"
+                placeholderText={showTimeSelect ? 'Ngày giờ bắt đầu' : 'Chọn ngày bắt đầu'}
+                calendarClassName="app-modal-time__calendar"
+              />
+            </div>
+
+            <div className="app-modal-time__divider" aria-hidden="true">
+              <span />
+            </div>
+
+            <div className="app-modal-time__field">
+              <label className="app-modal-label" htmlFor="time-range-to">
+                Kết thúc
+              </label>
+              <DatePicker
+                id="time-range-to"
+                selected={toDate}
+                onChange={handleToChange}
+                dateFormat={dateFormat}
+                showTimeSelect={showTimeSelect}
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                timeCaption="Giờ"
+                minDate={sameCalendarDayOnly ? fromDate : undefined}
+                maxDate={sameCalendarDayOnly ? fromDate : undefined}
+                className="form-control app-modal-input"
+                placeholderText={showTimeSelect ? 'Ngày giờ kết thúc' : 'Chọn ngày kết thúc'}
+                calendarClassName="app-modal-time__calendar"
+              />
+            </div>
+          </div>
+
+          {showViewMode && (
+            <div className="app-modal-time__field app-modal-time__field--full">
+              <label className="app-modal-label" htmlFor="time-range-view-mode">
+                Hiển thị
+              </label>
+              <select
+                id="time-range-view-mode"
+                className="form-select app-modal-input"
+                value={viewMode}
+                onChange={(e) => onViewModeChange(e.target.value)}
+              >
+                <option value="month">Từng ngày</option>
+                <option value="year">Từng tháng</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        <footer className="app-modal-time__footer">
           <button
             type="button"
-            className="btn app-modal-btn-outline"
+            className={`btn app-modal-btn-outline${isMida ? ' mida-modal-btn' : ''}`}
             onClick={() => {
               onCancel();
               onClose();
@@ -150,7 +171,7 @@ export default function TimeRangeModal({
           </button>
           <button
             type="button"
-            className="btn app-modal-btn-primary px-4"
+            className={`btn app-modal-btn-primary px-4${isMida ? ' mida-modal-btn mida-modal-btn--primary' : ''}`}
             onClick={() => {
               const ok = onUpdate?.();
               if (ok !== false) onClose();
@@ -158,7 +179,7 @@ export default function TimeRangeModal({
           >
             Cập nhật
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );

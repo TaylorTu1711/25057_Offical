@@ -1204,6 +1204,92 @@
   color: var(--mida-text);
 }
 
+/* Modal tuỳ chọn khoảng thời gian (trạng thái / công suất) */
+.mida-modal-panel--time.app-modal-panel--time {
+  max-width: 560px;
+  border-radius: 1.05rem !important;
+  overflow: hidden;
+}
+
+.mida-modal-panel--time .app-modal-time__header {
+  position: relative;
+  padding: 1.35rem 1.5rem 1.1rem;
+  border-bottom: 1px solid var(--mida-border);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--mida-brand) 8%, transparent) 0%, transparent 100%);
+}
+
+.mida-modal-panel--time .app-modal-time__header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--mida-brand-light), var(--mida-brand-dark));
+}
+
+.mida-modal-panel--time .app-modal-time__eyebrow {
+  color: var(--mida-brand);
+  letter-spacing: 0.1em;
+}
+
+.mida-modal-panel--time .app-modal-time__title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.mida-modal-panel--time .app-modal-time__body {
+  padding: 1.35rem 1.5rem 1.15rem;
+  gap: 1.15rem;
+}
+
+.mida-modal-panel--time .app-modal-label {
+  margin-bottom: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mida-text-muted) !important;
+}
+
+.mida-modal-panel--time .app-modal-time__field .app-modal-input {
+  min-height: 2.7rem;
+  border-radius: 0.75rem !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.mida-modal-panel--time .app-modal-time__divider {
+  color: var(--mida-brand-light);
+}
+
+.mida-modal-panel--time .app-modal-time__footer {
+  border-top: 1px solid var(--mida-border);
+  background: color-mix(in srgb, var(--mida-surface-muted) 70%, transparent);
+  padding: 1rem 1.5rem 1.25rem;
+}
+
+.mida-modal-panel--time .app-modal-time__footer .btn {
+  min-width: 6.5rem;
+  border-radius: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.mida-modal-panel--time .app-modal-btn-outline.mida-modal-btn {
+  background: transparent;
+  border: 1px solid var(--mida-btn-border);
+  color: var(--mida-text-subtle);
+}
+
+.mida-modal-panel--time .app-modal-btn-outline.mida-modal-btn:hover {
+  border-color: var(--mida-brand-border);
+  color: var(--mida-brand);
+  background: var(--mida-brand-soft);
+}
+
 /* Ô nhập — ghi đè AppModal !important (xanh) */
 .mida-modal-panel .mida-modal-input,
 .mida-modal-panel .app-modal-input,
@@ -2896,16 +2982,19 @@
 }
 
 .mida-elec-card__label {
-  font-size: clamp(0.62rem, 1vw, 0.75rem);
+  font-size: clamp(0.55rem, 0.9vw, 0.7rem);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   color: var(--mida-elec-color);
-  line-height: 1.2;
+  line-height: 1.15;
   text-align: center;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   flex: 0 0 auto;
 }
 

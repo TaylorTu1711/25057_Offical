@@ -140,7 +140,7 @@ ChartJS.register(
   zoomPlugin,
 );
 
-const STATUS_CHART_TICKS = { 1: 'Stop', 2: 'Auto' };
+const STATUS_CHART_TICKS = { 1: 'Dừng', 2: 'Quay' };
 
 const BarChartStatus = ({ labels, line1, categoryPrefix = 'Thời gian' }) => {
   const { theme } = useTheme();
