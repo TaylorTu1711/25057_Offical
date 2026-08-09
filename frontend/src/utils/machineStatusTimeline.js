@@ -117,6 +117,71 @@ export function buildStatusTimelineChart(
   return { labels, mappedData };
 }
 
+/**
+ * Biểu đồ trạng thái — bước giây (mặc định 10s), trả timestamps cho trục linear.
+ * Forward-fill theo mẫu telemetry; live chỉ gắn điểm cuối cửa sổ.
+ */
+export function buildStatusTimelineChartSeconds(
+  rawMachineData,
+  effectiveFrom,
+  effectiveTo,
+  intervalSeconds = 10,
+  currentStatus = null,
+) {
+  const intervalMs = Math.max(1000, Number(intervalSeconds) * 1000 || 1000);
+  const toDate = new Date(effectiveTo);
+  const fromDate = new Date(effectiveFrom);
+  const toMsRaw = toDate.getTime();
+  const fromMsRaw = fromDate.getTime();
+  const windowMs = Math.max(0, toMsRaw - fromMsRaw);
+
+  const alignedTo = alignToIntervalMs(toDate, intervalMs, 'floor');
+  const alignedFrom = alignToIntervalMs(
+    new Date(alignedTo.getTime() - windowMs),
+    intervalMs,
+    'floor',
+  );
+  const fromMs = alignedFrom.getTime();
+  const toMs = alignedTo.getTime();
+
+  const allSorted = (Array.isArray(rawMachineData) ? rawMachineData : [])
+    .filter((d) => d?.timestamp)
+    .map((d) => ({ ...d, _ts: new Date(d.timestamp).getTime() }))
+    .filter((d) => Number.isFinite(d._ts))
+    .sort((a, b) => a._ts - b._ts);
+
+  let lastStatus = null;
+  for (const d of allSorted) {
+    if (d._ts >= fromMs) break;
+    const s = toStatusChartValue(d.status);
+    if (s != null) lastStatus = s;
+  }
+
+  const rangeFiltered = allSorted.filter((d) => d._ts >= fromMs && d._ts <= toMs);
+  const rangeTimestamps = generateTimestampsInRangeMs(alignedFrom, alignedTo, intervalMs);
+
+  let ptr = 0;
+  const values = rangeTimestamps.map((t) => {
+    const tMs = t.getTime();
+    while (ptr < rangeFiltered.length && rangeFiltered[ptr]._ts <= tMs) {
+      const s = toStatusChartValue(rangeFiltered[ptr].status);
+      if (s != null) lastStatus = s;
+      ptr += 1;
+    }
+    return lastStatus;
+  });
+
+  const live = toStatusChartValue(currentStatus);
+  if (values.length > 0 && live != null) {
+    values[values.length - 1] = live;
+  }
+
+  return {
+    timestamps: rangeTimestamps.map((t) => t.getTime()),
+    values,
+  };
+}
+
 /** Sinh mốc thời gian: hôm nay mỗi 10s, các ngày trước mỗi 5 phút. */
 function generateAdaptivePowerTimestamps(start, end, todayRef = new Date()) {
   const todayStart = new Date(todayRef);

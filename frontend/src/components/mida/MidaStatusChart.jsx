@@ -20,13 +20,12 @@ import {
   themedXScale,
   chartStableRenderOptions,
   getChartLegendOptions,
-  formatChartTooltipValue,
-  isDarkChartTheme,
 } from '../../utils/chartTheme';
 import {
   formatMidaLiveClock,
   getMidaLiveTimeXScaleConfig,
 } from '../../utils/midaLiveChartAxis';
+import { getStatusChartLabel } from '../../utils/machineStatus';
 
 ChartJS.register(
   CategoryScale,
@@ -41,87 +40,68 @@ ChartJS.register(
   ChartDataLabels,
 );
 
-const Y_POWER_HEADROOM = 0.1;
+const STATUS_CHART_TICKS = { 1: 'Stop', 2: 'Auto' };
 
-function roundSigUp(v, sig = 2) {
-  if (!Number.isFinite(v) || v <= 0) return 0;
-  const exp = Math.floor(Math.log10(v)) - (sig - 1);
-  const step = Math.pow(10, exp);
-  return Math.ceil(v / step) * step;
-}
+/** Nén đỉnh bước để đường ngang/dọc gọn, không tô kín như sample 10s dày. */
+function toStatusStepPoints(timestamps, values) {
+  const pts = [];
+  const n = timestamps?.length ?? 0;
+  if (n === 0) return pts;
 
-function roundSigDown(v, sig = 2) {
-  if (!Number.isFinite(v) || v === 0) return 0;
-  const abs = Math.abs(v);
-  const exp = Math.floor(Math.log10(abs)) - (sig - 1);
-  const step = Math.pow(10, exp);
-  return Math.sign(v) * Math.floor(abs / step) * step;
-}
+  let runStart = 0;
+  for (let i = 1; i <= n; i += 1) {
+    const ended = i === n || values[i] !== values[runStart];
+    if (!ended) continue;
 
-function computeStableBound(values, headroom, prev) {
-  let hi = -Infinity;
-  let lo = Infinity;
-  for (const raw of values || []) {
-    const v = Number(raw);
-    if (!Number.isFinite(v)) continue;
-    if (v > hi) hi = v;
-    if (v < lo) lo = v;
+    const yRaw = values[runStart];
+    const y = Number(yRaw);
+    if (yRaw != null && Number.isFinite(y)) {
+      pts.push({ x: timestamps[runStart], y });
+      const runEnd = i - 1;
+      if (runEnd !== runStart) {
+        pts.push({ x: timestamps[runEnd], y });
+      }
+      if (i < n) {
+        const nextY = Number(values[i]);
+        if (values[i] != null && Number.isFinite(nextY) && nextY !== y) {
+          pts.push({ x: timestamps[i], y });
+        }
+      }
+    }
+    runStart = i;
   }
-  if (!Number.isFinite(hi) || !Number.isFinite(lo) || (hi <= 0 && lo >= 0)) {
-    return null;
-  }
-
-  let max;
-  if (prev && hi <= prev.max && hi >= prev.max * 0.55) {
-    max = prev.max;
-  } else {
-    max = roundSigUp(hi * (1 + headroom), 2);
-  }
-
-  let min;
-  if (lo >= 0) {
-    min = 0;
-  } else if (prev && prev.min < 0 && lo >= prev.min && lo <= prev.min * 0.55) {
-    min = prev.min;
-  } else {
-    const pad = Math.max(Math.abs(hi - lo) * headroom, Math.abs(lo) * 0.05, 0.1);
-    min = roundSigDown(lo - pad, 2);
-  }
-
-  return { min, max };
+  return pts;
 }
 
 /**
- * Biểu đồ công suất theo khoảng thời gian.
- * Zoom/pan → tự tạm dừng cập nhật live; bấm nút để chạy lại + reset zoom.
+ * Biểu đồ trạng thái — cùng khung/trục/zoom/pause với biểu đồ công suất.
+ * Chỉ khác dữ liệu (Stop/Auto) và nhãn trục Y.
  */
-export default function MidaPowerCurrentChart({
+export default function MidaStatusChart({
   timestamps = [],
-  powerValues = [],
+  statusValues = [],
 }) {
   const { theme } = useTheme();
-  const isDark = isDarkChartTheme(theme);
   const chartRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
-  const latestPropsRef = useRef({ timestamps, powerValues });
+  const latestPropsRef = useRef({ timestamps, statusValues });
   const frozenRef = useRef({
     timestamps,
-    powerValues,
+    statusValues,
   });
 
-  latestPropsRef.current = { timestamps, powerValues };
+  latestPropsRef.current = { timestamps, statusValues };
   pausedRef.current = paused;
 
-  // Khi đang chạy: luôn bám props mới. Khi tạm dừng: giữ snapshot.
   useEffect(() => {
     if (paused) return;
-    frozenRef.current = { timestamps, powerValues };
-  }, [paused, timestamps, powerValues]);
+    frozenRef.current = { timestamps, statusValues };
+  }, [paused, timestamps, statusValues]);
 
   const display = paused
     ? frozenRef.current
-    : { timestamps, powerValues };
+    : { timestamps, statusValues };
 
   const pauseLive = useCallback(() => {
     if (pausedRef.current) return;
@@ -138,39 +118,24 @@ export default function MidaPowerCurrentChart({
     setPaused(false);
   }, []);
 
-  const yBoundsRef = useRef({ yPower: null });
-  const yBounds = useMemo(() => {
-    const yPower = computeStableBound(
-      display.powerValues,
-      Y_POWER_HEADROOM,
-      yBoundsRef.current.yPower,
-    );
-    yBoundsRef.current = { yPower };
-    return { yPower };
-  }, [display.powerValues]);
-
   const data = useMemo(() => {
-    const toPoints = (values) =>
-      display.timestamps.map((t, i) => {
-        const y = values[i];
-        return { x: t, y: Number.isFinite(Number(y)) ? Number(y) : null };
-      });
+    const points = toStatusStepPoints(display.timestamps, display.statusValues);
     return {
       datasets: [
         {
           type: 'line',
-          label: 'Công suất (kW)',
-          data: toPoints(display.powerValues),
-          yAxisID: 'yPower',
-          borderColor: '#7c3aed',
-          backgroundColor: 'rgba(124, 58, 237, 0.10)',
+          label: 'Trạng thái',
+          data: points,
+          yAxisID: 'yStatus',
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.10)',
           pointRadius: 0,
           pointHoverRadius: 4,
-          pointBackgroundColor: '#7c3aed',
+          pointBackgroundColor: '#2563eb',
           pointBorderColor: '#ffffff',
           borderWidth: 2,
           tension: 0,
-          fill: display.timestamps.length <= 600,
+          fill: false,
           spanGaps: true,
           parsing: false,
           normalized: true,
@@ -178,7 +143,12 @@ export default function MidaPowerCurrentChart({
         },
       ],
     };
-  }, [display.timestamps, display.powerValues]);
+  }, [display.timestamps, display.statusValues]);
+
+  const xMin = display.timestamps.length ? display.timestamps[0] : undefined;
+  const xMax = display.timestamps.length
+    ? display.timestamps[display.timestamps.length - 1]
+    : undefined;
 
   const options = useMemo(
     () => ({
@@ -192,7 +162,11 @@ export default function MidaPowerCurrentChart({
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      elements: {
+        line: { fill: false },
+      },
       plugins: {
+        filler: { propagate: false },
         legend: getChartLegendOptions({ labels: { padding: 6, font: { size: 10 } } }, theme),
         datalabels: { display: false },
         tooltip: {
@@ -204,7 +178,7 @@ export default function MidaPowerCurrentChart({
             label: (ctx) => {
               const v = ctx.parsed.y;
               if (v == null || Number.isNaN(v)) return null;
-              return `${ctx.dataset.label}: ${formatChartTooltipValue(v)} kW`;
+              return `${ctx.dataset.label}: ${getStatusChartLabel(v)}`;
             },
           },
         },
@@ -241,32 +215,29 @@ export default function MidaPowerCurrentChart({
       },
       scales: {
         x: themedXScale(
-          getMidaLiveTimeXScaleConfig(),
+          {
+            ...getMidaLiveTimeXScaleConfig(),
+            min: xMin,
+            max: xMax,
+          },
           undefined,
           'linear',
           theme,
         ),
-        yPower: themedScale(
+        yStatus: themedScale(
           {
-            beginAtZero: true,
+            beginAtZero: false,
             position: 'left',
-            min: yBounds.yPower?.min,
-            max: yBounds.yPower?.max,
+            min: 1,
+            max: 2,
             title: {
-              display: true,
-              text: 'kW',
-              color: isDark ? '#c4b5fd' : '#7c3aed',
-              font: { size: 11, weight: '600' },
+              display: false,
             },
             ticks: {
+              stepSize: 1,
               padding: 4,
-              precision: 0,
-              callback: (value) => {
-                const n = Number(value);
-                if (!Number.isFinite(n)) return value;
-                if (Math.abs(n - Math.round(n)) > 1e-6) return '';
-                return String(Math.round(n));
-              },
+              font: { size: 9 },
+              callback: (value) => STATUS_CHART_TICKS[value] ?? '',
             },
             grid: {
               display: true,
@@ -279,7 +250,7 @@ export default function MidaPowerCurrentChart({
         ),
       },
     }),
-    [theme, isDark, yBounds, pauseLive],
+    [theme, pauseLive, xMin, xMax],
   );
 
   useSyncChartTheme(chartRef, theme, options);

@@ -7,7 +7,6 @@ import axios from 'axios';
 import { Offcanvas } from 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 import LineChart_TimeOn from '../../components/BarChart_Thoigian';
-import BarChartStatus from '../../components/BarChart_Status';
 import CumulativeRuntimeDisplay from '../../components/machine/CumulativeRuntimeDisplay';
 import MachineInfoModal from '../../components/machine/MachineInfoModal';
 import MachineStatusIconPanel from '../../components/machine/MachineStatusIconPanel';
@@ -22,6 +21,7 @@ import MidaGaugeChart from '../../components/mida/MidaGaugeChart';
 import MidaElectricalCards from '../../components/mida/MidaElectricalCards';
 import MidaPowerCurrentChart from '../../components/mida/MidaPowerCurrentChart';
 import MidaEfficiencyChart from '../../components/mida/MidaEfficiencyChart';
+import MidaStatusChart from '../../components/mida/MidaStatusChart';
 
 import useMidaMachineData from '../../hooks/useMidaMachineData';
 import useNow from '../../hooks/useNow';
@@ -47,7 +47,7 @@ import {
 } from '../../utils/chartViewRange';
 import { parseHandoverDate } from '../../utils/parseStandardProductivity';
 import {
-  buildStatusTimelineChart,
+  buildStatusTimelineChartSeconds,
   buildPowerCurrentTimelineChart,
 } from '../../utils/machineStatusTimeline';
 
@@ -101,8 +101,8 @@ function resolveStatusRange(mode, customFrom, customTo, nowMs) {
   return { from: getRollingFromDate(minutes, to), to, isLive: true };
 }
 
-/** Độ phân giải bucket trạng thái cố định 1 phút. */
-const STATUS_CHART_INTERVAL_MINUTES = 1;
+/** Độ phân giải bucket trạng thái cố định 10 giây (giống công suất). */
+const STATUS_CHART_INTERVAL_SECONDS = 10;
 
 /**
  * Cửa sổ tải telemetry tối thiểu để đủ cho status + điện + biểu đồ tháng.
@@ -167,7 +167,7 @@ export default function MidaCncMachineDetail() {
   const [rangeFrom, setRangeFrom] = useState(() => getDefaultRangeDates().from);
   const [rangeTo, setRangeTo] = useState(() => getDefaultRangeDates().to);
   const [rangeDisplay, setRangeDisplay] = useState(RANGE_DISPLAY_MODES.day);
-  const [statusRangeMode, setStatusRangeMode] = useState('24h');
+  const [statusRangeMode, setStatusRangeMode] = useState('1h');
   const [statusFrom, setStatusFrom] = useState(null);
   const [statusTo, setStatusTo] = useState(null);
   const [elecRangeMode, setElecRangeMode] = useState('1h');
@@ -269,7 +269,7 @@ export default function MidaCncMachineDetail() {
   const [usageChartValues, setUsageChartValues] = useState([]);
   const [powerChartValues, setPowerChartValues] = useState([]);
   const [elecChartTimestamps, setElecChartTimestamps] = useState([]);
-  const [labelsChart3, setLabelsChart3] = useState([]);
+  const [statusChartTimestamps, setStatusChartTimestamps] = useState([]);
   const [statusDataValuesChart3, setStatusDataValuesChart3] = useState([]);
   const [showStatusRangeModal, setShowStatusRangeModal] = useState(false);
   const [tempStatusFrom, setTempStatusFrom] = useState(null);
@@ -318,7 +318,7 @@ export default function MidaCncMachineDetail() {
     setRangeFrom(defaultRange.from);
     setRangeTo(defaultRange.to);
     setRangeDisplay(RANGE_DISPLAY_MODES.day);
-    setStatusRangeMode('24h');
+    setStatusRangeMode('1h');
     setStatusFrom(null);
     setStatusTo(null);
     setElecRangeMode('1h');
@@ -384,17 +384,19 @@ export default function MidaCncMachineDetail() {
     const liveStatus = isLive
       ? (statusMachine?.status ?? machineInfo?.status ?? null)
       : null;
-    const { labels, mappedData } = buildStatusTimelineChart(
+    const statusTimeline = buildStatusTimelineChartSeconds(
       rawMachineData,
       from,
       to,
-      STATUS_CHART_INTERVAL_MINUTES,
+      STATUS_CHART_INTERVAL_SECONDS,
       liveStatus,
     );
 
-    setLabelsChart3((prev) => (chartSeriesEqual(prev, labels) ? prev : labels));
+    setStatusChartTimestamps((prev) =>
+      chartSeriesEqual(prev, statusTimeline.timestamps) ? prev : statusTimeline.timestamps,
+    );
     setStatusDataValuesChart3((prev) =>
-      chartSeriesEqual(prev, mappedData) ? prev : mappedData,
+      chartSeriesEqual(prev, statusTimeline.values) ? prev : statusTimeline.values,
     );
   }, [
     rawMachineData,
@@ -685,7 +687,11 @@ export default function MidaCncMachineDetail() {
                   </div>
                   <div className="machine-chart-plot">
                     <div className="machine-chart-plot-inner">
-                      <BarChartStatus labels={labelsChart3} line1={statusDataValuesChart3} />
+                      <MidaStatusChart
+                        key={`${statusRangeMode}-${statusFrom?.getTime?.() ?? ''}-${statusTo?.getTime?.() ?? ''}`}
+                        timestamps={statusChartTimestamps}
+                        statusValues={statusDataValuesChart3}
+                      />
                     </div>
                   </div>
                 </div>
