@@ -101,7 +101,7 @@ export default function MidaEfficiencyChart({
         },
         {
           ...lineOpts(usageLine, 'rgba(74, 222, 128, 0.18)'),
-          label: 'Hiệu suất sử dụng (%)',
+          label: 'Hiệu suất khai thác (%)',
           data: usageValues,
           order: 0,
         },

@@ -736,15 +736,15 @@ export default function MidaCncMachineDetail() {
               <div className="mida-gauge-pair">
                 <MidaGaugeChart
                   value={performanceMachine}
-                  label="HIỆU SUẤT SỬ DỤNG"
+                  label="HIỆU SUẤT KHAI THÁC"
                   variant="performance"
-                  formula="Thời gian chạy / Thời gian đưa máy vào hoạt động × 100%"
+                  formula="Tổng thời gian cắt gọt / Thời gian từ khi đưa máy vào hoạt động đến hiện tại × 100%"
                 />
                 <MidaGaugeChart
                   value={utilizationMachine}
                   label="HIỆU SUẤT VẬN HÀNH"
                   variant="utilization"
-                  formula="Thời gian chạy / Thời gian bật máy × 100%"
+                  formula="Thời gian cắt gọt / Thời gian mở máy × 100%"
                 />
               </div>
             </div>
