@@ -182,6 +182,160 @@ export function buildStatusTimelineChartSeconds(
   };
 }
 
+/** Gantt: 2=chạy, 1=dừng, 0=chưa kết nối */
+export const GANTT_STATUS = { RUN: 2, STOP: 1, OFFLINE: 0 };
+
+const HOURS_24 = 24;
+
+/**
+ * Tổng giờ chạy / ngưng / offline và hiệu suất từ segments % trong 24h.
+ * Ngưng gồm dừng + chưa kết nối. Hiệu suất = chạy / 24h.
+ */
+export function summarizeGanttSegments24h(segments = []) {
+  let runPct = 0;
+  let stopPct = 0;
+  let offlinePct = 0;
+
+  (Array.isArray(segments) ? segments : []).forEach((seg) => {
+    const pct = Number(seg?.pct) || 0;
+    if (seg?.status === GANTT_STATUS.RUN) runPct += pct;
+    else if (seg?.status === GANTT_STATUS.STOP) stopPct += pct;
+    else offlinePct += pct;
+  });
+
+  const runHours = (runPct / 100) * HOURS_24;
+  const stopHours = (stopPct / 100) * HOURS_24;
+  const offlineHours = (offlinePct / 100) * HOURS_24;
+  const idleHours = stopHours + offlineHours;
+  const efficiency = Math.round((runHours / HOURS_24) * 100);
+
+  return {
+    runHours,
+    stopHours,
+    offlineHours,
+    idleHours,
+    efficiency,
+  };
+}
+
+/**
+ * Gộp chuỗi trạng thái Gantt thành đoạn % chiều rộng.
+ * @returns {{ status: 0|1|2|null, pct: number }[]}
+ */
+export function buildStatusGanttSegments(values = []) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return [{ status: GANTT_STATUS.OFFLINE, pct: 100 }];
+  }
+
+  const runs = [];
+  let cur = values[0];
+  let count = 1;
+  for (let i = 1; i < values.length; i += 1) {
+    if (values[i] === cur) {
+      count += 1;
+    } else {
+      runs.push({ status: cur, count });
+      cur = values[i];
+      count = 1;
+    }
+  }
+  runs.push({ status: cur, count });
+
+  const total = values.length;
+  return runs.map((r) => ({
+    status: r.status == null ? GANTT_STATUS.OFFLINE : Number(r.status),
+    pct: (r.count / total) * 100,
+  }));
+}
+
+/**
+ * Timeline Gantt 24h gần nhất (now−24h → now).
+ * Xanh=chạy, đỏ=dừng, xám=chưa kết nối (khoảng không có mẫu trong ngưỡng kết nối).
+ */
+export function buildLast24hStatusGanttSegments(
+  rawMachineData,
+  nowMs = Date.now(),
+  {
+    currentStatus = null,
+    lastUpdated = null,
+    intervalMinutes = 1,
+    offlineThresholdMinutes = 2,
+  } = {},
+) {
+  const intervalMs = Math.max(60_000, Number(intervalMinutes) * 60_000 || 60_000);
+  const offlineMs = Math.max(intervalMs, Number(offlineThresholdMinutes) * 60_000 || 120_000);
+  const toMs = Number(nowMs) || Date.now();
+  const fromMs = toMs - 24 * 60 * 60 * 1000;
+
+  const samples = (Array.isArray(rawMachineData) ? rawMachineData : [])
+    .filter((d) => d?.timestamp)
+    .map((d) => ({
+      ts: new Date(d.timestamp).getTime(),
+      status: toStatusChartValue(d.status),
+    }))
+    .filter((d) => Number.isFinite(d.ts))
+    .sort((a, b) => a.ts - b.ts);
+
+  const values = [];
+  let ptr = 0;
+  let lastSample = null;
+
+  // Seed: mẫu gần nhất trước cửa sổ
+  for (let i = 0; i < samples.length; i += 1) {
+    if (samples[i].ts > fromMs) break;
+    lastSample = samples[i];
+    ptr = i + 1;
+  }
+
+  for (let t = fromMs; t <= toMs; t += intervalMs) {
+    while (ptr < samples.length && samples[ptr].ts <= t) {
+      lastSample = samples[ptr];
+      ptr += 1;
+    }
+
+    if (!lastSample || t - lastSample.ts > offlineMs) {
+      values.push(GANTT_STATUS.OFFLINE);
+    } else if (lastSample.status === 2) {
+      values.push(GANTT_STATUS.RUN);
+    } else if (lastSample.status != null) {
+      values.push(GANTT_STATUS.STOP);
+    } else {
+      values.push(GANTT_STATUS.OFFLINE);
+    }
+  }
+
+  // Điểm cuối: ưu tiên trạng thái live + kết nối hiện tại
+  if (values.length > 0) {
+    const lastTs = lastUpdated ? new Date(lastUpdated).getTime() : NaN;
+    const liveConnected =
+      Number.isFinite(lastTs) && toMs - lastTs <= offlineMs;
+    if (!liveConnected) {
+      values[values.length - 1] = GANTT_STATUS.OFFLINE;
+    } else {
+      const live = toStatusChartValue(currentStatus);
+      if (live === 2) values[values.length - 1] = GANTT_STATUS.RUN;
+      else if (live != null) values[values.length - 1] = GANTT_STATUS.STOP;
+    }
+  }
+
+  return buildStatusGanttSegments(values);
+}
+
+/** @deprecated Dùng buildLast24hStatusGanttSegments */
+export function buildTodayStatusGanttSegments(
+  rawMachineData,
+  nowMs = Date.now(),
+  currentStatus = null,
+  intervalMinutes = 1,
+  lastUpdated = null,
+) {
+  return buildLast24hStatusGanttSegments(rawMachineData, nowMs, {
+    currentStatus,
+    lastUpdated,
+    intervalMinutes,
+  });
+}
+
 /** Sinh mốc thời gian: hôm nay mỗi 10s, các ngày trước mỗi 5 phút. */
 function generateAdaptivePowerTimestamps(start, end, todayRef = new Date()) {
   const todayStart = new Date(todayRef);

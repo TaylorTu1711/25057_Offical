@@ -2,20 +2,24 @@
  * Tạo dữ liệu giả lập cho bảng telemetry máy CNC (schema `cnc`).
  *
  * Usage:
- *   node scripts/seed-cnc-telemetry.js                 # mặc định máy mida_cnc_1, 7 ngày
- *   node scripts/seed-cnc-telemetry.js mida_cnc_1 7    # <machine_id> <số ngày>
+ *   node scripts/seed-cnc-telemetry.js                 # mặc định máy mida_cnc_1, 2 ngày
+ *   node scripts/seed-cnc-telemetry.js mida_cnc_1 2    # <machine_id> <số ngày>
  *
- * - Sinh mẫu mỗi 5 phút, mô phỏng chu kỳ chạy/dừng.
+ * - Sinh mẫu mỗi 30 giây, mô phỏng chu kỳ chạy/dừng + vài khoảng chưa kết nối.
  * - Ghi các thông số điện: điện áp/dòng 3 pha, công suất, điện năng tiêu thụ lũy kế.
- * - Tự tạo schema + bảng nếu chưa có (đúng cấu trúc máy CNC mới).
+ * - Tự tạo schema + bảng + dòng máy trong cnc.machines nếu chưa có.
  */
 import pool from '../db.js';
-import { telemetryTableRef, ensureCncSchema } from '../utils/machineSchema.js';
+import {
+  telemetryTableRef,
+  ensureCncSchema,
+  ensureCncMachinesTable,
+} from '../utils/machineSchema.js';
 import { ensureCncElectricalTelemetryColumns } from '../utils/cncTelemetry.js';
 
 const machineId = (process.argv[2] || 'mida_cnc_1').trim();
-const days = Math.max(1, Number(process.argv[3]) || 7);
-const SAMPLE_INTERVAL_SEC = 5 * 60; // 5 phút
+const days = Math.max(1, Number(process.argv[3]) || 2);
+const SAMPLE_INTERVAL_SEC = 30;
 
 const table = telemetryTableRef(machineId, 'cnc');
 
@@ -25,12 +29,12 @@ const round = (val, digits = 2) => {
   return Math.round(val * f) / f;
 };
 
-// Trạng thái: 2 = đang chạy, 1 = dừng (giữ đồng bộ với quy ước SCADA)
 const STATUS_RUN = 2;
 const STATUS_STOP = 1;
 
 async function ensureTable() {
   await ensureCncSchema(pool);
+  await ensureCncMachinesTable(pool);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ${table} (
       id SERIAL PRIMARY KEY,
@@ -54,33 +58,52 @@ async function ensureTable() {
     );
   `);
   await ensureCncElectricalTelemetryColumns(pool, table);
+
+  await pool.query(
+    `INSERT INTO cnc.machines (machine_id, machine_name, location, machine_category, status, last_updated)
+     VALUES ($1, $2, $3, 'cnc', 1, NOW())
+     ON CONFLICT (machine_id) DO NOTHING`,
+    [machineId, machineId.toUpperCase().replace(/_/g, ' '), 'MIDA'],
+  );
 }
 
 function buildRows() {
   const rows = [];
   const now = new Date();
   const start = new Date(now.getTime() - days * 24 * 3600 * 1000);
-  const totalSamples = Math.floor((days * 24 * 3600) / SAMPLE_INTERVAL_SEC);
+  const endMs = now.getTime();
 
   let nr = 0;
-  let timeOn = 0; // giây máy được bật (lũy kế)
-  let timeRunning = 0; // giây máy thực chạy (lũy kế)
-  let powerConsumption = 0; // kWh lũy kế
+  let timeOn = 0;
+  let timeRunning = 0;
+  let powerConsumption = 0;
 
-  // Chu kỳ chạy/dừng: mỗi lần đổi trạng thái kéo dài ngẫu nhiên vài chục phút
   let running = true;
-  let stateSamplesLeft = Math.round(rand(6, 30));
+  let stateSamplesLeft = Math.round(rand(20, 80));
+  let offlineSamplesLeft = 0;
+  let nextOfflineIn = Math.round(rand(80, 200));
 
-  for (let i = 0; i < totalSamples; i += 1) {
-    const ts = new Date(start.getTime() + i * SAMPLE_INTERVAL_SEC * 1000);
+  for (let t = start.getTime(); t <= endMs; t += SAMPLE_INTERVAL_SEC * 1000) {
+    // Khoảng chưa kết nối: bỏ mẫu (Gantt sẽ tô xám)
+    if (offlineSamplesLeft > 0) {
+      offlineSamplesLeft -= 1;
+      continue;
+    }
+
+    nextOfflineIn -= 1;
+    if (nextOfflineIn <= 0) {
+      offlineSamplesLeft = Math.round(rand(10, 40)); // ~5–20 phút mất mẫu
+      nextOfflineIn = Math.round(rand(120, 360));
+      continue;
+    }
+
+    const ts = new Date(t);
     const hour = ts.getHours();
-
-    // Ban đêm (22h-6h) tăng khả năng dừng
     const isNight = hour >= 22 || hour < 6;
 
     if (stateSamplesLeft <= 0) {
-      running = isNight ? Math.random() < 0.25 : Math.random() < 0.8;
-      stateSamplesLeft = Math.round(running ? rand(6, 36) : rand(3, 18));
+      running = isNight ? Math.random() < 0.25 : Math.random() < 0.75;
+      stateSamplesLeft = Math.round(running ? rand(40, 120) : rand(20, 60));
     }
     stateSamplesLeft -= 1;
 
@@ -107,7 +130,7 @@ function buildRows() {
       phase3A = rand(8, 26);
     } else {
       status = STATUS_STOP;
-      phase1V = rand(228, 236); // không tải, điện áp cao hơn chút
+      phase1V = rand(228, 236);
       phase2V = rand(228, 236);
       phase3V = rand(228, 236);
       phase1A = rand(0.1, 1.2);
@@ -117,13 +140,9 @@ function buildRows() {
 
     const avgV = (phase1V + phase2V + phase3V) / 3;
     const avgA = (phase1A + phase2A + phase3A) / 3;
-
-    // Công suất 3 pha ~ sqrt(3) * V_line * I * pf. Dùng điện áp pha, pf ~ 0.85
     const powerFactor = running ? rand(0.82, 0.92) : rand(0.4, 0.6);
-    power = (Math.sqrt(3) * avgV * avgA * powerFactor) / 1000; // kW
-
-    // Điện năng tiêu thụ cộng dồn theo khoảng thời gian mẫu
-    powerConsumption += power * (SAMPLE_INTERVAL_SEC / 3600); // kWh
+    power = (Math.sqrt(3) * avgV * avgA * powerFactor) / 1000;
+    powerConsumption += power * (SAMPLE_INTERVAL_SEC / 3600);
     const frequency = running ? rand(49.7, 50.3) : rand(49.5, 50.5);
 
     rows.push({
@@ -178,14 +197,17 @@ async function insertRows(rows) {
 async function updateMachineRow(lastRow) {
   await pool.query(
     `UPDATE cnc.machines
-     SET status = $1, last_updated = $2
-     WHERE machine_id = $3`,
-    [lastRow.status, lastRow.timestamp, machineId],
+     SET status = $1,
+         last_updated = $2,
+         machine_name = COALESCE(NULLIF(machine_name, ''), $3),
+         machine_category = 'cnc'
+     WHERE machine_id = $4`,
+    [lastRow.status, lastRow.timestamp, machineId.toUpperCase().replace(/_/g, ' '), machineId],
   );
 }
 
 try {
-  console.log(`Seeding ${days} ngày dữ liệu cho ${table} ...`);
+  console.log(`Seeding ${days} ngày dữ liệu cho ${table} (mỗi ${SAMPLE_INTERVAL_SEC}s) ...`);
   await ensureTable();
 
   await pool.query(`TRUNCATE ${table} RESTART IDENTITY`);
@@ -194,8 +216,9 @@ try {
   await insertRows(rows);
   await updateMachineRow(rows[rows.length - 1]);
 
-  console.log(`✅ Đã tạo ${rows.length} bản ghi (mỗi 5 phút, ${days} ngày).`);
-  console.log(`   Mẫu cuối: status=${rows[rows.length - 1].status}, power=${rows[rows.length - 1].power} kW, kWh=${rows[rows.length - 1].power_consumption}`);
+  const last = rows[rows.length - 1];
+  console.log(`✅ Đã tạo ${rows.length} bản ghi cho ${machineId}.`);
+  console.log(`   Mẫu cuối: status=${last.status}, power=${last.power} kW, kWh=${last.power_consumption}, ts=${last.timestamp}`);
 } catch (err) {
   console.error('Seed thất bại:', err.message);
   process.exitCode = 1;

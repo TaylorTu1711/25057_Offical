@@ -6,7 +6,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Offcanvas } from 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
-import LineChart_TimeOn from '../../components/BarChart_Thoigian';
 import CumulativeRuntimeDisplay from '../../components/machine/CumulativeRuntimeDisplay';
 import MachineInfoModal from '../../components/machine/MachineInfoModal';
 import MachineStatusIconPanel from '../../components/machine/MachineStatusIconPanel';
@@ -17,10 +16,12 @@ import AutoFitMachineName from '../../components/machine/AutoFitMachineName';
 import MidaNavbar from '../../components/mida/MidaNavbar';
 import MidaMachineSidebar from '../../components/mida/MidaMachineSidebar';
 import MidaMachineSidebarMobile from '../../components/mida/MidaMachineSidebarMobile';
-import MidaGaugeChart from '../../components/mida/MidaGaugeChart';
+import MidaDualEfficiencyGauge from '../../components/mida/MidaDualEfficiencyGauge';
+import MidaRunStopPieChart from '../../components/mida/MidaRunStopPieChart';
 import MidaElectricalCards from '../../components/mida/MidaElectricalCards';
 import MidaPowerCurrentChart from '../../components/mida/MidaPowerCurrentChart';
-import MidaEfficiencyChart from '../../components/mida/MidaEfficiencyChart';
+import MidaRunStopStackedBar from '../../components/mida/MidaRunStopStackedBar';
+import MidaTimeEnergyWithTotal from '../../components/mida/MidaTimeEnergyWithTotal';
 import MidaStatusChart from '../../components/mida/MidaStatusChart';
 
 import useMidaMachineData from '../../hooks/useMidaMachineData';
@@ -40,7 +41,8 @@ import {
   RANGE_DISPLAY_MODES,
   getDefaultRangeDates,
   buildTimeSeries,
-  buildEfficiencySeries,
+  buildRunStopPctSeries,
+  buildRunStopShare,
   toErrorChartTickMode,
   getChartCategoryPrefix,
   getYearKeysFromData,
@@ -113,6 +115,7 @@ function computeTelemetryFromIso({
   elecFrom,
   selectedYear,
   selectedMonth,
+  selectedDay,
   chartViewMode,
   nowMinute,
 }) {
@@ -137,8 +140,17 @@ function computeTelemetryFromIso({
   applyRange(statusRangeMode, statusFrom);
   applyRange(elecRangeMode, elecFrom);
 
-  if (chartViewMode === CHART_VIEW_MODES.month) {
+  if (
+    chartViewMode === CHART_VIEW_MODES.month
+    || chartViewMode === CHART_VIEW_MODES.quarter
+    || chartViewMode === CHART_VIEW_MODES.year
+  ) {
     earliest = Math.min(earliest, new Date(selectedYear, 0, 1).getTime());
+  } else if (chartViewMode === CHART_VIEW_MODES.hour) {
+    earliest = Math.min(
+      earliest,
+      new Date(selectedYear, selectedMonth - 1, selectedDay, 0, 0, 0, 0).getTime(),
+    );
   } else {
     earliest = Math.min(earliest, new Date(selectedYear, selectedMonth - 1, 1).getTime());
   }
@@ -162,6 +174,7 @@ export default function MidaCncMachineDetail() {
   const [chartViewMode, setChartViewMode] = useState(CHART_VIEW_MODES.day);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
   const [rangeFrom, setRangeFrom] = useState(() => getDefaultRangeDates().from);
   const [rangeTo, setRangeTo] = useState(() => getDefaultRangeDates().to);
   const [rangeDisplay, setRangeDisplay] = useState(RANGE_DISPLAY_MODES.day);
@@ -182,6 +195,7 @@ export default function MidaCncMachineDetail() {
         elecFrom,
         selectedYear,
         selectedMonth,
+        selectedDay,
         chartViewMode,
         nowMinute,
       }),
@@ -192,6 +206,7 @@ export default function MidaCncMachineDetail() {
       elecFrom,
       selectedYear,
       selectedMonth,
+      selectedDay,
       chartViewMode,
       nowMinute,
     ],
@@ -267,9 +282,11 @@ export default function MidaCncMachineDetail() {
   const [chartLabels, setChartLabels] = useState([]);
   const [timeRunValues, setTimeRunValues] = useState([]);
   const [energyKwhValues, setEnergyKwhValues] = useState([]);
-  const [efficiencyLabels, setEfficiencyLabels] = useState([]);
-  const [utilizationChartValues, setUtilizationChartValues] = useState([]);
-  const [usageChartValues, setUsageChartValues] = useState([]);
+  const [runStopBarLabels, setRunStopBarLabels] = useState([]);
+  const [runStopCutPctValues, setRunStopCutPctValues] = useState([]);
+  const [runStopIdlePctValues, setRunStopIdlePctValues] = useState([]);
+  const [runStopCutHourValues, setRunStopCutHourValues] = useState([]);
+  const [runStopIdleHourValues, setRunStopIdleHourValues] = useState([]);
   const [powerChartValues, setPowerChartValues] = useState([]);
   const [elecChartTimestamps, setElecChartTimestamps] = useState([]);
   const [statusChartTimestamps, setStatusChartTimestamps] = useState([]);
@@ -309,7 +326,7 @@ export default function MidaCncMachineDetail() {
   const machineIsRunningForIcon = machineIsConnectedForIcon && statusRunningStable;
   const machineIsRunningRaw = machineIsConnected && isMachineRunning(currentMachineStatus);
   const statusIconAlt = !machineIsConnected
-    ? 'Mất kết nối PLC'
+    ? 'Chưa kết nối PLC'
     : getMachineStatusLabel(currentMachineStatus);
 
   useEffect(() => {
@@ -338,12 +355,23 @@ export default function MidaCncMachineDetail() {
     () => ({
       year: selectedYear,
       month: selectedMonth,
+      day: selectedDay,
       availableYears: availableChartYears,
       dateFrom: rangeFrom,
       dateTo: rangeTo,
       rangeDisplay,
+      telemetryRows: rawMachineData,
     }),
-    [selectedYear, selectedMonth, availableChartYears, rangeFrom, rangeTo, rangeDisplay],
+    [
+      selectedYear,
+      selectedMonth,
+      selectedDay,
+      availableChartYears,
+      rangeFrom,
+      rangeTo,
+      rangeDisplay,
+      rawMachineData,
+    ],
   );
 
   const chartXTickMode = toErrorChartTickMode(chartViewMode, chartSelection);
@@ -356,24 +384,34 @@ export default function MidaCncMachineDetail() {
 
   useEffect(() => {
     const time = buildTimeSeries(rawData, chartViewMode, chartSelection);
-
     setChartLabels((prev) => (chartSeriesEqual(prev, time.labels) ? prev : time.labels));
     setTimeRunValues((prev) => (chartSeriesEqual(prev, time.timeRun) ? prev : time.timeRun));
     setEnergyKwhValues((prev) =>
       chartSeriesEqual(prev, time.energyKwh) ? prev : time.energyKwh,
     );
 
-    const eff = buildEfficiencySeries(rawData, chartViewMode, chartSelection);
-    setEfficiencyLabels((prev) =>
-      chartSeriesEqual(prev, eff.labels) ? prev : eff.labels,
+    const runStop = buildRunStopPctSeries(rawData, chartViewMode, chartSelection);
+    setRunStopBarLabels((prev) =>
+      chartSeriesEqual(prev, runStop.labels) ? prev : runStop.labels,
     );
-    setUtilizationChartValues((prev) =>
-      chartSeriesEqual(prev, eff.utilization) ? prev : eff.utilization,
+    setRunStopCutPctValues((prev) =>
+      chartSeriesEqual(prev, runStop.cutPct) ? prev : runStop.cutPct,
     );
-    setUsageChartValues((prev) =>
-      chartSeriesEqual(prev, eff.usage) ? prev : eff.usage,
+    setRunStopIdlePctValues((prev) =>
+      chartSeriesEqual(prev, runStop.stopPct) ? prev : runStop.stopPct,
+    );
+    setRunStopCutHourValues((prev) =>
+      chartSeriesEqual(prev, runStop.cutHours) ? prev : runStop.cutHours,
+    );
+    setRunStopIdleHourValues((prev) =>
+      chartSeriesEqual(prev, runStop.stopHours) ? prev : runStop.stopHours,
     );
   }, [rawData, chartViewMode, chartSelection]);
+
+  const runStopShare = useMemo(
+    () => buildRunStopShare(rawData, chartViewMode, chartSelection),
+    [rawData, chartViewMode, chartSelection],
+  );
 
   const isConnected = (lastUpdated) => isMachineConnected(lastUpdated, now);
 
@@ -721,78 +759,44 @@ export default function MidaCncMachineDetail() {
                 viewMode={chartViewMode}
                 onViewModeChange={setChartViewMode}
                 selectedMonth={selectedMonth}
-                onMonthChange={setSelectedMonth}
+                onMonthChange={(month) => {
+                  setSelectedMonth(month);
+                  const maxDay = new Date(selectedYear, month, 0).getDate();
+                  setSelectedDay((d) => Math.min(d, maxDay));
+                }}
                 selectedYear={selectedYear}
-                onYearChange={setSelectedYear}
+                onYearChange={(year) => {
+                  setSelectedYear(year);
+                  const maxDay = new Date(year, selectedMonth, 0).getDate();
+                  setSelectedDay((d) => Math.min(d, maxDay));
+                }}
+                selectedDay={selectedDay}
+                onDayChange={setSelectedDay}
+                onDateChange={({ year, month, day }) => {
+                  setSelectedYear(year);
+                  setSelectedMonth(month);
+                  setSelectedDay(day);
+                }}
                 availableYears={availableChartYears}
                 pickerYear={selectedYear}
               />
             </div>
           </div>
 
-          {/* Phần biểu đồ — lưới 2 hàng: hàng dưới time & power cùng chiều cao */}
+          {/* Phần biểu đồ — thứ tự DOM = thứ tự đọc: gauges → power → time → efficiency → elec */}
           <div className="machine-charts-row machine-charts-row--mida">
             <div className="mida-charts-cell mida-charts-cell--gauges">
               <div className="mida-gauge-pair">
-                <MidaGaugeChart
-                  value={performanceMachine}
-                  label="HIỆU SUẤT KHAI THÁC"
-                  variant="performance"
-                  formula="Tổng thời gian cắt gọt / Thời gian từ khi đưa máy vào hoạt động đến hiện tại × 100%"
+                <MidaDualEfficiencyGauge
+                  performanceValue={performanceMachine}
+                  utilizationValue={utilizationMachine}
+                  performanceFormula="Tổng thời gian cắt gọt / Thời gian từ khi đưa máy vào hoạt động đến hiện tại × 100%"
+                  utilizationFormula="Tổng thời gian cắt gọt / Tổng thời gian mở máy × 100%"
                 />
-                <MidaGaugeChart
-                  value={utilizationMachine}
-                  label="HIỆU SUẤT VẬN HÀNH"
-                  variant="utilization"
-                  formula="Thời gian cắt gọt / Thời gian mở máy × 100%"
+                <MidaRunStopPieChart
+                  runSeconds={runStopShare.runSeconds}
+                  onSeconds={runStopShare.onSeconds}
                 />
-              </div>
-            </div>
-
-            <div className="mida-charts-cell mida-charts-cell--efficiency">
-              <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--status">
-                <div className="chart-title-brand machine-chart-head">
-                  <div>BIỂU ĐỒ HIỆU SUẤT</div>
-                </div>
-                <div className="machine-chart-plot">
-                  <div className="machine-chart-plot-inner">
-                    <MidaEfficiencyChart
-                      labels={efficiencyLabels}
-                      utilizationValues={utilizationChartValues}
-                      usageValues={usageChartValues}
-                      xTickMode={chartXTickMode}
-                      categoryPrefix={chartCategoryPrefix}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mida-charts-cell mida-charts-cell--elec">
-              <MidaElectricalCards
-                voltage={voltageAvg}
-                current={currentAvg}
-                powerKw={powerKw}
-              />
-            </div>
-
-            <div className="mida-charts-cell mida-charts-cell--time">
-              <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--time">
-                <div className="chart-title-brand machine-chart-head">
-                  <div>BIỂU ĐỒ THỜI GIAN & ĐIỆN NĂNG</div>
-                </div>
-                <div className="machine-chart-plot">
-                  <div className="machine-chart-plot-inner">
-                    <LineChart_TimeOn
-                      labels={chartLabels}
-                      line3={timeRunValues}
-                      energyKwhValues={energyKwhValues}
-                      xTickMode={chartXTickMode}
-                      categoryPrefix={chartCategoryPrefix}
-                      timeSeriesType="line"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -835,6 +839,42 @@ export default function MidaCncMachineDetail() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div className="mida-charts-cell mida-charts-cell--time">
+              <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--time">
+                <MidaTimeEnergyWithTotal
+                  labels={chartLabels}
+                  timeRunValues={timeRunValues}
+                  energyKwhValues={energyKwhValues}
+                  xTickMode={chartXTickMode}
+                  categoryPrefix={chartCategoryPrefix}
+                  timeSeriesType="line"
+                  timeSeriesLabel="Thời gian cắt gọt (giờ)"
+                />
+              </div>
+            </div>
+
+            <div className="mida-charts-cell mida-charts-cell--efficiency">
+              <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--status">
+                <MidaRunStopStackedBar
+                  labels={runStopBarLabels}
+                  cutPctValues={runStopCutPctValues}
+                  stopPctValues={runStopIdlePctValues}
+                  cutHourValues={runStopCutHourValues}
+                  stopHourValues={runStopIdleHourValues}
+                  xTickMode={chartXTickMode}
+                  categoryPrefix={chartCategoryPrefix}
+                />
+              </div>
+            </div>
+
+            <div className="mida-charts-cell mida-charts-cell--elec">
+              <MidaElectricalCards
+                voltage={voltageAvg}
+                current={currentAvg}
+                powerKw={powerKw}
+              />
             </div>
           </div>
           </>

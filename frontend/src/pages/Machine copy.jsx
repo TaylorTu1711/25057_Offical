@@ -180,7 +180,7 @@ function Machine() {
   const machineIsRunningForIcon = machineIsConnectedForIcon && statusRunningStable;
   const machineIsRunningRaw = machineIsConnected && isMachineRunning(currentMachineStatus);
   const statusIconAlt = !machineIsConnected
-    ? 'Mất kết nối PLC'
+    ? 'Chưa kết nối PLC'
     : getMachineStatusLabel(currentMachineStatus);
 
 

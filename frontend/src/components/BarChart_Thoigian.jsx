@@ -61,6 +61,7 @@ const LineChart_TimeOn = ({
   categoryPrefix = '',
   /** 'bar' (mặc định) | 'line' — MIDA dùng line */
   timeSeriesType = 'bar',
+  timeSeriesLabel = 'Thời gian chạy (giờ)',
 }) => {
   const { theme } = useTheme();
   const performanceLine = useMemo(() => getPerformanceLineStyle(), []);
@@ -111,7 +112,7 @@ const LineChart_TimeOn = ({
     const timeDataset = useLine
       ? {
           type: 'line',
-          label: 'Thời gian chạy (giờ)',
+          label: timeSeriesLabel,
           data: line3,
           yAxisID: 'y',
           borderColor: timeBarPalette.border,
@@ -136,7 +137,7 @@ const LineChart_TimeOn = ({
         }
       : {
           type: 'bar',
-          label: 'Thời gian chạy (giờ)',
+          label: timeSeriesLabel,
           data: line3,
           yAxisID: 'y',
           backgroundColor: (context) => {
@@ -270,6 +271,7 @@ const LineChart_TimeOn = ({
     standardLine,
     standardProductivity,
     timeSeriesType,
+    timeSeriesLabel,
   ]);
 
   const rightAxisStyle = hasEnergy
@@ -349,7 +351,7 @@ const LineChart_TimeOn = ({
             beginAtZero: true,
             position: 'left',
             title: {
-              display: true,
+              display: false,
               text: 'Giờ',
               font: {
                 size: 11,
@@ -371,7 +373,7 @@ const LineChart_TimeOn = ({
                   position: 'right',
                   grid: { drawOnChartArea: false },
                   title: {
-                    display: true,
+                    display: false,
                     text: hasEnergy
                       ? 'kWh'
                       : hasStandard

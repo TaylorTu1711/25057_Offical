@@ -138,7 +138,7 @@ export default function MachineInfoModal({
                 connected ? 'app-modal-status--connected' : 'app-modal-status--disconnected'
               }`}
             >
-              {connected ? '🟢 Đang kết nối' : '🔴 Mất kết nối'}
+              {connected ? '🟢 Đang kết nối' : '🔴 Chưa kết nối'}
             </div>
           </div>
 

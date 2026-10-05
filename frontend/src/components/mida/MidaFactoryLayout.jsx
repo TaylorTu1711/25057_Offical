@@ -3,21 +3,53 @@ import { Link } from 'react-router-dom';
 import { Boxes, Move, Pause, Play, Plus, WifiOff } from 'lucide-react';
 import MidaStatusPill from './MidaStatusPill';
 import MidaTotalStatBar from './MidaTotalStatBar';
+import MidaStatusGanttBar from './MidaStatusGanttBar';
 import axios from 'axios';
 import factoryLayoutImg from '../../assets/mida/layout nha may.png';
 import { BASE_URL } from '../../config/config';
 import { MIDA_FACTORY_SLOTS } from '../../config/midaFactoryLayout';
 import { authHeaders } from '../../utils/auth';
 import { getMachineStatusLabel, isMachineConnected, isMachineRunning } from '../../utils/machineStatus';
+import { summarizeGanttSegments24h } from '../../utils/machineStatusTimeline';
+import useMidaFactoryStatusGantts from '../../hooks/useMidaFactoryStatusGantts';
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function TagCallout({ name }) {
+function formatHours1(hours) {
+  const n = Number(hours);
+  if (!Number.isFinite(n)) return '0';
+  return (Math.round(n * 10) / 10).toLocaleString('vi-VN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  });
+}
+
+function TagCallout({ name, statusLabel, ganttSegments }) {
+  const summary = summarizeGanttSegments24h(ganttSegments);
   return (
     <div className="mida-factory__callout">
-      <span className="mida-factory__tag">{String(name).toUpperCase()}</span>
+      <span className="mida-factory__tag">
+        <span className="mida-factory__tag-dot" aria-hidden="true" />
+        <span className="mida-factory__tag-name">{String(name).toUpperCase()}</span>
+      </span>
+      <MidaStatusGanttBar segments={ganttSegments} />
+      <div className="mida-factory__hover-tip" role="tooltip">
+        <div className="mida-factory__hover-tip-title">
+          {String(name).toUpperCase()}: {statusLabel}
+        </div>
+        <div className="mida-factory__hover-tip-rule" aria-hidden="true" />
+        <div className="mida-factory__hover-tip-row">
+          Chạy 24h qua: {formatHours1(summary.runHours)} giờ
+        </div>
+        <div className="mida-factory__hover-tip-row">
+          Ngưng: {formatHours1(summary.idleHours)} giờ
+        </div>
+        <div className="mida-factory__hover-tip-row">
+          Hiệu suất: {summary.efficiency}%
+        </div>
+      </div>
     </div>
   );
 }
@@ -75,6 +107,8 @@ export default function MidaFactoryLayout({
   const [savingId, setSavingId] = useState('');
   const [saveError, setSaveError] = useState('');
   const [statsCompact, setStatsCompact] = useState(false);
+
+  const ganttById = useMidaFactoryStatusGantts(machines, true);
 
   const sorted = useMemo(
     () => [...machines].sort((a, b) => String(a.machine_id).localeCompare(String(b.machine_id), 'vi')),
@@ -329,7 +363,7 @@ export default function MidaFactoryLayout({
     const pos = positions[machine.machine_id] ?? resolvePosition(machine, index);
     const statusClass = markerStatusClass(machine, now);
     const statusLabel = !isMachineConnected(machine.last_updated, now)
-      ? 'Mất kết nối'
+      ? 'Chưa kết nối'
       : getMachineStatusLabel(machine.status);
     const name = machine.machine_name || machine.machine_id;
     const isSaving = savingId === machine.machine_id;
@@ -342,7 +376,13 @@ export default function MidaFactoryLayout({
     ].filter(Boolean).join(' ');
 
     const style = { top: `${pos.top}%`, left: `${pos.left}%` };
-    const content = <TagCallout name={name} />;
+    const content = (
+      <TagCallout
+        name={name}
+        statusLabel={statusLabel}
+        ganttSegments={ganttById[machine.machine_id]}
+      />
+    );
 
     if (editMode) {
       return (
@@ -366,7 +406,6 @@ export default function MidaFactoryLayout({
         to={`/mida/cnc/${encodeURIComponent(machine.machine_id)}`}
         className={className}
         style={style}
-        title={`${name} — ${statusLabel}`}
         aria-label={`Xem chi tiết ${name}, ${statusLabel}`}
       >
         {content}
@@ -408,7 +447,7 @@ export default function MidaFactoryLayout({
               <div className="mida-factory__stats-pills">
                 <MidaStatusPill variant="run" icon={Play} label="Đang chạy" value={stats.running} />
                 <MidaStatusPill variant="stop" icon={Pause} label="Dừng" value={stats.stopped} />
-                <MidaStatusPill variant="offline" icon={WifiOff} label="Mất kết nối" value={stats.offline} />
+                <MidaStatusPill variant="offline" icon={WifiOff} label="Chưa kết nối" value={stats.offline} />
               </div>
             </div>
           )}

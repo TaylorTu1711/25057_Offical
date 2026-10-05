@@ -93,7 +93,7 @@ export default function MidaCncDashboard() {
               <div className="mida-toolbar__status-pills">
                 <MidaStatusPill variant="run" icon={Play} label="Đang chạy" value={stats.running} />
                 <MidaStatusPill variant="stop" icon={Pause} label="Dừng" value={stats.stopped} />
-                <MidaStatusPill variant="offline" icon={WifiOff} label="Mất kết nối" value={stats.offline} />
+                <MidaStatusPill variant="offline" icon={WifiOff} label="Chưa kết nối" value={stats.offline} />
               </div>
               <div className="mida-toolbar__footer">
                 <MidaTotalStatBar

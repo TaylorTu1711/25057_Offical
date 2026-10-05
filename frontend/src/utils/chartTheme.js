@@ -51,6 +51,22 @@ export const NEON_BAR_GRADIENTS = {
     hoverTop: 'rgba(255, 130, 210, 1)',
     hoverBottom: 'rgba(255, 20, 147, 0.9)',
   },
+  /** Xanh lá neon — % cắt gọt */
+  neonGreen: {
+    top: 'rgba(74, 222, 128, 0.98)',
+    bottom: 'rgba(21, 128, 61, 0.92)',
+    border: 'rgba(22, 163, 74, 1)',
+    hoverTop: 'rgba(74, 222, 128, 1)',
+    hoverBottom: 'rgba(20, 83, 45, 0.95)',
+  },
+  /** Đỏ neon — % ngưng */
+  neonRed: {
+    top: 'rgba(248, 113, 113, 0.98)',
+    bottom: 'rgba(185, 28, 28, 0.92)',
+    border: 'rgba(220, 38, 38, 1)',
+    hoverTop: 'rgba(248, 113, 113, 1)',
+    hoverBottom: 'rgba(153, 27, 27, 0.95)',
+  },
 };
 
 export const NEON_LINES = {

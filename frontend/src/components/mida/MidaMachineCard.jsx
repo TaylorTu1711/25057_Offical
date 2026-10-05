@@ -7,7 +7,7 @@ export default function MidaMachineCard({ machine, now, machineType = 'cnc', onD
   const placeholder = machineType === 'ep' ? 'ÉP' : 'CNC';
   const connected = isMachineConnected(machine.last_updated, now);
   const running = connected && isMachineRunning(machine.status);
-  const statusLabel = !connected ? 'Mất kết nối' : getMachineStatusLabel(machine.status);
+  const statusLabel = !connected ? 'Chưa kết nối' : getMachineStatusLabel(machine.status);
   const imageSrc = machine.image_url ? `${BASE_URL}${machine.image_url}` : null;
 
   return (
