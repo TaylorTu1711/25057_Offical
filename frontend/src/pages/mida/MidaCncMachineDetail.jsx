@@ -165,6 +165,22 @@ const chartSeriesEqual = (a, b) => {
   return a.every((v, i) => v === b[i]);
 };
 
+/** Telemetry đã cover cửa sổ from chưa? (cho phép lệch 2 phút). */
+function telemetryCoversFrom(rows, fromIso) {
+  if (!fromIso || !Array.isArray(rows) || rows.length === 0) return false;
+  const needMs = new Date(fromIso).getTime();
+  if (!Number.isFinite(needMs)) return false;
+  let earliest = Infinity;
+  for (let i = 0; i < rows.length; i += 1) {
+    const t = new Date(rows[i]?.timestamp).getTime();
+    if (Number.isFinite(t) && t < earliest) earliest = t;
+  }
+  if (!Number.isFinite(earliest)) return false;
+  return earliest <= needMs + 120_000;
+}
+
+const TELEMETRY_REFETCH_DEBOUNCE_MS = 250;
+
 export default function MidaCncMachineDetail() {
   const { machine_id } = useParams();
   const navigate = useNavigate();
@@ -279,14 +295,6 @@ export default function MidaCncMachineDetail() {
   };
 
 
-  const [chartLabels, setChartLabels] = useState([]);
-  const [timeRunValues, setTimeRunValues] = useState([]);
-  const [energyKwhValues, setEnergyKwhValues] = useState([]);
-  const [runStopBarLabels, setRunStopBarLabels] = useState([]);
-  const [runStopCutPctValues, setRunStopCutPctValues] = useState([]);
-  const [runStopIdlePctValues, setRunStopIdlePctValues] = useState([]);
-  const [runStopCutHourValues, setRunStopCutHourValues] = useState([]);
-  const [runStopIdleHourValues, setRunStopIdleHourValues] = useState([]);
   const [powerChartValues, setPowerChartValues] = useState([]);
   const [elecChartTimestamps, setElecChartTimestamps] = useState([]);
   const [statusChartTimestamps, setStatusChartTimestamps] = useState([]);
@@ -301,18 +309,24 @@ export default function MidaCncMachineDetail() {
     machineInfo: false,
   });
 
-  // Bỏ qua lần mount (fetchAll đã tải); chỉ refetch khi cửa sổ from đổi
+  // Bỏ qua lần mount (fetchAll đã tải); debounce + skip nếu data đã cover
   const skipTelemetryRefetchRef = useRef(true);
+  const rawMachineDataRef = useRef(rawMachineData);
+  rawMachineDataRef.current = rawMachineData;
   useEffect(() => {
     skipTelemetryRefetchRef.current = true;
   }, [machine_id]);
   useEffect(() => {
-    if (!refetchTelemetry) return;
+    if (!refetchTelemetry) return undefined;
     if (skipTelemetryRefetchRef.current) {
       skipTelemetryRefetchRef.current = false;
-      return;
+      return undefined;
     }
-    refetchTelemetry();
+    const timer = setTimeout(() => {
+      if (telemetryCoversFrom(rawMachineDataRef.current, telemetryFrom)) return;
+      refetchTelemetry();
+    }, TELEMETRY_REFETCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
   }, [telemetryFrom, refetchTelemetry]);
 
   const currentMachineStatus =
@@ -346,13 +360,14 @@ export default function MidaCncMachineDetail() {
     setElecTo(null);
   }, [machine_id]);
 
+  // Không phụ thuộc `now` (tick 3s) — tránh rebuild chart vô ích
   const availableChartYears = useMemo(
-    () => getYearKeysFromData(rawData, allErrorsMachine, new Date(now)),
-    [rawData, allErrorsMachine, now],
+    () => getYearKeysFromData(rawData, allErrorsMachine, new Date()),
+    [rawData, allErrorsMachine],
   );
 
-  const chartSelection = useMemo(
-    () => ({
+  const chartSelection = useMemo(() => {
+    const base = {
       year: selectedYear,
       month: selectedMonth,
       day: selectedDay,
@@ -360,19 +375,23 @@ export default function MidaCncMachineDetail() {
       dateFrom: rangeFrom,
       dateTo: rangeTo,
       rangeDisplay,
-      telemetryRows: rawMachineData,
-    }),
-    [
-      selectedYear,
-      selectedMonth,
-      selectedDay,
-      availableChartYears,
-      rangeFrom,
-      rangeTo,
-      rangeDisplay,
-      rawMachineData,
-    ],
-  );
+    };
+    // Chỉ mode giờ cần raw samples; day/month… dùng rawData daily → không rebuild khi poll
+    if (chartViewMode === CHART_VIEW_MODES.hour) {
+      return { ...base, telemetryRows: rawMachineData };
+    }
+    return base;
+  }, [
+    selectedYear,
+    selectedMonth,
+    selectedDay,
+    availableChartYears,
+    rangeFrom,
+    rangeTo,
+    rangeDisplay,
+    chartViewMode,
+    chartViewMode === CHART_VIEW_MODES.hour ? rawMachineData : null,
+  ]);
 
   const chartXTickMode = toErrorChartTickMode(chartViewMode, chartSelection);
   const chartCategoryPrefix = getChartCategoryPrefix(chartViewMode, chartSelection);
@@ -382,31 +401,24 @@ export default function MidaCncMachineDetail() {
     [machineInfo?.information],
   );
 
-  useEffect(() => {
-    const time = buildTimeSeries(rawData, chartViewMode, chartSelection);
-    setChartLabels((prev) => (chartSeriesEqual(prev, time.labels) ? prev : time.labels));
-    setTimeRunValues((prev) => (chartSeriesEqual(prev, time.timeRun) ? prev : time.timeRun));
-    setEnergyKwhValues((prev) =>
-      chartSeriesEqual(prev, time.energyKwh) ? prev : time.energyKwh,
-    );
+  // Memo series — đổi tháng chỉ filter client, không setState hàng loạt
+  const timeChartSeries = useMemo(
+    () => buildTimeSeries(rawData, chartViewMode, chartSelection),
+    [rawData, chartViewMode, chartSelection],
+  );
+  const runStopChartSeries = useMemo(
+    () => buildRunStopPctSeries(rawData, chartViewMode, chartSelection),
+    [rawData, chartViewMode, chartSelection],
+  );
 
-    const runStop = buildRunStopPctSeries(rawData, chartViewMode, chartSelection);
-    setRunStopBarLabels((prev) =>
-      chartSeriesEqual(prev, runStop.labels) ? prev : runStop.labels,
-    );
-    setRunStopCutPctValues((prev) =>
-      chartSeriesEqual(prev, runStop.cutPct) ? prev : runStop.cutPct,
-    );
-    setRunStopIdlePctValues((prev) =>
-      chartSeriesEqual(prev, runStop.stopPct) ? prev : runStop.stopPct,
-    );
-    setRunStopCutHourValues((prev) =>
-      chartSeriesEqual(prev, runStop.cutHours) ? prev : runStop.cutHours,
-    );
-    setRunStopIdleHourValues((prev) =>
-      chartSeriesEqual(prev, runStop.stopHours) ? prev : runStop.stopHours,
-    );
-  }, [rawData, chartViewMode, chartSelection]);
+  const chartLabels = timeChartSeries.labels || [];
+  const timeRunValues = timeChartSeries.timeRun || [];
+  const energyKwhValues = timeChartSeries.energyKwh || [];
+  const runStopBarLabels = runStopChartSeries.labels || [];
+  const runStopCutPctValues = runStopChartSeries.cutPct || [];
+  const runStopIdlePctValues = runStopChartSeries.stopPct || [];
+  const runStopCutHourValues = runStopChartSeries.cutHours || [];
+  const runStopIdleHourValues = runStopChartSeries.stopHours || [];
 
   const runStopShare = useMemo(
     () => buildRunStopShare(rawData, chartViewMode, chartSelection),
@@ -415,12 +427,16 @@ export default function MidaCncMachineDetail() {
 
   const isConnected = (lastUpdated) => isMachineConnected(lastUpdated, now);
 
+  // Live charts: làm tròn 10s để khớp bucket, giảm rebuild mỗi 3s
+  const nowBucket10s = Math.floor(now / 10_000);
+
   useEffect(() => {
+    const nowMs = nowBucket10s * 10_000;
     const { from, to, isLive } = resolveStatusRange(
       statusRangeMode,
       statusFrom,
       statusTo,
-      now,
+      nowMs,
     );
     const liveStatus = isLive
       ? (statusMachine?.status ?? machineInfo?.status ?? null)
@@ -441,7 +457,7 @@ export default function MidaCncMachineDetail() {
     );
   }, [
     rawMachineData,
-    now,
+    nowBucket10s,
     statusRangeMode,
     statusFrom,
     statusTo,
@@ -503,11 +519,12 @@ export default function MidaCncMachineDetail() {
 
   // Biểu đồ công suất — khoảng chọn, mẫu đều 10 giây
   useEffect(() => {
+    const nowMs = nowBucket10s * 10_000;
     const { from, to, isLive } = resolveStatusRange(
       elecRangeMode,
       elecFrom,
       elecTo,
-      now,
+      nowMs,
     );
     const electrical = buildPowerCurrentTimelineChart(
       rawMachineData,
@@ -525,7 +542,7 @@ export default function MidaCncMachineDetail() {
     );
   }, [
     rawMachineData,
-    now,
+    nowBucket10s,
     elecRangeMode,
     elecFrom,
     elecTo,

@@ -248,6 +248,7 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
   const [frequencyHz, setFrequencyHz] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const hasChartDataRef = useRef(false);
+  const lastTelemetryFingerprintRef = useRef('');
   const telemetryFromRef = useRef(telemetryFrom);
   const telemetryToRef = useRef(telemetryTo);
   telemetryFromRef.current = telemetryFrom;
@@ -273,6 +274,7 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
     setDataValuesChartErr([]);
     setAllErrorsMachine([]);
     hasChartDataRef.current = false;
+    lastTelemetryFingerprintRef.current = '';
   }, [machineId]);
 
   const applyMachineInfo = useCallback((row) => {
@@ -328,6 +330,13 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
   const applyMachineParams = useCallback((data) => {
     if (!Array.isArray(data)) return;
     if (data.length === 0 && hasChartDataRef.current) return;
+
+    // Bỏ qua nếu payload không đổi (tránh rebuild chart mỗi poll)
+    const first = data[0];
+    const last = data[data.length - 1];
+    const fingerprint = `${data.length}|${first?.timestamp ?? ''}|${last?.timestamp ?? ''}|${last?.time_running ?? ''}|${last?.time_on ?? ''}|${last?.power ?? ''}`;
+    if (fingerprint === lastTelemetryFingerprintRef.current) return;
+    lastTelemetryFingerprintRef.current = fingerprint;
 
     hasChartDataRef.current = data.length > 0;
     setRawMachineData(data);
@@ -394,13 +403,20 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
     try {
       await Promise.all([
         fetchErrors(),
-        fetchMachineParams({ silent: true }),
         fetchPerformanceSummary(),
       ]);
     } catch (err) {
       console.error(err.message);
     }
-  }, [fetchErrors, fetchMachineParams, fetchPerformanceSummary]);
+  }, [fetchErrors, fetchPerformanceSummary]);
+
+  const fetchTelemetryQuiet = useCallback(async () => {
+    try {
+      await fetchMachineParams({ silent: true });
+    } catch (err) {
+      console.error(err.message);
+    }
+  }, [fetchMachineParams]);
 
   const handleBootData = useCallback(async () => {
     if (!window.confirm(
@@ -485,6 +501,7 @@ export default function useMidaMachineData(machineId, { telemetryFrom = null, te
 
   usePolling(fetchStatusLive, POLL_INTERVALS.status, Boolean(machineId));
   usePolling(fetchLiveData, POLL_INTERVALS.live, Boolean(machineId));
+  usePolling(fetchTelemetryQuiet, POLL_INTERVALS.telemetry, Boolean(machineId));
   usePolling(fetchMachines, POLL_INTERVALS.locations, Boolean(machineId));
 
   return {
