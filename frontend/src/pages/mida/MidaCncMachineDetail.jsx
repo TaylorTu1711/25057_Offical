@@ -308,6 +308,7 @@ export default function MidaCncMachineDetail() {
   const [modals, setModals] = useState({
     machineInfo: false,
   });
+  const [chartRangeLoading, setChartRangeLoading] = useState(false);
 
   // Bỏ qua lần mount (fetchAll đã tải); debounce + skip nếu data đã cover
   const skipTelemetryRefetchRef = useRef(true);
@@ -315,6 +316,7 @@ export default function MidaCncMachineDetail() {
   rawMachineDataRef.current = rawMachineData;
   useEffect(() => {
     skipTelemetryRefetchRef.current = true;
+    setChartRangeLoading(false);
   }, [machine_id]);
   useEffect(() => {
     if (!refetchTelemetry) return undefined;
@@ -322,11 +324,33 @@ export default function MidaCncMachineDetail() {
       skipTelemetryRefetchRef.current = false;
       return undefined;
     }
-    const timer = setTimeout(() => {
-      if (telemetryCoversFrom(rawMachineDataRef.current, telemetryFrom)) return;
-      refetchTelemetry();
+
+    let cancelled = false;
+    // Đã có data cover cửa sổ → không loading
+    if (telemetryCoversFrom(rawMachineDataRef.current, telemetryFrom)) {
+      setChartRangeLoading(false);
+      return undefined;
+    }
+
+    // Hiện spinner ngay khi đổi tháng/năm (trước debounce)
+    setChartRangeLoading(true);
+    const timer = setTimeout(async () => {
+      if (cancelled) return;
+      if (telemetryCoversFrom(rawMachineDataRef.current, telemetryFrom)) {
+        setChartRangeLoading(false);
+        return;
+      }
+      try {
+        await refetchTelemetry();
+      } finally {
+        if (!cancelled) setChartRangeLoading(false);
+      }
     }, TELEMETRY_REFETCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [telemetryFrom, refetchTelemetry]);
 
   const currentMachineStatus =
@@ -582,6 +606,15 @@ export default function MidaCncMachineDetail() {
   return (
     <div className="mida-page mida-page--detail">
       <MidaNavbar />
+
+      {chartRangeLoading ? (
+        <div className="mida-page-loading-overlay" role="status" aria-live="polite">
+          <div className="mida-page-loading-overlay__card">
+            <div className="spinner-border text-danger" aria-hidden="true" />
+            <div className="mida-page-loading-overlay__text">Đang tải dữ liệu biểu đồ…</div>
+          </div>
+        </div>
+      ) : null}
 
       {showMachineListToggle && !isOpen && (
         <button

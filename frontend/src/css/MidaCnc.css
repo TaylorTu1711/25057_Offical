@@ -3947,6 +3947,51 @@
   max-height: min(78vh, 780px);
 }
 
+.mida-page-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--mida-surface, #fff) 72%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.mida-page-loading-overlay__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.95rem 1.25rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(211, 47, 47, 0.28);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 4px 16px rgba(15, 23, 42, 0.12),
+    0 0 12px rgba(211, 47, 47, 0.12);
+}
+
+.mida-page-loading-overlay__text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--mida-brand, #d32f2f);
+  letter-spacing: 0.01em;
+}
+
+[data-theme='dark'] .mida-page-loading-overlay {
+  background: rgba(24, 16, 16, 0.72);
+}
+
+[data-theme='dark'] .mida-page-loading-overlay__card {
+  background: rgba(40, 24, 24, 0.95);
+  border-color: rgba(239, 83, 80, 0.4);
+}
+
+[data-theme='dark'] .mida-page-loading-overlay__text {
+  color: #ff8a80;
+}
+
 .mida-charts-cell {
   min-width: 0;
   min-height: 0;
