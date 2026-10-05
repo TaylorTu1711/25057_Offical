@@ -42,7 +42,6 @@ import {
   getDefaultRangeDates,
   buildTimeSeries,
   buildRunStopPctSeries,
-  buildRunStopShare,
   toErrorChartTickMode,
   getChartCategoryPrefix,
   getYearKeysFromData,
@@ -444,11 +443,6 @@ export default function MidaCncMachineDetail() {
   const runStopCutHourValues = runStopChartSeries.cutHours || [];
   const runStopIdleHourValues = runStopChartSeries.stopHours || [];
 
-  const runStopShare = useMemo(
-    () => buildRunStopShare(rawData, chartViewMode, chartSelection),
-    [rawData, chartViewMode, chartSelection],
-  );
-
   const isConnected = (lastUpdated) => isMachineConnected(lastUpdated, now);
 
   // Live charts: làm tròn 10s để khớp bucket, giảm rebuild mỗi 3s
@@ -844,8 +838,8 @@ export default function MidaCncMachineDetail() {
                   utilizationFormula="Tổng thời gian cắt gọt / Tổng thời gian mở máy × 100%"
                 />
                 <MidaRunStopPieChart
-                  runSeconds={runStopShare.runSeconds}
-                  onSeconds={runStopShare.onSeconds}
+                  runSeconds={totalTimeRunningSeconds}
+                  onSeconds={totalTimeOnSeconds}
                 />
               </div>
             </div>
