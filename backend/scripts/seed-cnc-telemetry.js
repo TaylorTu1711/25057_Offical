@@ -31,6 +31,14 @@ const round = (val, digits = 2) => {
 
 const STATUS_RUN = 2;
 const STATUS_STOP = 1;
+const VIETNAM_OFFSET_MS = 7 * 60 * 60 * 1000;
+/** Cột timestamp là giờ tường VN. toISOString() là UTC nên phải +7 trước khi ghi. */
+const TAIL_RUN_MS = 60 * 60 * 1000;
+
+function toVietnamWallClock(date) {
+  const shifted = new Date(date.getTime() + VIETNAM_OFFSET_MS);
+  return shifted.toISOString().slice(0, 23).replace('T', ' ');
+}
 
 async function ensureTable() {
   await ensureCncSchema(pool);
@@ -84,24 +92,34 @@ function buildRows() {
   let nextOfflineIn = Math.round(rand(80, 200));
 
   for (let t = start.getTime(); t <= endMs; t += SAMPLE_INTERVAL_SEC * 1000) {
-    // Khoảng chưa kết nối: bỏ mẫu (Gantt sẽ tô xám)
-    if (offlineSamplesLeft > 0) {
+    const inTail = endMs - t <= TAIL_RUN_MS;
+    // 60 phút cuối luôn có mẫu và đang chạy, để mép phải Gantt không bị vàng.
+    if (inTail) {
+      offlineSamplesLeft = 0;
+      running = true;
+      stateSamplesLeft = 10_000;
+    }
+
+    // Khoảng chưa kết nối: bỏ mẫu (Gantt sẽ tô vàng)
+    if (!inTail && offlineSamplesLeft > 0) {
       offlineSamplesLeft -= 1;
       continue;
     }
 
-    nextOfflineIn -= 1;
-    if (nextOfflineIn <= 0) {
-      offlineSamplesLeft = Math.round(rand(10, 40)); // ~5–20 phút mất mẫu
-      nextOfflineIn = Math.round(rand(120, 360));
-      continue;
+    if (!inTail) {
+      nextOfflineIn -= 1;
+      if (nextOfflineIn <= 0) {
+        offlineSamplesLeft = Math.round(rand(10, 40)); // ~5–20 phút mất mẫu
+        nextOfflineIn = Math.round(rand(120, 360));
+        continue;
+      }
     }
 
     const ts = new Date(t);
     const hour = ts.getHours();
     const isNight = hour >= 22 || hour < 6;
 
-    if (stateSamplesLeft <= 0) {
+    if (!inTail && stateSamplesLeft <= 0) {
       running = isNight ? Math.random() < 0.25 : Math.random() < 0.75;
       stateSamplesLeft = Math.round(running ? rand(40, 120) : rand(20, 60));
     }
@@ -148,7 +166,7 @@ function buildRows() {
     rows.push({
       nr,
       machine_id: machineId,
-      timestamp: ts.toISOString(),
+      timestamp: toVietnamWallClock(ts),
       time_on: timeOn,
       time_running: timeRunning,
       phase1_v: round(phase1V),
