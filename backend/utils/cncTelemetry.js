@@ -194,6 +194,14 @@ export async function ensureCncElectricalTelemetryColumns(db, qualifiedTable) {
   await ensureTimestampWithoutTz(db, qualifiedTable, schema, tableName);
 }
 
+/** Cột timestamp là giờ tường VN (không múi giờ). toISOString() là UTC nên phải +7. */
+const VIETNAM_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+function toVietnamWallClock(date) {
+  const shifted = new Date(date.getTime() + VIETNAM_OFFSET_MS);
+  return shifted.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 function normalizePayloadRow(row) {
   const payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
   return {
@@ -248,11 +256,11 @@ export async function fetchCncTelemetryRows(db, machineId, machine, options = {}
   const whereParts = [];
   const params = [];
   if (fromOk) {
-    params.push(fromOk.toISOString().slice(0, 19).replace('T', ' '));
+    params.push(toVietnamWallClock(fromOk));
     whereParts.push(`timestamp >= $${params.length}::timestamp`);
   }
   if (toOk) {
-    params.push(toOk.toISOString().slice(0, 19).replace('T', ' '));
+    params.push(toVietnamWallClock(toOk));
     whereParts.push(`timestamp <= $${params.length}::timestamp`);
   }
   const whereSql = whereParts.length ? `WHERE ${whereParts.join(' AND ')}` : '';

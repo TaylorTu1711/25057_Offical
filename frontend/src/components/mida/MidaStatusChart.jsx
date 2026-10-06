@@ -25,7 +25,6 @@ import {
   formatMidaLiveClock,
   getMidaLiveTimeXScaleConfig,
 } from '../../utils/midaLiveChartAxis';
-import { getStatusChartLabel } from '../../utils/machineStatus';
 
 ChartJS.register(
   CategoryScale,
@@ -40,7 +39,7 @@ ChartJS.register(
   ChartDataLabels,
 );
 
-const STATUS_CHART_TICKS = { 1: 'Dừng', 2: 'Quay' };
+const STATUS_CHART_TICKS = { 1: 'Dừng', 2: 'Cắt gọt' };
 
 /** Nén đỉnh bước để đường ngang/dọc gọn, không tô kín như sample 10s dày. */
 function toStatusStepPoints(timestamps, values) {
@@ -178,7 +177,7 @@ export default function MidaStatusChart({
             label: (ctx) => {
               const v = ctx.parsed.y;
               if (v == null || Number.isNaN(v)) return null;
-              return `${ctx.dataset.label}: ${getStatusChartLabel(v)}`;
+              return `${ctx.dataset.label}: ${STATUS_CHART_TICKS[v] ?? ''}`;
             },
           },
         },
