@@ -121,22 +121,76 @@ export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
   return { saved: true, reason: statusVal != null && last && Number(last.status) !== statusVal ? 'status_change' : 'interval' };
 }
 
-export async function tableExists(db, schema, tableName) {
-  const { rowCount } = await db.query(
-    `SELECT 1 FROM information_schema.tables
+/** Cache metadata bảng — tránh nhiều query information_schema mỗi lần mở chi tiết máy. */
+const tableMetaCache = new Map();
+const TABLE_META_TTL_MS = 5 * 60_000;
+
+function tableMetaKey(schema, tableName) {
+  return `${schema}.${tableName}`;
+}
+
+async function getTableMeta(db, schema, tableName) {
+  const key = tableMetaKey(schema, tableName);
+  const hit = tableMetaCache.get(key);
+  if (hit && Date.now() - hit.at < TABLE_META_TTL_MS) return hit.meta;
+
+  const { rows } = await db.query(
+    `SELECT column_name, data_type
+     FROM information_schema.columns
      WHERE table_schema = $1 AND table_name = $2`,
     [schema, tableName],
   );
-  return rowCount > 0;
+  const columns = new Map(rows.map((r) => [r.column_name, r.data_type]));
+  const meta = { exists: rows.length > 0, columns };
+  tableMetaCache.set(key, { at: Date.now(), meta });
+  return meta;
+}
+
+export async function tableExists(db, schema, tableName) {
+  const meta = await getTableMeta(db, schema, tableName);
+  return meta.exists;
 }
 
 export async function tableHasColumn(db, schema, tableName, columnName) {
-  const { rowCount } = await db.query(
-    `SELECT 1 FROM information_schema.columns
-     WHERE table_schema = $1 AND table_name = $2 AND column_name = $3`,
-    [schema, tableName, columnName],
+  const meta = await getTableMeta(db, schema, tableName);
+  return meta.columns.has(columnName);
+}
+
+/** Index timestamp giúp lọc cửa sổ daily/live nhanh hơn trên bảng raw lớn. */
+async function ensureTelemetryTimestampIndex(db, qualifiedTable, schema, tableName) {
+  const meta = await getTableMeta(db, schema, tableName);
+  if (!meta.exists || !meta.columns.has('timestamp')) return;
+  const safe = String(tableName).replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 40);
+  const indexName = `idx_${safe}_ts`;
+  await db.query(
+    `CREATE INDEX IF NOT EXISTS "${indexName}" ON ${qualifiedTable} ("timestamp")`,
   );
-  return rowCount > 0;
+}
+
+/** Cache kết quả daily ngắn — poll 60s + mở lại trang trong cùng cửa sổ. */
+const dailyResultCache = new Map();
+const DAILY_RESULT_TTL_MS = 45_000;
+
+function dailyCacheKey(machineId, from, to) {
+  return `${machineId}|${from || ''}|${to || ''}`;
+}
+
+function getCachedDaily(machineId, from, to) {
+  const key = dailyCacheKey(machineId, from, to);
+  const hit = dailyResultCache.get(key);
+  if (!hit) return null;
+  if (Date.now() - hit.at > DAILY_RESULT_TTL_MS) {
+    dailyResultCache.delete(key);
+    return null;
+  }
+  return hit.rows;
+}
+
+function setCachedDaily(machineId, from, to, rows) {
+  dailyResultCache.set(dailyCacheKey(machineId, from, to), {
+    at: Date.now(),
+    rows,
+  });
 }
 
 /** Cột telemetry điện CNC — dùng khi tạo máy mới / bổ sung bảng cũ. */
@@ -162,18 +216,16 @@ export const CNC_ELECTRICAL_COLUMNS = [
 
 /** Đổi TIMESTAMPTZ → TIMESTAMP (không +07), giữ giờ tường VN. */
 async function ensureTimestampWithoutTz(db, qualifiedTable, schema, tableName) {
-  const { rows } = await db.query(
-    `SELECT data_type FROM information_schema.columns
-     WHERE table_schema = $1 AND table_name = $2 AND column_name = 'timestamp'`,
-    [schema, tableName],
-  );
-  if (rows[0]?.data_type !== 'timestamp with time zone') return;
+  const meta = await getTableMeta(db, schema, tableName);
+  const dataType = meta.columns.get('timestamp');
+  if (dataType !== 'timestamp with time zone') return;
 
   await db.query(`
     ALTER TABLE ${qualifiedTable}
     ALTER COLUMN "timestamp" TYPE TIMESTAMP WITHOUT TIME ZONE
     USING ("timestamp" AT TIME ZONE 'Asia/Ho_Chi_Minh')
   `);
+  tableMetaCache.delete(tableMetaKey(schema, tableName));
 }
 
 /**
@@ -190,8 +242,10 @@ export async function ensureCncElectricalTelemetryColumns(db, qualifiedTable) {
       `ALTER TABLE ${qualifiedTable} ADD COLUMN IF NOT EXISTS "${column}" ${typeSql}`,
     );
   }
+  tableMetaCache.delete(tableMetaKey(schema, tableName));
 
   await ensureTimestampWithoutTz(db, qualifiedTable, schema, tableName);
+  await ensureTelemetryTimestampIndex(db, qualifiedTable, schema, tableName);
 }
 
 /** Cột timestamp là giờ tường VN (không múi giờ). toISOString() là UTC nên phải +7. */
@@ -303,12 +357,17 @@ export async function fetchCncTelemetryRows(db, machineId, machine, options = {}
 export async function fetchCncDailyTelemetryRows(db, machineId, machine, options = {}) {
   const qualified = telemetryTableRef(machineId, machine);
   const { schema, tableName } = parseQualifiedTable(qualified);
+  const cacheFrom = options.from || null;
+  const cacheTo = options.to || null;
+  const cached = getCachedDaily(machineId, cacheFrom, cacheTo);
+  if (cached) return cached;
 
   if (!(await tableExists(db, schema, tableName))) {
     return [];
   }
 
   await ensureTimestampWithoutTz(db, qualified, schema, tableName);
+  await ensureTelemetryTimestampIndex(db, qualified, schema, tableName);
 
   const hasTimeOn = await tableHasColumn(db, schema, tableName, 'time_on');
   const hasTimeRunning = await tableHasColumn(db, schema, tableName, 'time_running');
@@ -325,10 +384,13 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
       ...options,
       slim: false,
     });
-    return aggregateDailyFromRows(raw);
+    const aggregated = aggregateDailyFromRows(raw);
+    setCachedDaily(machineId, cacheFrom, cacheTo, aggregated);
+    return aggregated;
   }
 
   if (!hasTimeOn && !hasTimeRunning) {
+    setCachedDaily(machineId, cacheFrom, cacheTo, []);
     return [];
   }
 
@@ -443,7 +505,7 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
     params,
   );
 
-  return rows.map((r) => ({
+  const mapped = rows.map((r) => ({
     timestamp: r.timestamp,
     min_timestamp: r.min_timestamp,
     max_timestamp: r.timestamp,
@@ -456,6 +518,8 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
     power: Number(r.power) || 0,
     status: r.status != null ? Number(r.status) : null,
   }));
+  setCachedDaily(machineId, cacheFrom, cacheTo, mapped);
+  return mapped;
 }
 
 /** Fallback gom ngày từ rows thô (payload-only). */

@@ -124,14 +124,34 @@ function computeLiveTelemetryFromIso({ statusRangeMode, statusFrom, nowMinute })
   return new Date(earliest).toISOString();
 }
 
-/** Cửa sổ daily aggregate cho biểu đồ ngày→năm (nhẹ: ~365 dòng/năm). */
-function computeDailyTelemetryFromIso({ selectedYear, chartViewMode, nowMinute }) {
+/**
+ * Cửa sổ daily aggregate — thu hẹp theo mode để lần đầu vào trang không scan cả năm raw.
+ * - day/week/hour: từ đầu tháng đang chọn (~1 tháng raw → daily)
+ * - month/quarter: cả năm đang chọn
+ * - year: tối đa 5 năm gần nhất
+ */
+function computeDailyTelemetryFromIso({
+  selectedYear,
+  selectedMonth,
+  chartViewMode,
+  nowMinute,
+}) {
   const nowMs = nowMinute * 60_000;
   const currentYear = new Date(nowMs).getFullYear();
-  // Mode năm: lấy nhiều năm; còn lại: cả năm đang chọn (đổi tháng/tuần không refetch)
-  const earliest = chartViewMode === CHART_VIEW_MODES.year
-    ? new Date(currentYear - 10, 0, 1).getTime()
-    : new Date(selectedYear, 0, 1).getTime();
+  let earliest;
+  if (chartViewMode === CHART_VIEW_MODES.year) {
+    earliest = new Date(currentYear - 5, 0, 1).getTime();
+  } else if (
+    chartViewMode === CHART_VIEW_MODES.month
+    || chartViewMode === CHART_VIEW_MODES.quarter
+  ) {
+    earliest = new Date(selectedYear, 0, 1).getTime();
+  } else {
+    const month = Number(selectedMonth) >= 1 && Number(selectedMonth) <= 12
+      ? Number(selectedMonth)
+      : 1;
+    earliest = new Date(selectedYear, month - 1, 1).getTime();
+  }
   return new Date(Math.min(earliest, nowMs) - 5 * 60_000).toISOString();
 }
 
@@ -173,10 +193,11 @@ export default function MidaCncMachineDetail() {
     () =>
       computeDailyTelemetryFromIso({
         selectedYear,
+        selectedMonth,
         chartViewMode,
         nowMinute,
       }),
-    [selectedYear, chartViewMode, nowMinute],
+    [selectedYear, selectedMonth, chartViewMode, nowMinute],
   );
 
   const hourRange = useMemo(() => {

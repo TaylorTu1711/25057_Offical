@@ -222,16 +222,8 @@ export default function useMidaMachineData(machineId, {
   const [currentAvg, setCurrentAvg] = useState(0);
   const [frequencyHz, setFrequencyHz] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [chartRangeLoading, setChartRangeLoading] = useState(false);
-  const rangeLoadingCountRef = useRef(0);
-  const beginRangeLoading = useCallback(() => {
-    rangeLoadingCountRef.current += 1;
-    setChartRangeLoading(true);
-  }, []);
-  const endRangeLoading = useCallback(() => {
-    rangeLoadingCountRef.current = Math.max(0, rangeLoadingCountRef.current - 1);
-    if (rangeLoadingCountRef.current === 0) setChartRangeLoading(false);
-  }, []);
+  /** Giữ API cho overlay (không chặn trang khi daily load nền). */
+  const [chartRangeLoading] = useState(false);
 
   const hasLiveDataRef = useRef(false);
   const hasDailyDataRef = useRef(false);
@@ -446,10 +438,16 @@ export default function useMidaMachineData(machineId, {
         applyDailyTelemetry(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error(err.message);
-        // Fallback: gom daily từ raw cửa sổ daily (tương thích backend cũ)
+        // Fallback hẹp: tối đa ~14 ngày raw — tránh kéo cả năm khi API daily lỗi
         try {
-          const params = {};
-          if (dailyFromRef.current) params.from = dailyFromRef.current;
+          const fallbackFromMs = Date.now() - 14 * 24 * 60 * 60 * 1000;
+          const requestedFromMs = dailyFromRef.current
+            ? new Date(dailyFromRef.current).getTime()
+            : fallbackFromMs;
+          const fromMs = Number.isFinite(requestedFromMs)
+            ? Math.max(requestedFromMs, fallbackFromMs)
+            : fallbackFromMs;
+          const params = { from: new Date(fromMs).toISOString() };
           if (dailyToRef.current) params.to = dailyToRef.current;
           const res = await axios.get(
             `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machineId)}/telemetry`,
@@ -544,6 +542,7 @@ export default function useMidaMachineData(machineId, {
     fetchPerformanceSummary,
   ]);
 
+  /** Boot nhanh: info + live — không chờ daily (chart load nền). */
   const fetchAllMachineData = useCallback(async () => {
     if (!machineId) return;
     try {
@@ -552,8 +551,6 @@ export default function useMidaMachineData(machineId, {
         fetchMachineInfo(),
         fetchErrors(),
         fetchLiveTelemetry({ silent: true }),
-        fetchDailyTelemetry({ silent: true }),
-        fetchHourTelemetry(),
         fetchPerformanceSummary(),
         fetchMachines(),
       ]);
@@ -567,8 +564,6 @@ export default function useMidaMachineData(machineId, {
     fetchMachineInfo,
     fetchErrors,
     fetchLiveTelemetry,
-    fetchDailyTelemetry,
-    fetchHourTelemetry,
     fetchPerformanceSummary,
     fetchMachines,
   ]);
@@ -633,75 +628,68 @@ export default function useMidaMachineData(machineId, {
     };
   }, [machineId, resolvedLiveFrom, resolvedLiveTo, fetchLiveTelemetry]);
 
-  // Đổi năm / cửa sổ daily → refetch tổng hợp ngày (có spinner)
-  const skipDailyRefetchRef = useRef(true);
+  // Daily: lần đầu load nền (không overlay toàn trang); đổi cửa sổ mới hiện spinner
   const dailyCoveredRef = useRef('');
   useEffect(() => {
-    skipDailyRefetchRef.current = true;
     dailyCoveredRef.current = '';
-    rangeLoadingCountRef.current = 0;
-    setChartRangeLoading(false);
   }, [machineId]);
   useEffect(() => {
     if (!machineId || !dailyFrom) return undefined;
-    if (skipDailyRefetchRef.current) {
-      skipDailyRefetchRef.current = false;
-      dailyCoveredRef.current = `${dailyFrom}|${dailyTo || ''}`;
-      return undefined;
-    }
     const key = `${dailyFrom}|${dailyTo || ''}`;
     if (key === dailyCoveredRef.current && hasDailyDataRef.current) {
       return undefined;
     }
 
+    // Không overlay toàn trang — trang đã hiện; chart tự đầy khi daily xong
     let cancelled = false;
     const timer = setTimeout(async () => {
       if (cancelled) return;
-      beginRangeLoading();
       try {
         await fetchDailyTelemetry({ silent: true });
         if (!cancelled) dailyCoveredRef.current = key;
-      } finally {
-        endRangeLoading();
+      } catch (err) {
+        console.error(err.message);
       }
-    }, 200);
+    }, hasDailyDataRef.current ? 200 : 0);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [machineId, dailyFrom, dailyTo, fetchDailyTelemetry, beginRangeLoading, endRangeLoading]);
+  }, [machineId, dailyFrom, dailyTo, fetchDailyTelemetry]);
 
-  // Mode giờ: tải raw đúng 1 ngày
-  const skipHourRefetchRef = useRef(true);
+  // Mode giờ: tải raw đúng 1 ngày (lần đầu nền; đổi ngày mới overlay)
+  const hourCoveredRef = useRef('');
   useEffect(() => {
-    skipHourRefetchRef.current = true;
+    hourCoveredRef.current = '';
   }, [machineId]);
   useEffect(() => {
     if (!machineId) return undefined;
     if (!hourFrom) {
       setHourTelemetryRows([]);
       lastHourFingerprintRef.current = '';
+      hourCoveredRef.current = '';
       return undefined;
     }
-    if (skipHourRefetchRef.current) {
-      skipHourRefetchRef.current = false;
+    const key = `${hourFrom}|${hourTo || ''}`;
+    if (key === hourCoveredRef.current && lastHourFingerprintRef.current) {
       return undefined;
     }
+
     let cancelled = false;
     const timer = setTimeout(async () => {
       if (cancelled) return;
-      beginRangeLoading();
       try {
         await fetchHourTelemetry();
-      } finally {
-        endRangeLoading();
+        if (!cancelled) hourCoveredRef.current = key;
+      } catch (err) {
+        console.error(err.message);
       }
-    }, 150);
+    }, lastHourFingerprintRef.current ? 150 : 0);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [machineId, hourFrom, hourTo, fetchHourTelemetry, beginRangeLoading, endRangeLoading]);
+  }, [machineId, hourFrom, hourTo, fetchHourTelemetry]);
 
   usePolling(fetchStatusLive, POLL_INTERVALS.status, Boolean(machineId));
   usePolling(fetchLiveData, POLL_INTERVALS.live, Boolean(machineId));
