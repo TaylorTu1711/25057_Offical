@@ -1,0 +1,40 @@
+{
+  "name": "demo2",
+  "version": "1.0.0",
+  "main": "backend/server.js",
+  "scripts": {
+    "dev": "nodemon backend/server.js",
+    "build": "npm install && npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend && npm run seed:mida-admin",
+    "seed:mida-admin": "node backend/scripts/create-mida-admin.js",
+    "start": "node backend/server.js",
+    "migrate:shoot-real": "node backend/scripts/migrate-shoot-to-real.js",
+    "migrate:shoot-real:sql": "psql -U \"${DB_USER:-postgres}\" -d \"${DB_NAME:-postgres}\" -f backend/scripts/migrate-shoot-to-real.sql",
+    "migrate:product-real": "node backend/scripts/migrate-product-to-real.js",
+    "migrate:product-real:sql": "psql -U \"${DB_USER:-postgres}\" -d \"${DB_NAME:-postgres}\" -f backend/scripts/migrate-product-to-real.sql"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@arcjet/node": "^1.0.0-beta.7",
+    "@neondatabase/serverless": "^1.0.0",
+    "bcrypt": "^6.0.0",
+    "chartjs-plugin-zoom": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^0.548.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.1",
+    "pg": "^8.16.0",
+    "react-datepicker": "^8.4.0",
+    "redis": "^5.5.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

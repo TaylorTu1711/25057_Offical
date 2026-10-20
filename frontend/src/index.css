@@ -1,0 +1,305 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root,
+[data-theme='light'] {
+  /* Nền sáng — đậm/nhạt xen kẽ, tông xanh SCADA */
+  --app-bg: #cdd8eb;
+  --app-surface: #f2f6fc;
+  --app-surface-muted: #e6edf9;
+  --app-surface-deep: #d5e0f2;
+  --app-surface-glow: #ffffff;
+  --app-text: #212529;
+  --app-text-muted: #5a6d8a;
+  --app-border: rgba(32, 64, 154, 0.18);
+  --navbar-bg: #e8f0fb;
+  --brand-color: rgba(32, 64, 154, 1);
+  --nav-hover-bg: rgba(32, 64, 154, 0.1);
+  --accent-blue: rgba(32, 64, 154, 1);
+  --neon-highlight-top: rgba(255, 255, 255, 0.92);
+  --card-shadow:
+    0 0 1px rgba(32, 64, 154, 0.14),
+    0 0 18px rgba(32, 64, 154, 0.07),
+    0 4px 16px rgba(32, 64, 154, 0.1);
+  --ambient-bg:
+    radial-gradient(ellipse 85% 55% at 12% -8%, rgba(32, 64, 154, 0.16) 0%, transparent 58%),
+    radial-gradient(ellipse 65% 45% at 98% 8%, rgba(56, 189, 248, 0.12) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 40% at 50% 105%, rgba(32, 64, 154, 0.12) 0%, transparent 48%),
+    radial-gradient(ellipse 40% 30% at 72% 42%, rgba(125, 212, 252, 0.09) 0%, transparent 50%);
+}
+
+[data-theme='dark'] {
+  /* Nền xanh neon — sáng vừa phải (#7dd4fc / #38bdf8 / #2563eb) */
+  --app-bg: #061a32;
+  --app-surface: #0d2d5c;
+  --app-surface-muted: #154080;
+  --app-surface-deep: #0a2248;
+  --app-surface-glow: rgba(22, 68, 130, 0.88);
+  --app-text: #eef8ff;
+  --app-text-muted: rgba(125, 212, 252, 0.78);
+  --app-border: rgba(56, 189, 248, 0.3);
+  --navbar-bg: #081f42;
+  --brand-color: #7dd4fc;
+  --nav-hover-bg: rgba(56, 189, 248, 0.18);
+  --accent-blue: #38bdf8;
+  --neon-glow-soft: rgba(56, 189, 248, 0.14);
+  --neon-glow-mid: rgba(56, 189, 248, 0.28);
+  --neon-glow-strong: rgba(56, 189, 248, 0.55);
+  --neon-highlight-top: rgba(125, 212, 252, 0.22);
+  --card-shadow:
+    0 0 1px rgba(56, 189, 248, 0.42),
+    0 0 22px rgba(37, 99, 235, 0.18),
+    0 4px 18px rgba(0, 0, 0, 0.42);
+  --ambient-bg:
+    radial-gradient(ellipse 85% 55% at 12% -8%, rgba(37, 99, 235, 0.38) 0%, transparent 58%),
+    radial-gradient(ellipse 65% 45% at 98% 8%, rgba(56, 189, 248, 0.24) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 40% at 50% 105%, rgba(37, 99, 235, 0.2) 0%, transparent 48%),
+    radial-gradient(ellipse 40% 30% at 72% 42%, rgba(56, 189, 248, 0.12) 0%, transparent 50%);
+}
+
+.text-brand {
+  color: var(--brand-color) !important;
+}
+
+/* Chữ xanh inline → trắng ở dark mode */
+[data-theme='dark'] [style*="color: 'rgba(32, 64, 154"],
+[data-theme='dark'] [style*='color: "rgba(32, 64, 154'],
+[data-theme='dark'] [style*="color: '#203E9A'"],
+[data-theme='dark'] [style*='color: "#203E9A"'],
+[data-theme='dark'] [style*="color: '#20409a'"],
+[data-theme='dark'] [style*='color: "#20409a"'],
+[data-theme='dark'] [style*="color: '#20409A'"],
+[data-theme='dark'] [style*='color: "#20409A"'] {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] [style*="color: '#000080'"],
+[data-theme='dark'] [style*='color: "#000080"'] {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .text-danger {
+  color: #ff8a80 !important;
+}
+
+.chart-title-brand {
+  color: var(--brand-color);
+}
+
+[data-theme='dark'] .chart-title-brand,
+[data-theme='dark'] .machine-chart-head {
+  color: #ffffff !important;
+}
+
+.chart-time-range {
+  color: var(--brand-color);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+html,
+body {
+  background-color: var(--app-bg);
+  background-image: var(--ambient-bg);
+  background-attachment: fixed;
+  color: var(--app-text);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.app-shell,
+.app-page-bg {
+  background-color: var(--app-bg) !important;
+  background-image: var(--ambient-bg);
+  background-attachment: fixed;
+}
+
+[data-theme='light'] .bg-white,
+[data-theme='light'] .card,
+[data-theme='light'] .modal-content,
+[data-theme='dark'] .bg-white,
+[data-theme='dark'] .card,
+[data-theme='dark'] .modal-content {
+  background: linear-gradient(
+    168deg,
+    var(--app-surface-glow) 0%,
+    var(--app-surface) 42%,
+    var(--app-surface-deep) 100%
+  ) !important;
+  color: var(--app-text);
+  box-shadow: var(--card-shadow);
+}
+
+[data-theme='light'] .bg-white.border,
+[data-theme='light'] .border.bg-white,
+[data-theme='light'] .card:not(.border-0),
+[data-theme='dark'] .bg-white.border,
+[data-theme='dark'] .border.bg-white,
+[data-theme='dark'] .card:not(.border-0) {
+  border-color: var(--app-border) !important;
+  box-shadow:
+    var(--card-shadow),
+    inset 0 1px 0 var(--neon-highlight-top);
+}
+
+[data-theme='light'] .bg-light,
+[data-theme='dark'] .bg-light {
+  background: linear-gradient(
+    180deg,
+    var(--app-surface-muted) 0%,
+    var(--app-surface-deep) 100%
+  ) !important;
+}
+
+[data-theme='dark'] .table-light {
+  --bs-table-bg: var(--app-surface-muted);
+  --bs-table-color: var(--app-text);
+  --bs-table-border-color: var(--app-border);
+}
+
+[data-theme='dark'] .table,
+[data-theme='dark'] .table.table-bordered,
+[data-theme='dark'] .table.table-sm {
+  --bs-table-bg: var(--app-surface);
+  --bs-table-color: var(--app-text);
+  --bs-table-border-color: var(--app-border);
+  --bs-table-striped-bg: var(--app-surface-muted);
+  --bs-table-striped-color: var(--app-text);
+  --bs-table-hover-bg: var(--app-surface-muted);
+  --bs-table-hover-color: var(--app-text);
+  --bs-table-active-bg: var(--app-surface-muted);
+  --bs-table-active-color: var(--app-text);
+  color: var(--app-text);
+  border-color: var(--app-border);
+  background-color: var(--app-surface);
+}
+
+[data-theme='dark'] .table > :not(caption) > * > * {
+  background-color: var(--app-surface) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+  box-shadow: none;
+}
+
+[data-theme='dark'] .table thead,
+[data-theme='dark'] .table thead.table-light,
+[data-theme='dark'] .table .table-light {
+  --bs-table-bg: var(--app-surface-muted);
+  --bs-table-color: var(--app-text);
+}
+
+[data-theme='dark'] .table thead th,
+[data-theme='dark'] .table thead td,
+[data-theme='dark'] .table .table-light th,
+[data-theme='dark'] .table .table-light td {
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+  border-color: var(--app-border) !important;
+}
+
+[data-theme='dark'] .table-hover > tbody > tr:hover > * {
+  background-color: var(--app-surface-muted) !important;
+  color: var(--app-text) !important;
+}
+
+[data-theme='dark'] thead[style*='background-color'],
+[data-theme='dark'] thead[style*='backgroundColor'] {
+  background-color: var(--app-surface-muted) !important;
+}
+
+[data-theme='dark'] .text-dark {
+  color: var(--app-text) !important;
+}
+
+[data-theme='dark'] .text-muted {
+  color: var(--app-text-muted) !important;
+}
+
+[data-theme='dark'] .border,
+[data-theme='dark'] .table-bordered {
+  border-color: var(--app-border) !important;
+}
+
+/* Thẻ/panel chưa có viền rõ — bổ sung viền trong dark mode */
+[data-theme='dark'] .card:not(.border-0) {
+  border: 1px solid var(--app-border) !important;
+}
+
+[data-theme='light'] .machine-top-panel__image-wrap,
+[data-theme='light'] .machine-top-panel__name,
+[data-theme='light'] .machine-top-panel__status-icon--stopped,
+[data-theme='light'] .machine-top-panel__stat-box,
+[data-theme='dark'] .machine-top-panel__image-wrap,
+[data-theme='dark'] .machine-top-panel__name,
+[data-theme='dark'] .machine-top-panel__status-icon--stopped,
+[data-theme='dark'] .machine-top-panel__stat-box {
+  border: 1px solid var(--app-border) !important;
+  box-shadow:
+    var(--card-shadow),
+    inset 0 1px 0 var(--neon-highlight-top);
+}
+
+[data-theme='dark'] .shadow,
+[data-theme='dark'] .shadow-sm,
+[data-theme='dark'] .shadow-lg {
+  box-shadow: var(--card-shadow) !important;
+}
+
+[data-theme='dark'] .list-group-item {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .offcanvas {
+  background-color: var(--tree-bg) !important;
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .offcanvas-header {
+  background-color: var(--app-surface-muted);
+  border-color: var(--app-border) !important;
+}
+
+/* Bootstrap form trong dark mode (ngoài modal) */
+[data-theme='dark'] .form-control,
+[data-theme='dark'] .form-select {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .form-control:focus,
+[data-theme='dark'] .form-select:focus {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 0.2rem rgba(56, 189, 248, 0.25);
+}
+
+[data-theme='dark'] .form-label {
+  color: var(--app-text);
+}
+
+[data-theme='dark'] .btn-primary {
+  background-color: var(--app-surface-muted);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .btn-primary:hover {
+  background-color: var(--nav-hover-bg);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .btn-outline-secondary {
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-theme='dark'] .btn-outline-secondary:hover {
+  background-color: var(--nav-hover-bg);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}

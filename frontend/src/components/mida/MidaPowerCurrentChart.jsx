@@ -1,0 +1,317 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Chart } from 'react-chartjs-2';
+import zoomPlugin from 'chartjs-plugin-zoom';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import useTheme from '../../hooks/useTheme';
+import useSyncChartTheme from '../../hooks/useSyncChartTheme';
+import {
+  themedScale,
+  themedXScale,
+  chartStableRenderOptions,
+  getChartLegendOptions,
+  formatChartTooltipValue,
+  isDarkChartTheme,
+} from '../../utils/chartTheme';
+import {
+  formatMidaLiveClock,
+  getMidaLiveTimeXScaleConfig,
+} from '../../utils/midaLiveChartAxis';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+  zoomPlugin,
+  ChartDataLabels,
+);
+
+const Y_POWER_HEADROOM = 0.1;
+
+function roundSigUp(v, sig = 2) {
+  if (!Number.isFinite(v) || v <= 0) return 0;
+  const exp = Math.floor(Math.log10(v)) - (sig - 1);
+  const step = Math.pow(10, exp);
+  return Math.ceil(v / step) * step;
+}
+
+function roundSigDown(v, sig = 2) {
+  if (!Number.isFinite(v) || v === 0) return 0;
+  const abs = Math.abs(v);
+  const exp = Math.floor(Math.log10(abs)) - (sig - 1);
+  const step = Math.pow(10, exp);
+  return Math.sign(v) * Math.floor(abs / step) * step;
+}
+
+function computeStableBound(values, headroom, prev) {
+  let hi = -Infinity;
+  let lo = Infinity;
+  for (const raw of values || []) {
+    const v = Number(raw);
+    if (!Number.isFinite(v)) continue;
+    if (v > hi) hi = v;
+    if (v < lo) lo = v;
+  }
+  if (!Number.isFinite(hi) || !Number.isFinite(lo) || (hi <= 0 && lo >= 0)) {
+    return null;
+  }
+
+  let max;
+  if (prev && hi <= prev.max && hi >= prev.max * 0.55) {
+    max = prev.max;
+  } else {
+    max = roundSigUp(hi * (1 + headroom), 2);
+  }
+
+  let min;
+  if (lo >= 0) {
+    min = 0;
+  } else if (prev && prev.min < 0 && lo >= prev.min && lo <= prev.min * 0.55) {
+    min = prev.min;
+  } else {
+    const pad = Math.max(Math.abs(hi - lo) * headroom, Math.abs(lo) * 0.05, 0.1);
+    min = roundSigDown(lo - pad, 2);
+  }
+
+  return { min, max };
+}
+
+/**
+ * Biểu đồ công suất theo khoảng thời gian.
+ * Zoom/pan → tự tạm dừng cập nhật live; bấm nút để chạy lại + reset zoom.
+ */
+export default function MidaPowerCurrentChart({
+  timestamps = [],
+  powerValues = [],
+}) {
+  const { theme } = useTheme();
+  const isDark = isDarkChartTheme(theme);
+  const chartRef = useRef(null);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const latestPropsRef = useRef({ timestamps, powerValues });
+  const frozenRef = useRef({
+    timestamps,
+    powerValues,
+  });
+
+  latestPropsRef.current = { timestamps, powerValues };
+  pausedRef.current = paused;
+
+  // Khi đang chạy: luôn bám props mới. Khi tạm dừng: giữ snapshot.
+  useEffect(() => {
+    if (paused) return;
+    frozenRef.current = { timestamps, powerValues };
+  }, [paused, timestamps, powerValues]);
+
+  const display = paused
+    ? frozenRef.current
+    : { timestamps, powerValues };
+
+  const pauseLive = useCallback(() => {
+    if (pausedRef.current) return;
+    frozenRef.current = { ...latestPropsRef.current };
+    setPaused(true);
+  }, []);
+
+  const resumeLive = useCallback(() => {
+    const chart = chartRef.current;
+    if (chart?.resetZoom) {
+      chart.resetZoom('none');
+    }
+    frozenRef.current = { ...latestPropsRef.current };
+    setPaused(false);
+  }, []);
+
+  const yBoundsRef = useRef({ yPower: null });
+  const yBounds = useMemo(() => {
+    const yPower = computeStableBound(
+      display.powerValues,
+      Y_POWER_HEADROOM,
+      yBoundsRef.current.yPower,
+    );
+    yBoundsRef.current = { yPower };
+    return { yPower };
+  }, [display.powerValues]);
+
+  const data = useMemo(() => {
+    const toPoints = (values) =>
+      display.timestamps.map((t, i) => {
+        const y = values[i];
+        return { x: t, y: Number.isFinite(Number(y)) ? Number(y) : null };
+      });
+    return {
+      datasets: [
+        {
+          type: 'line',
+          label: 'Công suất trục spindle (kW)',
+          data: toPoints(display.powerValues),
+          yAxisID: 'yPower',
+          borderColor: '#7c3aed',
+          backgroundColor: 'rgba(124, 58, 237, 0.10)',
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointBackgroundColor: '#7c3aed',
+          pointBorderColor: '#ffffff',
+          borderWidth: 2,
+          tension: 0,
+          fill: display.timestamps.length <= 600,
+          spanGaps: true,
+          parsing: false,
+          normalized: true,
+          datalabels: { display: false },
+        },
+      ],
+    };
+  }, [display.timestamps, display.powerValues]);
+
+  const options = useMemo(
+    () => ({
+      ...chartStableRenderOptions,
+      animation: false,
+      animations: {},
+      transitions: {
+        active: { animation: { duration: 150 } },
+        resize: { animation: { duration: 0 } },
+      },
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: getChartLegendOptions({ labels: { padding: 6, font: { size: 10 } } }, theme),
+        datalabels: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              const x = items?.[0]?.parsed?.x ?? items?.[0]?.raw?.x;
+              return Number.isFinite(x) ? formatMidaLiveClock(x, true) : '';
+            },
+            label: (ctx) => {
+              const v = ctx.parsed.y;
+              if (v == null || Number.isNaN(v)) return null;
+              return `${ctx.dataset.label}: ${formatChartTooltipValue(v)} kW`;
+            },
+          },
+        },
+        zoom: {
+          limits: { x: { minRange: 10_000 } },
+          pan: {
+            enabled: true,
+            mode: 'x',
+            onPanStart: () => {
+              pauseLive();
+            },
+            onPanComplete: () => {
+              pauseLive();
+            },
+          },
+          zoom: {
+            wheel: { enabled: true, speed: 0.1 },
+            pinch: { enabled: true },
+            drag: {
+              enabled: true,
+              backgroundColor: 'rgba(220, 38, 38, 0.12)',
+              borderColor: 'rgba(220, 38, 38, 0.45)',
+              borderWidth: 1,
+            },
+            mode: 'x',
+            onZoomStart: () => {
+              pauseLive();
+            },
+            onZoomComplete: () => {
+              pauseLive();
+            },
+          },
+        },
+      },
+      scales: {
+        x: themedXScale(
+          getMidaLiveTimeXScaleConfig(),
+          undefined,
+          'linear',
+          theme,
+        ),
+        yPower: themedScale(
+          {
+            beginAtZero: true,
+            position: 'left',
+            min: yBounds.yPower?.min,
+            max: yBounds.yPower?.max,
+            title: {
+              display: true,
+              text: 'kW',
+              color: isDark ? '#c4b5fd' : '#7c3aed',
+              font: { size: 11, weight: '600' },
+            },
+            ticks: {
+              padding: 4,
+              precision: 0,
+              callback: (value) => {
+                const n = Number(value);
+                if (!Number.isFinite(n)) return value;
+                if (Math.abs(n - Math.round(n)) > 1e-6) return '';
+                return String(Math.round(n));
+              },
+            },
+            grid: {
+              display: true,
+              drawOnChartArea: true,
+            },
+          },
+          undefined,
+          'linear',
+          theme,
+        ),
+      },
+    }),
+    [theme, isDark, yBounds, pauseLive],
+  );
+
+  useSyncChartTheme(chartRef, theme, options);
+
+  return (
+    <div
+      className="mida-power-chart"
+      onMouseEnter={pauseLive}
+      onMouseLeave={resumeLive}
+      onTouchStart={pauseLive}
+    >
+      {paused ? (
+        <button
+          type="button"
+          className="mida-power-chart__resume"
+          onClick={(e) => {
+            e.stopPropagation();
+            resumeLive();
+          }}
+          title="Chạy lại cập nhật realtime và reset zoom"
+        >
+          Tạm dừng — bấm để chạy lại
+        </button>
+      ) : null}
+      <Chart
+        ref={chartRef}
+        key={theme}
+        type="line"
+        data={data}
+        options={options}
+        style={{ position: 'relative' }}
+      />
+    </div>
+  );
+}
