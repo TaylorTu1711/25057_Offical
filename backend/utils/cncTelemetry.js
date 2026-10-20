@@ -603,26 +603,26 @@ export async function fetchCncAlarmRows(db, machineId, machine) {
 /**
  * Dọn telemetry CNC theo độ phân giải:
  * - Ngày hiện tại (Asia/Ho_Chi_Minh): giữ ~1 mẫu / 10 giây
- * - Các ngày trước: gộp 1 phút / mẫu; công suất + dòng điện = AVG(~6 mẫu 10s)
+ * - Các ngày khác: gộp 1 phút / mẫu; công suất + dòng điện = AVG(~6 mẫu 10s)
  * Các cột khác giữ giá trị bản ghi mới nhất trong phút.
- * @returns {number} số dòng đã xóa
+ * @returns {{ deleted: number, keptToday: number, keptPast: number, today: string }}
  */
 export async function bootCncTelemetryTable(db, machineId, machine) {
   const qualified = telemetryTableRef(machineId, machine);
   const { schema, tableName } = parseQualifiedTable(qualified);
 
   if (!(await tableExists(db, schema, tableName))) {
-    return 0;
+    return { deleted: 0, keptToday: 0, keptPast: 0, today: null };
   }
 
   const hasTimestamp = await tableHasColumn(db, schema, tableName, 'timestamp');
   if (!hasTimestamp) {
-    return 0;
+    return { deleted: 0, keptToday: 0, keptPast: 0, today: null };
   }
 
   const hasId = await tableHasColumn(db, schema, tableName, 'id');
   if (!hasId) {
-    return 0;
+    return { deleted: 0, keptToday: 0, keptPast: 0, today: null };
   }
 
   // Cột điện lấy trung bình trong bucket 1 phút
@@ -643,27 +643,26 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
   const client = await db.connect();
   try {
     await client.query('BEGIN');
+    await client.query(`SET LOCAL TIME ZONE 'Asia/Ho_Chi_Minh'`);
 
-    // Mốc 00:00 hôm nay theo giờ tường VN (khớp cột timestamp không TZ)
+    // Ngày hôm nay theo lịch VN (so sánh ::date — tránh lệch múi giờ)
     const { rows: dayRows } = await client.query(`
-      SELECT date_trunc(
-        'day',
-        (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')
-      ) AS today_start
+      SELECT (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS today
     `);
-    const todayStart = dayRows[0]?.today_start;
+    const today = dayRows[0]?.today;
 
     await client.query(`
       CREATE TEMP TABLE _mida_boot_keep (
-        id bigint PRIMARY KEY
+        id bigint PRIMARY KEY,
+        kind text NOT NULL
       ) ON COMMIT DROP
     `);
 
     // Hôm nay: 10 giây / mẫu
     await client.query(
       `
-      INSERT INTO _mida_boot_keep (id)
-      SELECT DISTINCT ON (bucket) id
+      INSERT INTO _mida_boot_keep (id, kind)
+      SELECT DISTINCT ON (bucket) id, 'today'
       FROM (
         SELECT
           id,
@@ -671,14 +670,14 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
           "timestamp"
         FROM ${qualified}
         WHERE "timestamp" IS NOT NULL
-          AND "timestamp" >= $1::timestamp
+          AND ("timestamp")::date = $1::date
       ) AS src
       ORDER BY bucket, "timestamp" DESC, id DESC
       `,
-      [todayStart],
+      [today],
     );
 
-    // Ngày trước: 1 phút / mẫu + AVG công suất/dòng
+    // Các ngày khác: 1 phút / mẫu + AVG công suất/dòng
     if (avgColumns.length > 0) {
       const avgSelects = avgColumns
         .map((col) => `AVG("${col}")::float8 AS avg_${col}`)
@@ -705,10 +704,10 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
           ${avgSelects}
         FROM ${qualified}
         WHERE "timestamp" IS NOT NULL
-          AND "timestamp" < $1::timestamp
+          AND ("timestamp")::date < $1::date
         GROUP BY floor(extract(epoch FROM "timestamp") / 60)::bigint
         `,
-        [todayStart],
+        [today],
       );
 
       await client.query(`
@@ -720,16 +719,15 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
       `);
 
       await client.query(`
-        INSERT INTO _mida_boot_keep (id)
-        SELECT keep_id FROM _mida_boot_min_agg
+        INSERT INTO _mida_boot_keep (id, kind)
+        SELECT keep_id, 'past' FROM _mida_boot_min_agg
         ON CONFLICT (id) DO NOTHING
       `);
     } else {
-      // Không có cột điện: vẫn downsample 1 phút, giữ bản ghi mới nhất
       await client.query(
         `
-        INSERT INTO _mida_boot_keep (id)
-        SELECT DISTINCT ON (bucket) id
+        INSERT INTO _mida_boot_keep (id, kind)
+        SELECT DISTINCT ON (bucket) id, 'past'
         FROM (
           SELECT
             id,
@@ -737,14 +735,21 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
             "timestamp"
           FROM ${qualified}
           WHERE "timestamp" IS NOT NULL
-            AND "timestamp" < $1::timestamp
+            AND ("timestamp")::date < $1::date
         ) AS src
         ORDER BY bucket, "timestamp" DESC, id DESC
         ON CONFLICT (id) DO NOTHING
         `,
-        [todayStart],
+        [today],
       );
     }
+
+    const { rows: keepStats } = await client.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE kind = 'today')::int AS kept_today,
+        COUNT(*) FILTER (WHERE kind = 'past')::int AS kept_past
+      FROM _mida_boot_keep
+    `);
 
     const result = await client.query(`
       DELETE FROM ${qualified} AS t
@@ -754,7 +759,12 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
     `);
 
     await client.query('COMMIT');
-    return result.rowCount ?? 0;
+    return {
+      deleted: result.rowCount ?? 0,
+      keptToday: keepStats[0]?.kept_today ?? 0,
+      keptPast: keepStats[0]?.kept_past ?? 0,
+      today: today != null ? String(today).slice(0, 10) : null,
+    };
   } catch (err) {
     try {
       await client.query('ROLLBACK');

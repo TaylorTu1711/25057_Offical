@@ -220,9 +220,15 @@ export const bootMidaCncMachineData = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy máy' });
     }
 
-    const deleted = await bootCncTelemetryTable(pool, machine_id, machine);
+    const result = await bootCncTelemetryTable(pool, machine_id, machine);
+    const deleted = typeof result === 'number' ? result : (result?.deleted ?? 0);
+    const keptToday = result?.keptToday ?? '?';
+    const keptPast = result?.keptPast ?? '?';
+    const today = result?.today ?? 'hôm nay';
     res.status(200).send(
-      `Đã xóa ${deleted} bản ghi; hôm nay ~10s/mẫu, ngày trước ~1 phút/mẫu (AVG công suất & dòng) (${machine_id})`,
+      `Boot ${machine_id}: xóa ${deleted} dòng. `
+      + `Giữ ${keptToday} mẫu ngày ${today} (10s/mẫu), `
+      + `${keptPast} mẫu các ngày trước (1 phút/mẫu, AVG công suất & dòng).`,
     );
   } catch (err) {
     console.error('bootMidaCncMachineData error:', err.message);
