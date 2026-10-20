@@ -507,7 +507,7 @@ export default function useMidaMachineData(machineId, {
 
   const handleBootData = useCallback(async () => {
     if (!window.confirm(
-      'Dọn dữ liệu: giữ ~10 giây/mẫu (mọi ngày). Tiếp tục?',
+      'Dọn dữ liệu: hôm nay giữ ~10 giây/mẫu; các ngày trước gộp 1 phút/mẫu (công suất & dòng = trung bình). Tiếp tục?',
     )) return;
     try {
       const res = await axios.delete(

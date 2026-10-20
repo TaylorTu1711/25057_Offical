@@ -601,9 +601,10 @@ export async function fetchCncAlarmRows(db, machineId, machine) {
 }
 
 /**
- * Dọn telemetry CNC: giữ ~1 mẫu / 10 giây (mọi ngày).
- * Mỗi bucket giữ bản ghi mới nhất.
- * Dùng temp keep-ids + anti-join (tránh DELETE NOT IN gây chậm/502 trên bảng lớn).
+ * Dọn telemetry CNC theo độ phân giải:
+ * - Ngày hiện tại (Asia/Ho_Chi_Minh): giữ ~1 mẫu / 10 giây
+ * - Các ngày trước: gộp 1 phút / mẫu; công suất + dòng điện = AVG(~6 mẫu 10s)
+ * Các cột khác giữ giá trị bản ghi mới nhất trong phút.
  * @returns {number} số dòng đã xóa
  */
 export async function bootCncTelemetryTable(db, machineId, machine) {
@@ -624,17 +625,43 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
     return 0;
   }
 
+  // Cột điện lấy trung bình trong bucket 1 phút
+  const avgColumnCandidates = [
+    'power',
+    'avg_a',
+    'phase1_a',
+    'phase2_a',
+    'phase3_a',
+  ];
+  const avgColumns = [];
+  for (const col of avgColumnCandidates) {
+    if (await tableHasColumn(db, schema, tableName, col)) {
+      avgColumns.push(col);
+    }
+  }
+
   const client = await db.connect();
   try {
     await client.query('BEGIN');
+
+    // Mốc 00:00 hôm nay theo giờ tường VN (khớp cột timestamp không TZ)
+    const { rows: dayRows } = await client.query(`
+      SELECT date_trunc(
+        'day',
+        (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')
+      ) AS today_start
+    `);
+    const todayStart = dayRows[0]?.today_start;
+
     await client.query(`
       CREATE TEMP TABLE _mida_boot_keep (
         id bigint PRIMARY KEY
       ) ON COMMIT DROP
     `);
 
-    // Mọi ngày: 10 giây / mẫu
-    await client.query(`
+    // Hôm nay: 10 giây / mẫu
+    await client.query(
+      `
       INSERT INTO _mida_boot_keep (id)
       SELECT DISTINCT ON (bucket) id
       FROM (
@@ -644,9 +671,80 @@ export async function bootCncTelemetryTable(db, machineId, machine) {
           "timestamp"
         FROM ${qualified}
         WHERE "timestamp" IS NOT NULL
+          AND "timestamp" >= $1::timestamp
       ) AS src
       ORDER BY bucket, "timestamp" DESC, id DESC
-    `);
+      `,
+      [todayStart],
+    );
+
+    // Ngày trước: 1 phút / mẫu + AVG công suất/dòng
+    if (avgColumns.length > 0) {
+      const avgSelects = avgColumns
+        .map((col) => `AVG("${col}")::float8 AS avg_${col}`)
+        .join(',\n          ');
+      const avgColDefs = avgColumns
+        .map((col) => `avg_${col} float8`)
+        .join(',\n        ');
+      const updateSets = avgColumns
+        .map((col) => `"${col}" = a.avg_${col}`)
+        .join(',\n        ');
+
+      await client.query(`
+        CREATE TEMP TABLE _mida_boot_min_agg (
+          keep_id bigint PRIMARY KEY,
+          ${avgColDefs}
+        ) ON COMMIT DROP
+      `);
+
+      await client.query(
+        `
+        INSERT INTO _mida_boot_min_agg (keep_id, ${avgColumns.map((c) => `avg_${c}`).join(', ')})
+        SELECT
+          (array_agg(id ORDER BY "timestamp" DESC, id DESC))[1] AS keep_id,
+          ${avgSelects}
+        FROM ${qualified}
+        WHERE "timestamp" IS NOT NULL
+          AND "timestamp" < $1::timestamp
+        GROUP BY floor(extract(epoch FROM "timestamp") / 60)::bigint
+        `,
+        [todayStart],
+      );
+
+      await client.query(`
+        UPDATE ${qualified} AS t
+        SET
+          ${updateSets}
+        FROM _mida_boot_min_agg AS a
+        WHERE t.id = a.keep_id
+      `);
+
+      await client.query(`
+        INSERT INTO _mida_boot_keep (id)
+        SELECT keep_id FROM _mida_boot_min_agg
+        ON CONFLICT (id) DO NOTHING
+      `);
+    } else {
+      // Không có cột điện: vẫn downsample 1 phút, giữ bản ghi mới nhất
+      await client.query(
+        `
+        INSERT INTO _mida_boot_keep (id)
+        SELECT DISTINCT ON (bucket) id
+        FROM (
+          SELECT
+            id,
+            floor(extract(epoch FROM "timestamp") / 60)::bigint AS bucket,
+            "timestamp"
+          FROM ${qualified}
+          WHERE "timestamp" IS NOT NULL
+            AND "timestamp" < $1::timestamp
+        ) AS src
+        ORDER BY bucket, "timestamp" DESC, id DESC
+        ON CONFLICT (id) DO NOTHING
+        `,
+        [todayStart],
+      );
+    }
 
     const result = await client.query(`
       DELETE FROM ${qualified} AS t

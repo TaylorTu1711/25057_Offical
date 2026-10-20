@@ -62,7 +62,6 @@ const getRollingFromDate = (minutesAgo, to = new Date()) => {
 
 const STATUS_RANGE_PRESETS = [
   { id: '1h', label: '1h', minutes: 60 },
-  { id: '24h', label: '24h', minutes: 1440 },
   { id: 'today', label: 'Hôm nay' },
 ];
 
