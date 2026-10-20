@@ -375,14 +375,23 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
       SELECT
         *,
         LAG(time_running) OVER (ORDER BY "timestamp" ASC, id ASC) AS prev_run,
-        LAG(power) OVER (ORDER BY "timestamp" ASC, id ASC) AS prev_power
+        LAG(power) OVER (ORDER BY "timestamp" ASC, id ASC) AS prev_power,
+        LAG("timestamp") OVER (ORDER BY "timestamp" ASC, id ASC) AS prev_ts
       FROM bounded
     ),
     with_energy AS (
       SELECT
         *,
         CASE
-          WHEN prev_run IS NOT NULL AND time_running > prev_run
+          WHEN prev_run IS NOT NULL
+            AND time_running > prev_run
+            AND (time_running - prev_run) <= GREATEST(
+              180::float8,
+              2.0 * GREATEST(
+                1::float8,
+                EXTRACT(EPOCH FROM ("timestamp" - prev_ts))
+              )
+            )
           THEN ((COALESCE(prev_power, power) + power) / 2.0)
                * ((time_running - prev_run) / 3600.0)
           ELSE 0::float8
@@ -399,8 +408,6 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
         (array_agg(time_on ORDER BY "timestamp" DESC, id DESC))[1] AS last_time_on,
         (array_agg(time_running ORDER BY "timestamp" ASC, id ASC))[1] AS first_time_running,
         (array_agg(time_running ORDER BY "timestamp" DESC, id DESC))[1] AS last_time_running,
-        (array_agg(power_consumption ORDER BY "timestamp" ASC, id ASC))[1] AS first_kwh,
-        (array_agg(power_consumption ORDER BY "timestamp" DESC, id DESC))[1] AS last_kwh,
         (array_agg(product ORDER BY "timestamp" ASC, id ASC))[1] AS first_product,
         (array_agg(product ORDER BY "timestamp" DESC, id DESC))[1] AS last_product,
         (array_agg(input_material ORDER BY "timestamp" ASC, id ASC))[1] AS first_input,
@@ -422,8 +429,8 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
         WHEN last_time_running >= first_time_running THEN last_time_running - first_time_running
         ELSE last_time_running
       END AS time_running,
+      -- Chỉ tính từ power × Δtime_running (không dùng cột power_consumption PLC — đơn vị sai/phình)
       CASE
-        WHEN last_kwh > first_kwh THEN last_kwh - first_kwh
         WHEN energy_integral > 0 THEN energy_integral
         ELSE 0::float8
       END AS power_consumption,
@@ -495,11 +502,16 @@ function aggregateDailyFromRows(raw) {
       const currRun = Number(sorted[i].time_running) || 0;
       const dt = currRun - prevRun;
       if (dt <= 0) continue;
+      const t0 = new Date(sorted[i - 1].timestamp).getTime();
+      const t1 = new Date(sorted[i].timestamp).getTime();
+      const wallSec = Number.isFinite(t0) && Number.isFinite(t1) && t1 > t0
+        ? (t1 - t0) / 1000
+        : 60;
+      if (dt > Math.max(180, wallSec * 2)) continue;
       const p0 = Number(sorted[i - 1].power) || 0;
       const p1 = Number(sorted[i].power) || 0;
       energy += ((p0 + p1) / 2) * (dt / 3600);
     }
-    const kwhDelta = resolveDelta(min.power_consumption, max.power_consumption);
     return {
       timestamp: max.timestamp,
       min_timestamp: min.timestamp,
@@ -507,7 +519,8 @@ function aggregateDailyFromRows(raw) {
       date_key: date,
       time_on: resolveDelta(min.time_on, max.time_on),
       time_running: resolveDelta(min.time_running, max.time_running),
-      power_consumption: kwhDelta > 0 ? kwhDelta : energy,
+      // Chỉ từ power × Δtime_running
+      power_consumption: energy,
       product: resolveDelta(min.product, max.product),
       input_material: resolveDelta(min.input_material, max.input_material),
       power: Number(max.power) || 0,

@@ -169,8 +169,33 @@ export const getQuartersInYear = (year) =>
     };
   });
 
+/** kWh từ power × Δtime_running (bỏ khoảng time_running nhảy bất thường). */
+function energyKwhFromPowerSamples(rows) {
+  if (!Array.isArray(rows) || rows.length < 2) return 0;
+  const sorted = [...rows].sort(
+    (a, b) => new Date(a.timestamp) - new Date(b.timestamp),
+  );
+  let total = 0;
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prevRun = Number(sorted[i - 1].time_running) || 0;
+    const currRun = Number(sorted[i].time_running) || 0;
+    let dtSec = currRun - prevRun;
+    if (dtSec <= 0) continue;
+    const t0 = new Date(sorted[i - 1].timestamp).getTime();
+    const t1 = new Date(sorted[i].timestamp).getTime();
+    const wallSec = Number.isFinite(t0) && Number.isFinite(t1) && t1 > t0
+      ? (t1 - t0) / 1000
+      : 60;
+    if (dtSec > Math.max(180, wallSec * 2)) continue;
+    const p0 = Number(sorted[i - 1].power) || 0;
+    const p1 = Number(sorted[i].power) || 0;
+    total += ((p0 + p1) / 2) * (dtSec / 3600);
+  }
+  return total;
+}
+
 /**
- * Gom telemetry thô theo giờ trong một ngày (delta time_on / time_running / kWh).
+ * Gom telemetry thô theo giờ trong một ngày (delta time_on / time_running; kWh từ power).
  * @returns {Record<string, { time_on: number, time_running: number, power_consumption: number, product: number }>}
  */
 export function aggregateTelemetryByHour(rawRows = [], dayDate) {
@@ -209,19 +234,18 @@ export function aggregateTelemetryByHour(rawRows = [], dayDate) {
     const last = bucket[bucket.length - 1];
     const baseOn = Number(prevClose?.time_on ?? first.time_on) || 0;
     const baseRun = Number(prevClose?.time_running ?? first.time_running) || 0;
-    const baseEnergy = Number(prevClose?.power_consumption ?? first.power_consumption) || 0;
     const baseProduct = Number(prevClose?.product ?? first.product) || 0;
 
     const endOn = Number(last.time_on) || 0;
     const endRun = Number(last.time_running) || 0;
-    const endEnergy = Number(last.power_consumption) || 0;
     const endProduct = Number(last.product) || 0;
 
+    const chain = prevClose ? [prevClose, ...bucket] : bucket;
     const key = `${toLocalDateKey(dayStart)}T${String(h).padStart(2, '0')}`;
     byHour[key] = {
       time_on: Math.max(0, endOn - baseOn),
       time_running: Math.max(0, endRun - baseRun),
-      power_consumption: Math.max(0, endEnergy - baseEnergy),
+      power_consumption: energyKwhFromPowerSamples(chain),
       product: Math.max(0, endProduct - baseProduct),
     };
     prevClose = last;

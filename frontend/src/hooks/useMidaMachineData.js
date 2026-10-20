@@ -22,8 +22,17 @@ const energyKwhFromPowerAndTimeRun = (rows) => {
   for (let i = 1; i < sorted.length; i += 1) {
     const prevRun = Number(sorted[i - 1].time_running) || 0;
     const currRun = Number(sorted[i].time_running) || 0;
-    const dtSec = currRun - prevRun;
+    let dtSec = currRun - prevRun;
     if (dtSec <= 0) continue;
+
+    // Bỏ khoảng time_running nhảy bất thường so với thời gian tường
+    const t0 = new Date(sorted[i - 1].timestamp).getTime();
+    const t1 = new Date(sorted[i].timestamp).getTime();
+    const wallSec = Number.isFinite(t0) && Number.isFinite(t1) && t1 > t0
+      ? (t1 - t0) / 1000
+      : 60;
+    const maxDt = Math.max(180, wallSec * 2);
+    if (dtSec > maxDt) continue;
 
     const p0 = Number(sorted[i - 1].power) || 0;
     const p1 = Number(sorted[i].power) || 0;
@@ -303,16 +312,17 @@ export default function useMidaMachineData(machineId, {
     setCurrentAvg(Number(latest?.avg_a) || 0);
     setFrequencyHz(Number(latest?.frequency ?? latest?.freq) || 0);
 
-    const latestKwh = Number(latest?.power_consumption) || 0;
-    if (latestKwh > 0) {
-      setShootMachine(Number(latestKwh.toFixed(3)));
-      return;
-    }
+    // Card điện năng: tổng kWh từ daily (đã tính bằng power × Δtime_running), không dùng meter PLC
     const fromDaily = dailyRowsRef.current.reduce(
       (sum, item) => sum + (Number(item.power_consumption) || 0),
       0,
     );
-    if (fromDaily > 0) setShootMachine(Number(fromDaily.toFixed(3)));
+    if (fromDaily > 0) {
+      setShootMachine(Number(fromDaily.toFixed(3)));
+      return;
+    }
+    const fromLive = energyKwhFromPowerAndTimeRun(rows);
+    if (fromLive > 0) setShootMachine(Number(fromLive.toFixed(3)));
   }, []);
 
   const applyLiveTelemetry = useCallback((data) => {
@@ -340,12 +350,9 @@ export default function useMidaMachineData(machineId, {
     dailyRowsRef.current = data;
     setRawData(data);
 
-    // Nếu chưa có kWh lũy kế từ live, dùng tổng daily
-    setShootMachine((prev) => {
-      if (prev > 0) return prev;
-      const sum = data.reduce((s, item) => s + (Number(item.power_consumption) || 0), 0);
-      return Number(sum.toFixed(3));
-    });
+    // Tổng điện năng cửa sổ daily (power × Δtime_running)
+    const sum = data.reduce((s, item) => s + (Number(item.power_consumption) || 0), 0);
+    setShootMachine(Number(sum.toFixed(3)));
   }, []);
 
   const applyHourTelemetry = useCallback((data) => {
