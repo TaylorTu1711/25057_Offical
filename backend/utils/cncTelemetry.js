@@ -14,7 +14,13 @@ const CNC_ELECTRICAL_MARKERS = [
   'phase1_a', 'phase2_a', 'phase3_a', 'avg_a',
   'power', 'power_consumption', 'frequency', 'freq',
   'time_running',
+  'time_setup',
 ];
+
+function setupSecondsFrom(row) {
+  if (!row || typeof row !== 'object') return null;
+  return numOrNull(row.time_setup ?? row.setup_time ?? row.time_setup_machine);
+}
 
 /** Payload telemetry điện CNC từ Node-RED / PLC. */
 export function isCncElectricalRow(row) {
@@ -87,15 +93,15 @@ export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
 
   await db.query(
     `INSERT INTO ${qualifiedTable} (
-      nr, machine_id, timestamp, time_on, time_running,
+      nr, machine_id, timestamp, time_on, time_running, time_setup,
       phase1_v, phase2_v, phase3_v, avg_v,
       phase1_a, phase2_a, phase3_a, avg_a,
       power, power_consumption, frequency, status
     ) VALUES (
-      $1, $2, COALESCE($3::timestamp, CURRENT_TIMESTAMP), $4, $5,
-      $6, $7, $8, $9,
-      $10, $11, $12, $13,
-      $14, $15, $16, $17
+      $1, $2, COALESCE($3::timestamp, CURRENT_TIMESTAMP), $4, $5, $6,
+      $7, $8, $9, $10,
+      $11, $12, $13, $14,
+      $15, $16, $17, $18
     )`,
     [
       row.nr ?? null,
@@ -103,6 +109,7 @@ export async function saveCncTelemetryRow(db, qualifiedTable, machineId, row) {
       timestamp || null,
       numOrNull(row.time_on),
       numOrNull(row.time_running),
+      setupSecondsFrom(row),
       numOrNull(row.phase1_v),
       numOrNull(row.phase2_v),
       numOrNull(row.phase3_v),
@@ -146,6 +153,7 @@ export const CNC_ELECTRICAL_COLUMNS = [
   ['timestamp', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'],
   ['time_on', 'INTEGER'],
   ['time_running', 'INTEGER'],
+  ['time_setup', 'INTEGER'],
   ['phase1_v', 'REAL'],
   ['phase2_v', 'REAL'],
   ['phase3_v', 'REAL'],
@@ -194,6 +202,25 @@ export async function ensureCncElectricalTelemetryColumns(db, qualifiedTable) {
   await ensureTimestampWithoutTz(db, qualifiedTable, schema, tableName);
 }
 
+/** Bổ sung cột telemetry (gồm time_setup) cho mọi bảng máy trong schema cnc. */
+export async function ensureAllCncTelemetryColumns(db) {
+  const { rows } = await db.query(`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'cnc'
+      AND table_type = 'BASE TABLE'
+      AND table_name <> 'machines'
+      AND table_name NOT LIKE 'alarm%'
+  `);
+  for (const row of rows) {
+    const qualified = `"cnc"."${row.table_name}"`;
+    await ensureCncElectricalTelemetryColumns(db, qualified);
+    await db.query(
+      `UPDATE ${qualified} SET time_setup = 0 WHERE time_setup IS NULL`,
+    );
+  }
+}
+
 /** Cột timestamp là giờ tường VN (không múi giờ). toISOString() là UTC nên phải +7. */
 const VIETNAM_OFFSET_MS = 7 * 60 * 60 * 1000;
 
@@ -215,6 +242,7 @@ function normalizePayloadRow(row) {
     time_on: Number(payload.time_on ?? row.time_on ?? 0),
     time_off: Number(payload.time_off ?? row.time_off ?? 0),
     time_running: Number(payload.time_running ?? row.time_running ?? 0),
+    time_setup: Number(payload.time_setup ?? payload.setup_time ?? row.time_setup ?? 0),
     input_material: Number(payload.input_material ?? row.input_material ?? 0),
     cycle: Number(payload.cycle ?? row.cycle ?? 0),
     check_get: payload.check_get ?? row.check_get ?? false,
@@ -267,12 +295,10 @@ export async function fetchCncTelemetryRows(db, machineId, machine, options = {}
 
   // Bảng CNC điện (frequency / avg_v) hoặc legacy (shoot): SELECT cột cần dùng (nhẹ hơn *)
   if (hasLegacyColumns || hasFrequency || hasAvgV) {
-    if (!hasFrequency) {
-      await ensureCncElectricalTelemetryColumns(db, qualified);
-    }
+    await ensureCncElectricalTelemetryColumns(db, qualified);
     const slim = options.slim !== false;
     const selectSql = slim
-      ? `id, machine_id, timestamp, status, time_on, time_running,
+      ? `id, machine_id, timestamp, status, time_on, time_running, time_setup,
          avg_v, avg_a, power, power_consumption, frequency`
       : '*';
     const { rows } = await db.query(
@@ -312,6 +338,7 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
 
   const hasTimeOn = await tableHasColumn(db, schema, tableName, 'time_on');
   const hasTimeRunning = await tableHasColumn(db, schema, tableName, 'time_running');
+  const hasTimeSetup = await tableHasColumn(db, schema, tableName, 'time_setup');
   const hasPower = await tableHasColumn(db, schema, tableName, 'power');
   const hasPowerConsumption = await tableHasColumn(db, schema, tableName, 'power_consumption');
   const hasProduct = await tableHasColumn(db, schema, tableName, 'product');
@@ -363,6 +390,7 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
         ("timestamp")::date AS day,
         ${numCol(hasTimeOn, 'time_on')} AS time_on,
         ${numCol(hasTimeRunning, 'time_running')} AS time_running,
+        ${numCol(hasTimeSetup, 'time_setup')} AS time_setup,
         ${numCol(hasPower, 'power')} AS power,
         ${numCol(hasPowerConsumption, 'power_consumption')} AS power_consumption,
         ${numCol(hasProduct, 'product')} AS product,
@@ -408,6 +436,8 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
         (array_agg(time_on ORDER BY "timestamp" DESC, id DESC))[1] AS last_time_on,
         (array_agg(time_running ORDER BY "timestamp" ASC, id ASC))[1] AS first_time_running,
         (array_agg(time_running ORDER BY "timestamp" DESC, id DESC))[1] AS last_time_running,
+        (array_agg(time_setup ORDER BY "timestamp" ASC, id ASC))[1] AS first_time_setup,
+        (array_agg(time_setup ORDER BY "timestamp" DESC, id DESC))[1] AS last_time_setup,
         (array_agg(product ORDER BY "timestamp" ASC, id ASC))[1] AS first_product,
         (array_agg(product ORDER BY "timestamp" DESC, id DESC))[1] AS last_product,
         (array_agg(input_material ORDER BY "timestamp" ASC, id ASC))[1] AS first_input,
@@ -429,6 +459,10 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
         WHEN last_time_running >= first_time_running THEN last_time_running - first_time_running
         ELSE last_time_running
       END AS time_running,
+      CASE
+        WHEN last_time_setup >= first_time_setup THEN last_time_setup - first_time_setup
+        ELSE last_time_setup
+      END AS time_setup,
       -- Chỉ tính từ power × Δtime_running (không dùng cột power_consumption PLC — đơn vị sai/phình)
       CASE
         WHEN energy_integral > 0 THEN energy_integral
@@ -457,6 +491,7 @@ export async function fetchCncDailyTelemetryRows(db, machineId, machine, options
     date_key: r.date_key,
     time_on: Number(r.time_on) || 0,
     time_running: Number(r.time_running) || 0,
+    time_setup: Number(r.time_setup) || 0,
     power_consumption: Number(r.power_consumption) || 0,
     product: Number(r.product) || 0,
     input_material: Number(r.input_material) || 0,
@@ -519,6 +554,7 @@ function aggregateDailyFromRows(raw) {
       date_key: date,
       time_on: resolveDelta(min.time_on, max.time_on),
       time_running: resolveDelta(min.time_running, max.time_running),
+      time_setup: resolveDelta(min.time_setup, max.time_setup),
       // Chỉ từ power × Δtime_running
       power_consumption: energy,
       product: resolveDelta(min.product, max.product),
@@ -543,13 +579,16 @@ export async function fetchCncPerformanceSummary(db, machineId, machine) {
       last_timestamp: null,
       time_on: 0,
       time_running: 0,
+      time_setup: 0,
     };
   }
 
+  await ensureCncElectricalTelemetryColumns(db, qualified);
   await ensureTimestampWithoutTz(db, qualified, schema, tableName);
 
   const hasTimeOn = await tableHasColumn(db, schema, tableName, 'time_on');
   const hasTimeRunning = await tableHasColumn(db, schema, tableName, 'time_running');
+  const hasTimeSetup = await tableHasColumn(db, schema, tableName, 'time_setup');
   const hasPayload = await tableHasColumn(db, schema, tableName, 'payload');
 
   const { rows: boundRows } = await db.query(`
@@ -562,11 +601,13 @@ export async function fetchCncPerformanceSummary(db, machineId, machine) {
 
   let timeOn = 0;
   let timeRunning = 0;
+  let timeSetup = 0;
 
-  if (hasTimeOn || hasTimeRunning) {
+  if (hasTimeOn || hasTimeRunning || hasTimeSetup) {
     const selectParts = ['"timestamp"'];
     if (hasTimeOn) selectParts.push('time_on');
     if (hasTimeRunning) selectParts.push('time_running');
+    if (hasTimeSetup) selectParts.push('time_setup');
     const { rows } = await db.query(`
       SELECT ${selectParts.join(', ')}
       FROM ${qualified}
@@ -576,6 +617,7 @@ export async function fetchCncPerformanceSummary(db, machineId, machine) {
     const latest = rows[0] || {};
     timeOn = Number(latest.time_on) || 0;
     timeRunning = Number(latest.time_running) || 0;
+    timeSetup = Number(latest.time_setup) || 0;
   } else if (hasPayload) {
     const { rows } = await db.query(`
       SELECT payload, "timestamp"
@@ -586,6 +628,7 @@ export async function fetchCncPerformanceSummary(db, machineId, machine) {
     const normalized = rows[0] ? normalizePayloadRow(rows[0]) : null;
     timeOn = Number(normalized?.time_on) || 0;
     timeRunning = Number(normalized?.time_running) || 0;
+    timeSetup = Number(normalized?.time_setup) || 0;
   }
 
   return {
@@ -593,6 +636,7 @@ export async function fetchCncPerformanceSummary(db, machineId, machine) {
     last_timestamp: boundRows[0]?.last_ts ?? null,
     time_on: timeOn,
     time_running: timeRunning,
+    time_setup: timeSetup,
   };
 }
 

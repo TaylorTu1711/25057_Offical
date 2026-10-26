@@ -60,13 +60,18 @@ async function initDB() {
       await pool.query(`
          CREATE TABLE IF NOT EXISTS machines (
             machine_id TEXT PRIMARY KEY,
-            machine_name VARCHAR(255),     
+            machine_name VARCHAR(255),
             location VARCHAR(255),
             image_url TEXT,
             isdtgroup BOOLEAN,
             status INT,
             last_updated TIMESTAMP,
-            information TEXT
+            information TEXT,
+            output_name VARCHAR(255),
+            output_unit VARCHAR(64),
+            input_name VARCHAR(255),
+            input_unit VARCHAR(64),
+            machine_category VARCHAR(32) DEFAULT 'standard'
          );
 
          CREATE TABLE IF NOT EXISTS alarmsmachines (

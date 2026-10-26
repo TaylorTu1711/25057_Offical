@@ -716,6 +716,11 @@
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
 }
 
+.mida-run-stop-pie__legend-item--setup i {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22);
+}
+
 .mida-run-stop-pie__legend-item--stop i {
   background: #ef4444;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
@@ -761,13 +766,20 @@
   flex: 1 1 auto;
   min-height: 0;
   position: relative;
+  margin-top: 2px;
+}
+
+.mida-charts-cell--time .mida-time-total-wrap__main .machine-chart-plot-inner {
+  padding-top: 0 !important;
 }
 
 .mida-time-total-head {
   display: flex !important;
   align-items: center;
   width: 100%;
-  min-height: 1.35rem;
+  min-height: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
   padding-right: 0 !important;
   flex-shrink: 0;
 }
@@ -921,6 +933,11 @@
   flex: 1 1 auto;
   min-height: 0;
   position: relative;
+  margin-top: -6px;
+}
+
+.mida-charts-cell--efficiency .mida-run-stop-wrap__main .machine-chart-plot-inner {
+  padding-top: 0 !important;
 }
 
 .mida-run-stop-head {
@@ -929,7 +946,9 @@
   flex-wrap: wrap;
   gap: 0.25rem 0.35rem;
   width: 100%;
-  min-height: 1.35rem;
+  min-height: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
   padding-right: 0 !important;
   flex-shrink: 0;
 }
@@ -1092,6 +1111,13 @@
   border-left: 1px solid rgba(22, 163, 74, 1);
   border-right: 1px solid rgba(22, 163, 74, 1);
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.28);
+}
+
+.mida-run-stop-avg__bar--setup {
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.98) 0%, rgba(217, 119, 6, 0.92) 100%);
+  border-left: 1px solid rgba(217, 119, 6, 1);
+  border-right: 1px solid rgba(217, 119, 6, 1);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.28);
 }
 
 .mida-run-stop-avg__bar--stop {
@@ -5009,4 +5035,120 @@
   background: rgba(40, 24, 24, 0.92);
   border-color: rgba(201, 180, 180, 0.16);
   box-shadow: none;
+}
+
+.mida-page--maintenance.mida-page--detail {
+  overflow: hidden;
+}
+
+.mida-page--maintenance .mida-detail__main {
+  overflow-y: auto;
+}
+
+.mida-maint {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  padding: 1.5rem 1.25rem 2.5rem;
+}
+
+.mida-maint__card {
+  width: min(460px, 100%);
+  background: var(--mida-surface, #fff);
+  border: 1px solid var(--mida-border, rgba(15, 23, 42, 0.12));
+  border-radius: 12px;
+  box-shadow: var(--mida-shadow, 0 1px 3px rgba(15, 23, 42, 0.08));
+  padding: 1.4rem 1.35rem 1.5rem;
+}
+
+.mida-maint__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--mida-text);
+}
+
+.mida-maint__machine {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--mida-brand, #d32f2f);
+}
+
+.mida-maint__hint,
+.mida-maint__status,
+.mida-maint__saved {
+  margin: 0.55rem 0 0;
+  font-size: 0.88rem;
+  color: var(--mida-text-muted);
+}
+
+.mida-maint__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1.1rem;
+}
+
+.mida-maint__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.mida-maint__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--mida-text-subtle);
+}
+
+.mida-maint__input {
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--mida-btn-border);
+  background: var(--mida-modal-input-bg, #fff);
+  color: var(--mida-text);
+  padding: 0 0.7rem;
+  font-size: 0.95rem;
+}
+
+.mida-maint__input:focus {
+  outline: 2px solid var(--mida-brand-soft);
+  border-color: var(--mida-brand);
+  background: var(--mida-modal-input-focus-bg, #fff);
+}
+
+.mida-maint__save {
+  height: 42px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--mida-brand, #d32f2f);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.mida-maint__save:hover:not(:disabled) {
+  background: var(--mida-brand-dark, #b71c1c);
+}
+
+.mida-maint__save:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.mida-maint__error {
+  margin: 0.7rem 0 0;
+  color: #d32f2f;
+  font-size: 0.88rem;
+}
+
+.mida-maint__ok {
+  margin: 0.7rem 0 0;
+  color: #15803d;
+  font-size: 0.88rem;
 }

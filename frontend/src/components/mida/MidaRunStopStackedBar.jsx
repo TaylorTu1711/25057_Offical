@@ -43,35 +43,41 @@ const UNIT_PCT = 'pct';
 const UNIT_HOURS = 'hours';
 
 const cutPalette = NEON_BAR_GRADIENTS.neonGreen;
+const setupPalette = NEON_BAR_GRADIENTS.neonAmber;
 const stopPalette = NEON_BAR_GRADIENTS.neonRed;
 
-function calcAverages(cutValues = [], stopValues = [], { asPercent = false } = {}) {
+function calcAverages(cutValues = [], setupValues = [], stopValues = [], { asPercent = false } = {}) {
   let cutSum = 0;
+  let setupSum = 0;
   let stopSum = 0;
   let n = 0;
-  const len = Math.max(cutValues.length, stopValues.length);
+  const len = Math.max(cutValues.length, setupValues.length, stopValues.length);
   for (let i = 0; i < len; i += 1) {
     const cut = Number(cutValues[i]) || 0;
+    const setup = Number(setupValues[i]) || 0;
     const stop = Number(stopValues[i]) || 0;
-    if (cut + stop <= 0) continue;
+    if (cut + setup + stop <= 0) continue;
     cutSum += cut;
+    setupSum += setup;
     stopSum += stop;
     n += 1;
   }
-  if (n <= 0) return { cut: 0, stop: 0, hasData: false };
+  if (n <= 0) return { cut: 0, setup: 0, stop: 0, hasData: false };
 
-  // % mode: TB cắt gọt trước, ngưng = 100 − cắt gọt (luôn đủ 100%)
   if (asPercent) {
     const cut = Number((cutSum / n).toFixed(1));
+    const setup = Number((setupSum / n).toFixed(1));
     return {
       cut,
-      stop: Number(Math.max(0, 100 - cut).toFixed(1)),
+      setup,
+      stop: Number(Math.max(0, 100 - cut - setup).toFixed(1)),
       hasData: true,
     };
   }
 
   return {
     cut: Number((cutSum / n).toFixed(1)),
+    setup: Number((setupSum / n).toFixed(1)),
     stop: Number((stopSum / n).toFixed(1)),
     hasData: true,
   };
@@ -85,14 +91,16 @@ function formatHourLabel(value) {
 }
 
 /**
- * Cột xếp chồng: % hoặc giờ Cắt gọt (dưới) + Ngưng (trên).
+ * Cột xếp chồng: % hoặc giờ Cắt gọt (dưới) + Setup + Ngưng (trên).
  * Bên phải: ô TRUNG BÌNH trong cửa sổ đang chọn.
  */
 export default function MidaRunStopStackedBar({
   labels = [],
   cutPctValues = [],
+  setupPctValues = [],
   stopPctValues = [],
   cutHourValues = [],
+  setupHourValues = [],
   stopHourValues = [],
   xTickMode = 'month',
   categoryPrefix = '',
@@ -102,18 +110,21 @@ export default function MidaRunStopStackedBar({
   const isHours = unitMode === UNIT_HOURS;
 
   const cutValues = isHours ? cutHourValues : cutPctValues;
+  const setupValues = isHours ? setupHourValues : setupPctValues;
   const stopValues = isHours ? stopHourValues : stopPctValues;
 
   const averages = useMemo(
-    () => calcAverages(cutValues, stopValues, { asPercent: !isHours }),
-    [cutValues, stopValues, isHours],
+    () => calcAverages(cutValues, setupValues, stopValues, { asPercent: !isHours }),
+    [cutValues, setupValues, stopValues, isHours],
   );
 
   const yMaxHours = useMemo(() => {
     let max = 0;
-    const len = Math.max(cutHourValues.length, stopHourValues.length);
+    const len = Math.max(cutHourValues.length, setupHourValues.length, stopHourValues.length);
     for (let i = 0; i < len; i += 1) {
-      const total = (Number(cutHourValues[i]) || 0) + (Number(stopHourValues[i]) || 0);
+      const total = (Number(cutHourValues[i]) || 0)
+        + (Number(setupHourValues[i]) || 0)
+        + (Number(stopHourValues[i]) || 0);
       if (total > max) max = total;
     }
     if (max <= 0) return 1;
@@ -121,10 +132,10 @@ export default function MidaRunStopStackedBar({
     if (max <= 2) return 2;
     if (max <= 5) return Math.ceil(max);
     return Math.ceil(max * 1.05);
-  }, [cutHourValues, stopHourValues]);
+  }, [cutHourValues, setupHourValues, stopHourValues]);
 
   const { chartRef, zoomPluginOptions, zoomedScaleProps } = useChartZoomPreserve(
-    [labels, cutValues, stopValues, unitMode],
+    [labels, cutValues, setupValues, stopValues, unitMode],
     'x',
   );
   const xZoom = zoomedScaleProps?.x;
@@ -181,6 +192,26 @@ export default function MidaRunStopStackedBar({
         },
         {
           type: 'bar',
+          label: 'Setup',
+          data: setupValues,
+          backgroundColor: (context) => {
+            const { chart } = context;
+            return createNeonBarGradient(chart.ctx, chart.chartArea, setupPalette);
+          },
+          borderColor: setupPalette.border,
+          borderWidth: 1,
+          borderSkipped: false,
+          hoverBackgroundColor: (context) => {
+            const { chart } = context;
+            return createNeonBarHoverGradient(chart.ctx, chart.chartArea, setupPalette);
+          },
+          hoverBorderColor: setupPalette.border,
+          hoverBorderWidth: 2,
+          stack: 'runStop',
+          datalabels: dataLabels,
+        },
+        {
+          type: 'bar',
           label: 'Ngưng',
           data: stopValues,
           backgroundColor: (context) => {
@@ -202,7 +233,7 @@ export default function MidaRunStopStackedBar({
         },
       ],
     }),
-    [labels, cutValues, stopValues, dataLabels],
+    [labels, cutValues, setupValues, stopValues, dataLabels],
   );
 
   const options = useMemo(
@@ -228,7 +259,7 @@ export default function MidaRunStopStackedBar({
         legend: getChartLegendOptions(
           {
             labels: {
-              padding: 6,
+              padding: 2,
               boxWidth: 12,
               font: { size: 11 },
             },
@@ -305,13 +336,17 @@ export default function MidaRunStopStackedBar({
 
   useSyncChartTheme(chartRef, theme, options);
 
-  const totalAvg = averages.cut + averages.stop;
+  const totalAvg = averages.cut + averages.setup + averages.stop;
   const cutH = totalAvg > 0 ? Math.max(0, Math.min(100, (averages.cut / totalAvg) * 100)) : 0;
+  const setupH = totalAvg > 0 ? Math.max(0, Math.min(100, (averages.setup / totalAvg) * 100)) : 0;
   const stopH = totalAvg > 0 ? Math.max(0, Math.min(100, (averages.stop / totalAvg) * 100)) : 0;
 
   const avgCutLabel = isHours
     ? formatHourLabel(averages.cut)
     : `${Math.round(averages.cut)}%`;
+  const avgSetupLabel = isHours
+    ? formatHourLabel(averages.setup)
+    : `${Math.round(averages.setup)}%`;
   const avgStopLabel = isHours
     ? formatHourLabel(averages.stop)
     : `${Math.round(averages.stop)}%`;
@@ -361,7 +396,7 @@ export default function MidaRunStopStackedBar({
         </div>
       </div>
 
-      <aside className="mida-run-stop-avg" aria-label="Trung bình cắt gọt và ngưng">
+      <aside className="mida-run-stop-avg" aria-label="Trung bình cắt gọt, setup và ngưng">
         <div className="chart-title-brand machine-chart-head mida-run-stop-avg__title">
           TRUNG<br />BÌNH
         </div>
@@ -370,7 +405,7 @@ export default function MidaRunStopStackedBar({
           role="img"
           aria-label={
             averages.hasData
-              ? `Trung bình cắt gọt ${avgCutLabel}, ngưng ${avgStopLabel}`
+              ? `Trung bình cắt gọt ${avgCutLabel}, setup ${avgSetupLabel}, ngưng ${avgStopLabel}`
               : 'Chưa có dữ liệu trung bình'
           }
         >
@@ -384,6 +419,14 @@ export default function MidaRunStopStackedBar({
                   >
                     {stopH >= 8 ? (
                       <span className="mida-run-stop-avg__pct">{avgStopLabel}</span>
+                    ) : null}
+                  </div>
+                  <div
+                    className="mida-run-stop-avg__bar mida-run-stop-avg__bar--setup"
+                    style={{ height: `${setupH}%` }}
+                  >
+                    {setupH >= 8 ? (
+                      <span className="mida-run-stop-avg__pct">{avgSetupLabel}</span>
                     ) : null}
                   </div>
                   <div

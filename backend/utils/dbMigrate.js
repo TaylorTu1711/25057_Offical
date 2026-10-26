@@ -1,5 +1,7 @@
 import pool from '../db.js';
-import { ensureCncMachinesTable } from './machineSchema.js';
+import { ensureCncMachinesTable, ensurePublicMachinesTable } from './machineSchema.js';
+import { ensureAllCncTelemetryColumns } from './cncTelemetry.js';
+import { ensureDailySetupTable } from './cncDailySetup.js';
 
 export async function migrateUserAccessSchema() {
   try {
@@ -13,11 +15,12 @@ export async function migrateUserAccessSchema() {
         PRIMARY KEY (user_id, location)
       );
 
-      ALTER TABLE machines ADD COLUMN IF NOT EXISTS machine_category VARCHAR(32) DEFAULT 'standard';
-
       CREATE SCHEMA IF NOT EXISTS cnc;
     `);
+    await ensurePublicMachinesTable(pool);
     await ensureCncMachinesTable(pool);
+    await ensureAllCncTelemetryColumns(pool);
+    await ensureDailySetupTable(pool);
     console.log('✅ User access schema migrated');
   } catch (error) {
     console.error('User access migration error:', error.message);

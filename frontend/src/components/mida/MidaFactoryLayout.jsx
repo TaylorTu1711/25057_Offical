@@ -86,6 +86,7 @@ export default function MidaFactoryLayout({
   statLabel,
   stats,
   onCreateClick,
+  canEditLayout = true,
   createOpen = false,
   machineTabs,
   activeTab,
@@ -114,6 +115,10 @@ export default function MidaFactoryLayout({
     () => [...machines].sort((a, b) => String(a.machine_id).localeCompare(String(b.machine_id), 'vi')),
     [machines],
   );
+
+  useEffect(() => {
+    if (!canEditLayout) setEditMode(false);
+  }, [canEditLayout]);
 
   useEffect(() => {
     setPositions(buildInitialPositions(machines));
@@ -466,29 +471,31 @@ export default function MidaFactoryLayout({
           </div>
         </div>
       </div>
-      <div className="mida-factory__bottom-left">
-        <div className="mida-factory__toolbar">
-          <button
-            type="button"
-            className={`mida-factory__edit-toggle${editMode ? ' is-active' : ''}`}
-            onClick={() => {
-              draggingIdRef.current = null;
-              setDraggingId('');
-              setEditMode((value) => !value);
-              setSaveError('');
-            }}
-          >
-            <Move size={16} aria-hidden="true" />
-            {editMode ? 'Xong chỉnh vị trí' : 'Chỉnh vị trí layout'}
-          </button>
-          {editMode && (
-            <p className="mida-factory__edit-hint">
-              Kéo từng thẻ tên máy đến đúng vị trí trên hình — thả tay để lưu tự động.
-            </p>
-          )}
-          {saveError && <p className="mida-factory__save-error">{saveError}</p>}
+      {canEditLayout ? (
+        <div className="mida-factory__bottom-left">
+          <div className="mida-factory__toolbar">
+            <button
+              type="button"
+              className={`mida-factory__edit-toggle${editMode ? ' is-active' : ''}`}
+              onClick={() => {
+                draggingIdRef.current = null;
+                setDraggingId('');
+                setEditMode((value) => !value);
+                setSaveError('');
+              }}
+            >
+              <Move size={16} aria-hidden="true" />
+              {editMode ? 'Xong chỉnh vị trí' : 'Chỉnh vị trí layout'}
+            </button>
+            {editMode && (
+              <p className="mida-factory__edit-hint">
+                Kéo từng thẻ tên máy đến đúng vị trí trên hình — thả tay để lưu tự động.
+              </p>
+            )}
+            {saveError && <p className="mida-factory__save-error">{saveError}</p>}
+          </div>
         </div>
-      </div>
+      ) : null}
       {onCreateClick && !editMode && (
         <button
           type="button"

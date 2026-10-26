@@ -28,7 +28,8 @@ import useNow from '../../hooks/useNow';
 import useStableMachineRunning from '../../hooks/useStableMachineRunning';
 
 import { BASE_URL } from '../../config/config';
-import { authHeaders, getRole } from '../../utils/auth';
+import { authHeaders, getRole, isMaintenanceRole } from '../../utils/auth';
+import MidaMaintenanceSetupPage from './MidaMaintenanceSetupPage';
 import { POLL_INTERVALS } from '../../config/polling';
 import {
   getMachineStatusLabel,
@@ -141,6 +142,13 @@ const chartSeriesEqual = (a, b) => {
 };
 
 export default function MidaCncMachineDetail() {
+  if (isMaintenanceRole()) {
+    return <MidaMaintenanceSetupPage />;
+  }
+  return <MidaCncMachineDetailInner />;
+}
+
+function MidaCncMachineDetailInner() {
   const { machine_id } = useParams();
   const navigate = useNavigate();
   const now = useNow(POLL_INTERVALS.connectionTick);
@@ -203,6 +211,7 @@ export default function MidaCncMachineDetail() {
     machines,
     totalTimeOnSeconds,
     totalTimeRunningSeconds,
+    totalTimeSetupSeconds,
     shootMachine,
     powerKw,
     voltageAvg,
@@ -353,8 +362,10 @@ export default function MidaCncMachineDetail() {
   const energyKwhValues = timeChartSeries.energyKwh || [];
   const runStopBarLabels = runStopChartSeries.labels || [];
   const runStopCutPctValues = runStopChartSeries.cutPct || [];
+  const runStopSetupPctValues = runStopChartSeries.setupPct || [];
   const runStopIdlePctValues = runStopChartSeries.stopPct || [];
   const runStopCutHourValues = runStopChartSeries.cutHours || [];
+  const runStopSetupHourValues = runStopChartSeries.setupHours || [];
   const runStopIdleHourValues = runStopChartSeries.stopHours || [];
 
   const isConnected = (lastUpdated) => isMachineConnected(lastUpdated, now);
@@ -718,6 +729,7 @@ export default function MidaCncMachineDetail() {
                 </div>
                 <MidaRunStopPieChart
                   runSeconds={totalTimeRunningSeconds}
+                  setupSeconds={totalTimeSetupSeconds}
                   onSeconds={totalTimeOnSeconds}
                 />
               </div>
@@ -759,8 +771,10 @@ export default function MidaCncMachineDetail() {
                 <MidaRunStopStackedBar
                   labels={runStopBarLabels}
                   cutPctValues={runStopCutPctValues}
+                  setupPctValues={runStopSetupPctValues}
                   stopPctValues={runStopIdlePctValues}
                   cutHourValues={runStopCutHourValues}
+                  setupHourValues={runStopSetupHourValues}
                   stopHourValues={runStopIdleHourValues}
                   xTickMode={chartXTickMode}
                   categoryPrefix={chartCategoryPrefix}

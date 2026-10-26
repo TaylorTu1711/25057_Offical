@@ -9,6 +9,15 @@ import {
   fetchCncPerformanceSummary,
   fetchCncTelemetryRows,
 } from '../utils/cncTelemetry.js';
+import {
+  fetchDailySetupForDate,
+  fetchDailySetupMap,
+  isMaintenanceRole,
+  overlayDailySetupOnRows,
+  sumDailySetupSeconds,
+  upsertDailySetup,
+  vietnamDateKey,
+} from '../utils/cncDailySetup.js';
 
 const MIDA_MACHINES = midaMachinesTableRef();
 
@@ -161,7 +170,7 @@ export const getMidaCncMachineTelemetryDaily = async (req, res) => {
       from: req.query.from || new Date(Date.now() - 366 * 24 * 60 * 60 * 1000).toISOString(),
       to: req.query.to || undefined,
     });
-    res.json(rows);
+    res.json(await overlayDailySetupOnRows(pool, machine_id, rows));
   } catch (err) {
     console.error('getMidaCncMachineTelemetryDaily error:', err.message);
     res.status(500).json({ error: 'Lỗi server' });
@@ -181,6 +190,8 @@ export const getMidaCncMachinePerformance = async (req, res) => {
     }
 
     const summary = await fetchCncPerformanceSummary(pool, machine_id, machine);
+    const enteredSetup = await sumDailySetupSeconds(pool, machine_id);
+    if (enteredSetup > 0) summary.time_setup = enteredSetup;
     res.json(summary);
   } catch (err) {
     console.error('getMidaCncMachinePerformance error:', err.message);
@@ -298,6 +309,7 @@ export const addMidaCncMachine = async (req, res) => {
           timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           time_on INTEGER,
           time_running INTEGER,
+          time_setup INTEGER,
           phase1_v REAL,
           phase2_v REAL,
           phase3_v REAL,
@@ -419,6 +431,9 @@ export const updateMidaCncMachineInfo = async (req, res) => {
   }
 
   try {
+    if (isMaintenanceRole(role) || isMaintenanceRole(req.userScope?.role)) {
+      return res.status(403).json({ error: 'Tài khoản maintenance không được sửa thông tin máy' });
+    }
     const scope = await resolveCncScope(userId, role);
     if (scope.error) return res.status(scope.status).json({ error: scope.error });
 
@@ -461,6 +476,9 @@ export const updateMidaMachineLayout = async (req, res) => {
   }
 
   try {
+    if (isMaintenanceRole(role) || isMaintenanceRole(req.userScope?.role)) {
+      return res.status(403).json({ error: 'Tài khoản maintenance không được chỉnh layout' });
+    }
     const scope = await resolveCncScope(userId, role);
     if (scope.error) return res.status(scope.status).json({ error: scope.error });
 
@@ -489,5 +507,85 @@ export const updateMidaMachineLayout = async (req, res) => {
   } catch (err) {
     console.error('updateMidaMachineLayout error:', err.message);
     res.status(500).json({ error: 'Lỗi khi lưu vị trí layout' });
+  }
+};
+
+export const getMidaCncMachineDailySetup = async (req, res) => {
+  try {
+    const { machine_id } = req.params;
+    const { role, id: userId } = req.user;
+    const scope = await resolveCncScope(userId, role);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
+    const machine = await findAuthorizedMidaMachine(machine_id, scope.locations);
+    if (!machine) {
+      return res.status(404).json({ error: 'Không tìm thấy máy' });
+    }
+
+    const dateKey = String(req.query.date || vietnamDateKey()).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      return res.status(400).json({ error: 'date phải là YYYY-MM-DD' });
+    }
+
+    const from = req.query.from ? String(req.query.from).slice(0, 10) : null;
+    const to = req.query.to ? String(req.query.to).slice(0, 10) : null;
+    if (from || to) {
+      const { rows } = await fetchDailySetupMap(pool, machine_id, from, to);
+      return res.json(rows);
+    }
+
+    const row = await fetchDailySetupForDate(pool, machine_id, dateKey);
+    res.json({
+      machine_id,
+      setup_date: dateKey,
+      setup_seconds: Number(row?.setup_seconds) || 0,
+      updated_at: row?.updated_at || null,
+      updated_by: row?.updated_by || null,
+    });
+  } catch (err) {
+    console.error('getMidaCncMachineDailySetup error:', err.message);
+    res.status(500).json({ error: 'Lỗi server' });
+  }
+};
+
+export const putMidaCncMachineDailySetup = async (req, res) => {
+  try {
+    const { machine_id } = req.params;
+    const role = req.userScope?.role || req.user?.role;
+    if (role !== 'admin' && !isMaintenanceRole(role)) {
+      return res.status(403).json({ error: 'Chỉ maintenance hoặc admin được nhập thời gian setup' });
+    }
+
+    const { id: userId } = req.user;
+    const scope = await resolveCncScope(userId, role);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
+    const machine = await findAuthorizedMidaMachine(machine_id, scope.locations);
+    if (!machine) {
+      return res.status(404).json({ error: 'Không tìm thấy máy' });
+    }
+
+    const dateKey = String(req.body.date || vietnamDateKey()).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      return res.status(400).json({ error: 'date phải là YYYY-MM-DD' });
+    }
+
+    let setupSeconds = Number(req.body.setup_seconds);
+    if (!Number.isFinite(setupSeconds)) {
+      const hours = Number(req.body.hours) || 0;
+      const minutes = Number(req.body.minutes) || 0;
+      setupSeconds = hours * 3600 + minutes * 60;
+    }
+
+    const saved = await upsertDailySetup(pool, {
+      machineId: machine_id,
+      dateKey,
+      setupSeconds,
+      userId,
+    });
+    res.json(saved);
+  } catch (err) {
+    console.error('putMidaCncMachineDailySetup error:', err.message);
+    res.status(500).json({ error: 'Lỗi lưu thời gian setup' });
   }
 };

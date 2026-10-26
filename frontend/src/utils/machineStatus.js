@@ -50,7 +50,7 @@ export const toStatusChartValue = (status) => {
 
 export const getStatusChartLabel = (chartValue) => {
   const v = Number(chartValue);
-  if (v === 2) return 'Quay';
+  if (v === 2) return 'Chạy';
   if (v === 1) return 'Dừng';
   return '—';
 };

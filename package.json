@@ -6,6 +6,8 @@
     "dev": "nodemon backend/server.js",
     "build": "npm install && npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend && npm run seed:mida-admin",
     "seed:mida-admin": "node backend/scripts/create-mida-admin.js",
+    "seed:mida-maintenance": "node backend/scripts/create-mida-maintenance.js",
+    "seed:plenma-users": "node backend/scripts/create-plenma-users.js",
     "start": "node backend/server.js",
     "migrate:shoot-real": "node backend/scripts/migrate-shoot-to-real.js",
     "migrate:shoot-real:sql": "psql -U \"${DB_USER:-postgres}\" -d \"${DB_NAME:-postgres}\" -f backend/scripts/migrate-shoot-to-real.sql",

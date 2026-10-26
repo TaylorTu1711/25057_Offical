@@ -196,7 +196,7 @@ function energyKwhFromPowerSamples(rows) {
 
 /**
  * Gom telemetry thô theo giờ trong một ngày (delta time_on / time_running; kWh từ power).
- * @returns {Record<string, { time_on: number, time_running: number, power_consumption: number, product: number }>}
+ * @returns {Record<string, { time_on: number, time_running: number, time_setup: number, power_consumption: number, product: number }>}
  */
 export function aggregateTelemetryByHour(rawRows = [], dayDate) {
   const dayStart = startOfDay(dayDate);
@@ -210,7 +210,7 @@ export function aggregateTelemetryByHour(rawRows = [], dayDate) {
   const byHour = {};
   for (let h = 0; h < 24; h += 1) {
     const key = `${toLocalDateKey(dayStart)}T${String(h).padStart(2, '0')}`;
-    byHour[key] = { time_on: 0, time_running: 0, power_consumption: 0, product: 0 };
+    byHour[key] = { time_on: 0, time_running: 0, time_setup: 0, power_consumption: 0, product: 0 };
   }
 
   if (samples.length === 0) return byHour;
@@ -234,10 +234,12 @@ export function aggregateTelemetryByHour(rawRows = [], dayDate) {
     const last = bucket[bucket.length - 1];
     const baseOn = Number(prevClose?.time_on ?? first.time_on) || 0;
     const baseRun = Number(prevClose?.time_running ?? first.time_running) || 0;
+    const baseSetup = Number(prevClose?.time_setup ?? first.time_setup) || 0;
     const baseProduct = Number(prevClose?.product ?? first.product) || 0;
 
     const endOn = Number(last.time_on) || 0;
     const endRun = Number(last.time_running) || 0;
+    const endSetup = Number(last.time_setup) || 0;
     const endProduct = Number(last.product) || 0;
 
     const chain = prevClose ? [prevClose, ...bucket] : bucket;
@@ -245,6 +247,7 @@ export function aggregateTelemetryByHour(rawRows = [], dayDate) {
     byHour[key] = {
       time_on: Math.max(0, endOn - baseOn),
       time_running: Math.max(0, endRun - baseRun),
+      time_setup: Math.max(0, endSetup - baseSetup),
       power_consumption: energyKwhFromPowerSamples(chain),
       product: Math.max(0, endProduct - baseProduct),
     };
@@ -1198,48 +1201,63 @@ export const toErrorChartTickMode = (viewMode, selection = {}) => {
 };
 
 /**
- * Chuỗi % / giờ Cắt gọt–Ngưng theo bucket (cùng trục X Giờ…Năm).
- * %: cắt gọt = time_running / khung thời gian bucket (1h / 24h / …) × 100;
- *     ngưng = 100 − cắt gọt.
- * Giờ: cắt gọt = time_running; ngưng = khung − cắt gọt.
+ * Chuỗi % / giờ Cắt gọt–Setup–Ngưng theo bucket (cùng trục X Giờ…Năm).
+ * %: cắt gọt = time_running / khung × 100; setup = time_setup / khung × 100;
+ *     ngưng = 100 − cắt gọt − setup.
+ * Giờ: cắt gọt = time_running; setup = time_setup; ngưng = khung − cắt − setup.
  */
 export function buildRunStopPctSeries(rawData, viewMode, selection = {}) {
   const buckets = buildRunStopBuckets(rawData, viewMode, selection);
-  const cutPct = buckets.runSec.map((run, i) => {
+  const n = buckets.labels.length;
+  const setupSecArr = buckets.setupSec || buckets.runSec.map(() => 0);
+  const cutPct = [];
+  const setupPct = [];
+  const stopPct = [];
+  const cutHours = [];
+  const setupHours = [];
+  const stopHours = [];
+
+  for (let i = 0; i < n; i += 1) {
     const avail = Number(buckets.availSec[i]) || 0;
     const on = Number(buckets.onSec[i]) || 0;
-    const runSec = Number(run) || 0;
-    // Không có dữ liệu trong bucket → để trống
-    if (runSec <= 0 && on <= 0) return 0;
-    if (avail <= 0) return 0;
-    const pct = (runSec / avail) * 100;
-    return Number(Math.min(100, Math.max(0, pct)).toFixed(1));
-  });
-  const stopPct = cutPct.map((cut, i) => {
-    const on = Number(buckets.onSec[i]) || 0;
-    const runSec = Number(buckets.runSec[i]) || 0;
-    if (runSec <= 0 && on <= 0) return 0;
-    return Number(Math.max(0, 100 - cut).toFixed(1));
-  });
-  const cutHours = buckets.runSec.map((run, i) => {
-    const on = Number(buckets.onSec[i]) || 0;
-    const runSec = Number(run) || 0;
-    if (runSec <= 0 && on <= 0) return 0;
-    return Number((runSec / 3600).toFixed(2));
-  });
-  const stopHours = buckets.runSec.map((run, i) => {
-    const avail = Number(buckets.availSec[i]) || 0;
-    const on = Number(buckets.onSec[i]) || 0;
-    const runSec = Number(run) || 0;
-    if (runSec <= 0 && on <= 0) return 0;
-    return Number((Math.max(0, avail - runSec) / 3600).toFixed(2));
-  });
+    let runSec = Number(buckets.runSec[i]) || 0;
+    let setupSec = Number(setupSecArr[i]) || 0;
+    const empty = runSec <= 0 && setupSec <= 0 && on <= 0;
+    if (empty) {
+      cutPct.push(0);
+      setupPct.push(0);
+      stopPct.push(0);
+      cutHours.push(0);
+      setupHours.push(0);
+      stopHours.push(0);
+      continue;
+    }
+    if (avail > 0 && runSec + setupSec > avail) {
+      if (runSec > avail) {
+        runSec = avail;
+        setupSec = 0;
+      } else {
+        setupSec = Math.max(0, avail - runSec);
+      }
+    }
+    const cut = avail <= 0 ? 0 : Math.min(100, Math.max(0, (runSec / avail) * 100));
+    const setup = avail <= 0 ? 0 : Math.min(Math.max(0, 100 - cut), Math.max(0, (setupSec / avail) * 100));
+    const stop = Math.max(0, 100 - cut - setup);
+    cutPct.push(Number(cut.toFixed(1)));
+    setupPct.push(Number(setup.toFixed(1)));
+    stopPct.push(Number(stop.toFixed(1)));
+    cutHours.push(Number((runSec / 3600).toFixed(2)));
+    setupHours.push(Number((setupSec / 3600).toFixed(2)));
+    stopHours.push(Number((Math.max(0, avail - runSec - setupSec) / 3600).toFixed(2)));
+  }
 
   return {
     labels: buckets.labels,
     cutPct,
+    setupPct,
     stopPct,
     cutHours,
+    setupHours,
     stopHours,
   };
 }
@@ -1248,6 +1266,7 @@ export function buildRunStopPctSeries(rawData, viewMode, selection = {}) {
 function buildRunStopBuckets(rawData, viewMode, selection = {}) {
   const rowRunSec = (row) => Number(row.time_running) || 0;
   const rowOnSec = (row) => Number(row.time_on) || 0;
+  const rowSetupSec = (row) => Number(row.time_setup) || 0;
 
   if (viewMode === CHART_VIEW_MODES.hour) {
     const { from, year, month, day } = getSelectionRange(viewMode, selection);
@@ -1267,6 +1286,10 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
         const key = `${dayKey}T${String(h).padStart(2, '0')}`;
         return Number(hourMap[key]?.time_on) || 0;
       }),
+      setupSec: hours.map((h) => {
+        const key = `${dayKey}T${String(h).padStart(2, '0')}`;
+        return Number(hourMap[key]?.time_setup) || 0;
+      }),
       // Mỗi cột = 1 giờ
       availSec: hours.map(() => 3600),
     };
@@ -1278,15 +1301,18 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
     const days = getDaysInMonth(year, month - 1);
     const runMap = {};
     const onMap = {};
+    const setupMap = {};
     filtered.forEach((row) => {
       const key = toLocalDateKey(row.timestamp);
       runMap[key] = rowRunSec(row);
       onMap[key] = rowOnSec(row);
+      setupMap[key] = rowSetupSec(row);
     });
     return {
       labels: days.map(formatDayLabel),
       runSec: days.map((d) => runMap[toLocalDateKey(d)] ?? 0),
       onSec: days.map((d) => onMap[toLocalDateKey(d)] ?? 0),
+      setupSec: days.map((d) => setupMap[toLocalDateKey(d)] ?? 0),
       // Mỗi cột = 24h
       availSec: days.map(() => SEC_PER_DAY),
     };
@@ -1298,10 +1324,12 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
     const weeks = getWeeksInMonth(year, month - 1);
     const runMap = {};
     const onMap = {};
+    const setupMap = {};
     filtered.forEach((row) => {
       const key = toLocalDateKey(row.timestamp);
       runMap[key] = rowRunSec(row);
       onMap[key] = rowOnSec(row);
+      setupMap[key] = rowSetupSec(row);
     });
     return {
       labels: weeks.map((w) => w.label),
@@ -1310,6 +1338,9 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
       ),
       onSec: weeks.map((w) =>
         w.days.reduce((sum, d) => sum + (onMap[toLocalDateKey(d)] ?? 0), 0),
+      ),
+      setupSec: weeks.map((w) =>
+        w.days.reduce((sum, d) => sum + (setupMap[toLocalDateKey(d)] ?? 0), 0),
       ),
       availSec: weeks.map((w) => w.dayCount * SEC_PER_DAY),
     };
@@ -1321,16 +1352,19 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
     const monthKeys = getMonthKeysInYear(year);
     const runMap = {};
     const onMap = {};
+    const setupMap = {};
     filtered.forEach((row) => {
       const ts = new Date(row.timestamp);
       const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
       runMap[key] = (runMap[key] || 0) + rowRunSec(row);
       onMap[key] = (onMap[key] || 0) + rowOnSec(row);
+      setupMap[key] = (setupMap[key] || 0) + rowSetupSec(row);
     });
     return {
       labels: monthKeys.map(formatMonthLabel),
       runSec: monthKeys.map((key) => runMap[key] ?? 0),
       onSec: monthKeys.map((key) => onMap[key] ?? 0),
+      setupSec: monthKeys.map((key) => setupMap[key] ?? 0),
       availSec: monthKeys.map((key) => {
         const [, m] = key.split('-');
         const daysInMonth = new Date(year, parseInt(m, 10), 0).getDate();
@@ -1345,17 +1379,20 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
     const quarters = getQuartersInYear(year);
     const runMap = {};
     const onMap = {};
+    const setupMap = {};
     filtered.forEach((row) => {
       const ts = new Date(row.timestamp);
       const q = Math.floor(ts.getMonth() / 3) + 1;
       const key = `${ts.getFullYear()}-Q${q}`;
       runMap[key] = (runMap[key] || 0) + rowRunSec(row);
       onMap[key] = (onMap[key] || 0) + rowOnSec(row);
+      setupMap[key] = (setupMap[key] || 0) + rowSetupSec(row);
     });
     return {
       labels: quarters.map((q) => q.label),
       runSec: quarters.map((q) => runMap[q.key] ?? 0),
       onSec: quarters.map((q) => onMap[q.key] ?? 0),
+      setupSec: quarters.map((q) => setupMap[q.key] ?? 0),
       availSec: quarters.map((q) => q.dayCount * SEC_PER_DAY),
     };
   }
@@ -1369,16 +1406,19 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
       const spansMultipleYears = new Set(months.map((m) => m.year)).size > 1;
       const runMap = {};
       const onMap = {};
+      const setupMap = {};
       filtered.forEach((row) => {
         const ts = new Date(row.timestamp);
         const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
         runMap[key] = (runMap[key] || 0) + rowRunSec(row);
         onMap[key] = (onMap[key] || 0) + rowOnSec(row);
+        setupMap[key] = (setupMap[key] || 0) + rowSetupSec(row);
       });
       return {
         labels: months.map((m) => formatRangeMonthLabel(m, spansMultipleYears)),
         runSec: months.map((m) => runMap[m.key] ?? 0),
         onSec: months.map((m) => onMap[m.key] ?? 0),
+        setupSec: months.map((m) => setupMap[m.key] ?? 0),
         availSec: months.map((m) => {
           const days = countDaysInRangeMonth(from, to, m.year, m.monthIndex);
           return Math.max(0, days) * SEC_PER_DAY;
@@ -1389,15 +1429,18 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
     const days = getDaysInRange(from, to);
     const runMap = {};
     const onMap = {};
+    const setupMap = {};
     filtered.forEach((row) => {
       const key = toLocalDateKey(row.timestamp);
       runMap[key] = rowRunSec(row);
       onMap[key] = rowOnSec(row);
+      setupMap[key] = rowSetupSec(row);
     });
     return {
       labels: days.map((d) => formatRangeDayLabel(d, days.length)),
       runSec: days.map((d) => runMap[toLocalDateKey(d)] ?? 0),
       onSec: days.map((d) => onMap[toLocalDateKey(d)] ?? 0),
+      setupSec: days.map((d) => setupMap[toLocalDateKey(d)] ?? 0),
       availSec: days.map(() => SEC_PER_DAY),
     };
   }
@@ -1407,15 +1450,18 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
   const filtered = filterInRange(rawData, from, to);
   const runMap = {};
   const onMap = {};
+  const setupMap = {};
   filtered.forEach((row) => {
     const y = new Date(row.timestamp).getFullYear();
     runMap[y] = (runMap[y] || 0) + rowRunSec(row);
     onMap[y] = (onMap[y] || 0) + rowOnSec(row);
+    setupMap[y] = (setupMap[y] || 0) + rowSetupSec(row);
   });
   return {
     labels: years.map(formatYearLabel),
     runSec: years.map((y) => runMap[y] ?? 0),
     onSec: years.map((y) => onMap[y] ?? 0),
+    setupSec: years.map((y) => setupMap[y] ?? 0),
     availSec: years.map((y) => {
       const isLeap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
       return (isLeap ? 366 : 365) * SEC_PER_DAY;

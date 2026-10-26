@@ -338,7 +338,16 @@ const LineChart_TimeOn = ({
             );
           },
         },
-        legend: getChartLegendOptions({}, theme),
+        legend: getChartLegendOptions(
+          {
+            labels: {
+              padding: 2,
+              boxWidth: 12,
+              font: { size: 11 },
+            },
+          },
+          theme,
+        ),
         title: { display: false },
         zoom: zoomPluginOptions,
       },

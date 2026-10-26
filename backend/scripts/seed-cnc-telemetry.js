@@ -51,6 +51,7 @@ async function ensureTable() {
       timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       time_on INTEGER,
       time_running INTEGER,
+      time_setup INTEGER,
       phase1_v REAL,
       phase2_v REAL,
       phase3_v REAL,
@@ -84,9 +85,10 @@ function buildRows() {
   let nr = 0;
   let timeOn = 0;
   let timeRunning = 0;
+  let timeSetup = 0;
   let powerConsumption = 0;
 
-  let running = true;
+  let mode = 'run'; // run | setup | idle
   let stateSamplesLeft = Math.round(rand(20, 80));
   let offlineSamplesLeft = 0;
   let nextOfflineIn = Math.round(rand(80, 200));
@@ -96,7 +98,7 @@ function buildRows() {
     // 60 phút cuối luôn có mẫu và đang chạy, để mép phải Gantt không bị vàng.
     if (inTail) {
       offlineSamplesLeft = 0;
-      running = true;
+      mode = 'run';
       stateSamplesLeft = 10_000;
     }
 
@@ -120,8 +122,15 @@ function buildRows() {
     const isNight = hour >= 22 || hour < 6;
 
     if (!inTail && stateSamplesLeft <= 0) {
-      running = isNight ? Math.random() < 0.25 : Math.random() < 0.75;
-      stateSamplesLeft = Math.round(running ? rand(40, 120) : rand(20, 60));
+      const roll = Math.random();
+      if (isNight) {
+        mode = roll < 0.2 ? 'run' : roll < 0.35 ? 'setup' : 'idle';
+      } else {
+        mode = roll < 0.62 ? 'run' : roll < 0.78 ? 'setup' : 'idle';
+      }
+      stateSamplesLeft = Math.round(
+        mode === 'run' ? rand(40, 120) : mode === 'setup' ? rand(16, 40) : rand(20, 60),
+      );
     }
     stateSamplesLeft -= 1;
 
@@ -136,6 +145,8 @@ function buildRows() {
     let phase3A;
     let power;
     let status;
+    const running = mode === 'run';
+    const settingUp = mode === 'setup';
 
     if (running) {
       timeRunning += SAMPLE_INTERVAL_SEC;
@@ -146,6 +157,15 @@ function buildRows() {
       phase1A = rand(8, 26);
       phase2A = rand(8, 26);
       phase3A = rand(8, 26);
+    } else if (settingUp) {
+      timeSetup += SAMPLE_INTERVAL_SEC;
+      status = STATUS_STOP;
+      phase1V = rand(222, 234);
+      phase2V = rand(222, 234);
+      phase3V = rand(222, 234);
+      phase1A = rand(1.5, 4.5);
+      phase2A = rand(1.5, 4.5);
+      phase3A = rand(1.5, 4.5);
     } else {
       status = STATUS_STOP;
       phase1V = rand(228, 236);
@@ -169,6 +189,7 @@ function buildRows() {
       timestamp: toVietnamWallClock(ts),
       time_on: timeOn,
       time_running: timeRunning,
+      time_setup: timeSetup,
       phase1_v: round(phase1V),
       phase2_v: round(phase2V),
       phase3_v: round(phase3V),
@@ -189,7 +210,7 @@ function buildRows() {
 
 async function insertRows(rows) {
   const cols = [
-    'nr', 'machine_id', 'timestamp', 'time_on', 'time_running',
+    'nr', 'machine_id', 'timestamp', 'time_on', 'time_running', 'time_setup',
     'phase1_v', 'phase2_v', 'phase3_v', 'avg_v',
     'phase1_a', 'phase2_a', 'phase3_a', 'avg_a',
     'power', 'power_consumption', 'frequency', 'status',

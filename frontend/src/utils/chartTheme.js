@@ -67,6 +67,14 @@ export const NEON_BAR_GRADIENTS = {
     hoverTop: 'rgba(248, 113, 113, 1)',
     hoverBottom: 'rgba(153, 27, 27, 0.95)',
   },
+  /** Cam/vàng neon — % setup */
+  neonAmber: {
+    top: 'rgba(251, 191, 36, 0.98)',
+    bottom: 'rgba(217, 119, 6, 0.92)',
+    border: 'rgba(217, 119, 6, 1)',
+    hoverTop: 'rgba(252, 211, 77, 1)',
+    hoverBottom: 'rgba(180, 83, 9, 0.95)',
+  },
 };
 
 export const NEON_LINES = {

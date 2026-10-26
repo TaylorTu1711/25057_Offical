@@ -48,6 +48,45 @@ export async function ensureCncSchema(db) {
   await db.query(`CREATE SCHEMA IF NOT EXISTS ${SCHEMA.CNC}`);
 }
 
+/** Cột registry máy — ALTER IF NOT EXISTS vì CREATE TABLE không bổ sung bảng cũ. */
+async function ensureMachinesRegistryColumns(db, tableRef, categoryDefault) {
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS machine_name VARCHAR(255)`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS location VARCHAR(255)`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS image_url TEXT`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS isdtgroup BOOLEAN`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS status INT`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS last_updated TIMESTAMP`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS information TEXT`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS output_name VARCHAR(255)`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS output_unit VARCHAR(64)`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS input_name VARCHAR(255)`);
+  await db.query(`ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS input_unit VARCHAR(64)`);
+  await db.query(
+    `ALTER TABLE ${tableRef} ADD COLUMN IF NOT EXISTS machine_category VARCHAR(32) DEFAULT '${categoryDefault}'`,
+  );
+}
+
+export async function ensurePublicMachinesTable(db) {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS ${PUBLIC_MACHINES_TABLE} (
+      machine_id TEXT PRIMARY KEY,
+      machine_name VARCHAR(255),
+      location VARCHAR(255),
+      image_url TEXT,
+      isdtgroup BOOLEAN,
+      status INT,
+      last_updated TIMESTAMP,
+      information TEXT,
+      output_name VARCHAR(255),
+      output_unit VARCHAR(64),
+      input_name VARCHAR(255),
+      input_unit VARCHAR(64),
+      machine_category VARCHAR(32) DEFAULT 'standard'
+    )
+  `);
+  await ensureMachinesRegistryColumns(db, PUBLIC_MACHINES_TABLE, 'standard');
+}
+
 export async function ensureCncMachinesTable(db) {
   await ensureCncSchema(db);
   await db.query(`
@@ -67,6 +106,7 @@ export async function ensureCncMachinesTable(db) {
       machine_category VARCHAR(32) DEFAULT 'cnc'
     );
   `);
+  await ensureMachinesRegistryColumns(db, CNC_MACHINES_TABLE, 'cnc');
   await db.query(`ALTER TABLE ${CNC_MACHINES_TABLE} ADD COLUMN IF NOT EXISTS layout_x REAL`);
   await db.query(`ALTER TABLE ${CNC_MACHINES_TABLE} ADD COLUMN IF NOT EXISTS layout_y REAL`);
 }

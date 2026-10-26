@@ -67,6 +67,7 @@ const buildDailyData = (data) => {
     product: 0,
     time_on: 0,
     time_running: 0,
+    time_setup: 0,
     input_material: 0,
   };
   let prevDateKey = null;
@@ -79,12 +80,15 @@ const buildDailyData = (data) => {
     const maxTimeOn = Number(max.time_on) || 0;
     const minTimeRunning = Number(min.time_running) || 0;
     const maxTimeRunning = Number(max.time_running) || 0;
+    const minTimeSetup = Number(min.time_setup) || 0;
+    const maxTimeSetup = Number(max.time_setup) || 0;
     const minInput = Number(min.input_material) || 0;
     const maxInput = Number(max.input_material) || 0;
 
     const outputDiff = maxProduct - minProduct;
     const timeOnDiff = maxTimeOn - minTimeOn;
     const timeRunningDiff = maxTimeRunning - minTimeRunning;
+    const timeSetupDiff = maxTimeSetup - minTimeSetup;
     const inputDiff = maxInput - minInput;
     const isSingleReading =
       min.id != null && max.id != null
@@ -118,6 +122,12 @@ const buildDailyData = (data) => {
       maxTimeRunning,
       prevClose.time_running,
     );
+    const time_setup = resolveDaily(
+      timeSetupDiff,
+      minTimeSetup,
+      maxTimeSetup,
+      prevClose.time_setup,
+    );
     const input_material = resolveDaily(inputDiff, minInput, maxInput, prevClose.input_material);
 
     // Điện năng trong ngày: power × Δtime_running (không dùng cột power_consumption)
@@ -133,6 +143,7 @@ const buildDailyData = (data) => {
       product: maxProduct,
       time_on: maxTimeOn,
       time_running: maxTimeRunning,
+      time_setup: maxTimeSetup,
       input_material: maxInput,
     };
     prevDateKey = date;
@@ -142,6 +153,7 @@ const buildDailyData = (data) => {
       product,
       time_on,
       time_running,
+      time_setup,
       input_material,
       power_consumption,
       min_timestamp: min.timestamp,
@@ -156,6 +168,7 @@ const clampPct = (value) => Math.min(100, Math.max(0, Number(value.toFixed(1))))
 const buildLifetimeGauges = (summary) => {
   const timeOn = Number(summary?.time_on) || 0;
   const timeRunning = Number(summary?.time_running) || 0;
+  const timeSetup = Number(summary?.time_setup) || 0;
 
   const utilizationMachine = timeOn > 0
     ? clampPct((timeRunning / timeOn) * 100)
@@ -172,6 +185,7 @@ const buildLifetimeGauges = (summary) => {
     totalTimeOn: (timeOn / 3600).toFixed(1),
     totalTimeOnSeconds: timeOn,
     totalTimeRunningSeconds: timeRunning,
+    totalTimeSetupSeconds: timeSetup,
     performanceMachine,
     utilizationMachine,
   };
@@ -183,7 +197,7 @@ const fingerprintRows = (data) => {
   if (!Array.isArray(data) || data.length === 0) return '0';
   const first = data[0];
   const last = data[data.length - 1];
-  return `${data.length}|${first?.timestamp ?? ''}|${last?.timestamp ?? ''}|${last?.time_running ?? ''}|${last?.time_on ?? ''}|${last?.power ?? ''}|${last?.power_consumption ?? ''}`;
+  return `${data.length}|${first?.timestamp ?? ''}|${last?.timestamp ?? ''}|${last?.time_running ?? ''}|${last?.time_setup ?? ''}|${last?.time_on ?? ''}|${last?.power ?? ''}|${last?.power_consumption ?? ''}`;
 };
 
 /**
@@ -223,6 +237,7 @@ export default function useMidaMachineData(machineId, {
   const [totalTimeOn, setTotalTimeOn] = useState(0);
   const [totalTimeOnSeconds, setTotalTimeOnSeconds] = useState(0);
   const [totalTimeRunningSeconds, setTotalTimeRunningSeconds] = useState(0);
+  const [totalTimeSetupSeconds, setTotalTimeSetupSeconds] = useState(0);
   const [performanceMachine, setPerformanceMachine] = useState(0);
   const [utilizationMachine, setUtilizationMachine] = useState(0);
   const [shootMachine, setShootMachine] = useState(0);
@@ -266,6 +281,7 @@ export default function useMidaMachineData(machineId, {
     setTotalTimeOn(0);
     setTotalTimeOnSeconds(0);
     setTotalTimeRunningSeconds(0);
+    setTotalTimeSetupSeconds(0);
     setPerformanceMachine(0);
     setUtilizationMachine(0);
     setShootMachine(0);
@@ -404,6 +420,7 @@ export default function useMidaMachineData(machineId, {
     setTotalTimeOn(gauges.totalTimeOn);
     setTotalTimeOnSeconds(gauges.totalTimeOnSeconds);
     setTotalTimeRunningSeconds(gauges.totalTimeRunningSeconds);
+    setTotalTimeSetupSeconds(gauges.totalTimeSetupSeconds);
     setPerformanceMachine(gauges.performanceMachine);
     setUtilizationMachine(gauges.utilizationMachine);
   }, []);
@@ -744,6 +761,7 @@ export default function useMidaMachineData(machineId, {
     totalTimeOn,
     totalTimeOnSeconds,
     totalTimeRunningSeconds,
+    totalTimeSetupSeconds,
     performanceMachine,
     utilizationMachine,
     shootMachine,
