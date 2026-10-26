@@ -6,7 +6,7 @@
  *
  * Env:
  *   MIDA_MAINT_EMAIL (default: maintenance.cnc@plenma.com)
- *   MIDA_MAINT_PASSWORD (default: Maintenance@2026)
+ *   MIDA_MAINT_PASSWORD (default: Mida@2026)
  *   MIDA_LOCATION (default: MIDA)
  */
 import dotenv from 'dotenv';
@@ -22,7 +22,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const email = process.env.MIDA_MAINT_EMAIL || 'maintenance.cnc@plenma.com';
-const password = process.env.MIDA_MAINT_PASSWORD || 'Maintenance@2026';
+const password = process.env.MIDA_MAINT_PASSWORD || 'Mida@2026';
 const location = process.env.MIDA_LOCATION || 'MIDA';
 
 async function main() {
