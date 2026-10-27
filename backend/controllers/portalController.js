@@ -18,6 +18,17 @@ import {
   upsertDailySetup,
   vietnamDateKey,
 } from '../utils/cncDailySetup.js';
+import {
+  DOWNTIME_REASONS,
+  deleteDowntime,
+  dropDowntimeTable,
+  ensureDowntimeTable,
+  fetchDowntimePareto,
+  insertDowntime,
+  listDowntimeForDate,
+  sumSetupSecondsAll,
+  sumSetupSecondsForDate,
+} from '../utils/cncDowntime.js';
 
 const MIDA_MACHINES = midaMachinesTableRef();
 
@@ -190,7 +201,10 @@ export const getMidaCncMachinePerformance = async (req, res) => {
     }
 
     const summary = await fetchCncPerformanceSummary(pool, machine_id, machine);
-    const enteredSetup = await sumDailySetupSeconds(pool, machine_id);
+    const downtimeSetup = await sumSetupSecondsAll(pool, machine_id);
+    const enteredSetup = downtimeSetup > 0
+      ? downtimeSetup
+      : await sumDailySetupSeconds(pool, machine_id);
     if (enteredSetup > 0) summary.time_setup = enteredSetup;
     res.json(summary);
   } catch (err) {
@@ -325,6 +339,7 @@ export const addMidaCncMachine = async (req, res) => {
         );
       `);
       await ensureCncElectricalTelemetryColumns(client, telemetryTable);
+      await ensureDowntimeTable(client, id);
     } else {
       await client.query(`
         CREATE TABLE IF NOT EXISTS ${telemetryTable} (
@@ -403,6 +418,7 @@ export const deleteMidaCncMachine = async (req, res) => {
     const telemetryTable = telemetryTableRef(machine_id, machine);
 
     await pool.query(`DROP TABLE IF EXISTS ${alarmTable}`);
+    await dropDowntimeTable(pool, machine_id).catch(() => {});
     await pool.query(`DELETE FROM ${MIDA_MACHINES} WHERE machine_id = $1`, [machine_id]);
     await pool.query(`DROP TABLE IF EXISTS ${telemetryTable}`);
 
@@ -534,17 +550,146 @@ export const getMidaCncMachineDailySetup = async (req, res) => {
       return res.json(rows);
     }
 
-    const row = await fetchDailySetupForDate(pool, machine_id, dateKey);
+    const events = await listDowntimeForDate(pool, machine_id, dateKey);
+    const setupSeconds = await sumSetupSecondsForDate(pool, machine_id, dateKey);
+    const row = setupSeconds > 0 ? null : await fetchDailySetupForDate(pool, machine_id, dateKey);
     res.json({
       machine_id,
       setup_date: dateKey,
-      setup_seconds: Number(row?.setup_seconds) || 0,
+      setup_seconds: setupSeconds || Number(row?.setup_seconds) || 0,
+      events,
+      reasons: DOWNTIME_REASONS,
       updated_at: row?.updated_at || null,
       updated_by: row?.updated_by || null,
     });
   } catch (err) {
     console.error('getMidaCncMachineDailySetup error:', err.message);
     res.status(500).json({ error: 'Lỗi server' });
+  }
+};
+
+export const getMidaCncMachineDowntimePareto = async (req, res) => {
+  try {
+    const { machine_id } = req.params;
+    const { role, id: userId } = req.user;
+    const scope = await resolveCncScope(userId, role);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
+    const machine = await findAuthorizedMidaMachine(machine_id, scope.locations);
+    if (!machine) {
+      return res.status(404).json({ error: 'Không tìm thấy máy' });
+    }
+
+    const from = req.query.from ? String(req.query.from).slice(0, 10) : null;
+    const to = req.query.to ? String(req.query.to).slice(0, 10) : null;
+    if (from && !/^\d{4}-\d{2}-\d{2}$/.test(from)) {
+      return res.status(400).json({ error: 'from phải là YYYY-MM-DD' });
+    }
+    if (to && !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+      return res.status(400).json({ error: 'to phải là YYYY-MM-DD' });
+    }
+
+    const items = await fetchDowntimePareto(pool, machine_id, from, to);
+    res.json({ machine_id, from, to, items });
+  } catch (err) {
+    console.error('getMidaCncMachineDowntimePareto error:', err.message);
+    res.status(500).json({ error: 'Lỗi tải Pareto dừng máy' });
+  }
+};
+
+export const getMidaCncMachineDowntime = async (req, res) => {
+  try {
+    const { machine_id } = req.params;
+    const { role, id: userId } = req.user;
+    const scope = await resolveCncScope(userId, role);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
+    const machine = await findAuthorizedMidaMachine(machine_id, scope.locations);
+    if (!machine) {
+      return res.status(404).json({ error: 'Không tìm thấy máy' });
+    }
+
+    const dateKey = String(req.query.date || vietnamDateKey()).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      return res.status(400).json({ error: 'date phải là YYYY-MM-DD' });
+    }
+
+    const events = await listDowntimeForDate(pool, machine_id, dateKey);
+    const setupSeconds = await sumSetupSecondsForDate(pool, machine_id, dateKey);
+    res.json({
+      machine_id,
+      date: dateKey,
+      events,
+      setup_seconds: setupSeconds,
+      reasons: DOWNTIME_REASONS,
+    });
+  } catch (err) {
+    console.error('getMidaCncMachineDowntime error:', err.message);
+    res.status(500).json({ error: 'Lỗi tải lịch sử dừng máy' });
+  }
+};
+
+export const postMidaCncMachineDowntime = async (req, res) => {
+  try {
+    const { machine_id } = req.params;
+    const role = req.userScope?.role || req.user?.role;
+    if (role !== 'admin' && !isMaintenanceRole(role)) {
+      return res.status(403).json({ error: 'Chỉ maintenance hoặc admin được nhập dừng máy' });
+    }
+
+    const { id: userId } = req.user;
+    const scope = await resolveCncScope(userId, role);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
+    const machine = await findAuthorizedMidaMachine(machine_id, scope.locations);
+    if (!machine) {
+      return res.status(404).json({ error: 'Không tìm thấy máy' });
+    }
+
+    const dateKey = String(req.body.date || vietnamDateKey()).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
+      return res.status(400).json({ error: 'date phải là YYYY-MM-DD' });
+    }
+
+    const saved = await insertDowntime(pool, {
+      machineId: machine_id,
+      dateKey,
+      startTime: req.body.start_time,
+      endTime: req.body.end_time,
+      reasonCode: req.body.reason_code,
+      reasonNote: req.body.reason_note,
+      userId,
+    });
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error('postMidaCncMachineDowntime error:', err.message);
+    res.status(err.status || 500).json({ error: err.message || 'Lỗi lưu khoảng dừng máy' });
+  }
+};
+
+export const deleteMidaCncMachineDowntime = async (req, res) => {
+  try {
+    const { machine_id, event_id } = req.params;
+    const role = req.userScope?.role || req.user?.role;
+    if (role !== 'admin' && !isMaintenanceRole(role)) {
+      return res.status(403).json({ error: 'Chỉ maintenance hoặc admin được xóa khoảng dừng' });
+    }
+
+    const { id: userId } = req.user;
+    const scope = await resolveCncScope(userId, role);
+    if (scope.error) return res.status(scope.status).json({ error: scope.error });
+
+    const machine = await findAuthorizedMidaMachine(machine_id, scope.locations);
+    if (!machine) {
+      return res.status(404).json({ error: 'Không tìm thấy máy' });
+    }
+
+    const ok = await deleteDowntime(pool, machine_id, Number(event_id));
+    if (!ok) return res.status(404).json({ error: 'Không tìm thấy khoảng dừng' });
+    res.json({ message: 'Đã xóa khoảng dừng' });
+  } catch (err) {
+    console.error('deleteMidaCncMachineDowntime error:', err.message);
+    res.status(500).json({ error: 'Lỗi xóa khoảng dừng máy' });
   }
 };
 

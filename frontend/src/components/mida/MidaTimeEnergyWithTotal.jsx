@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import LineChart_TimeOn from '../BarChart_Thoigian';
+import MidaChartExpand from './MidaChartExpand';
 import { NEON_BAR_GRADIENTS, formatChartTooltipValue } from '../../utils/chartTheme';
 
 const timePalette = NEON_BAR_GRADIENTS.neonPink;
@@ -62,6 +63,17 @@ export default function MidaTimeEnergyWithTotal({
       <div className="mida-time-total-wrap__main">
         <div className="chart-title-brand machine-chart-head mida-time-total-head">
           <div className="mida-time-total-head__main">THỜI GIAN CẮT GỌT & ĐIỆN NĂNG</div>
+          <MidaChartExpand title="THỜI GIAN CẮT GỌT & ĐIỆN NĂNG">
+            <LineChart_TimeOn
+              labels={labels}
+              line3={timeRunValues}
+              energyKwhValues={energyKwhValues}
+              xTickMode={xTickMode}
+              categoryPrefix={categoryPrefix}
+              timeSeriesType={timeSeriesType}
+              timeSeriesLabel={timeSeriesLabel}
+            />
+          </MidaChartExpand>
         </div>
         <div className="machine-chart-plot">
           <div className="machine-chart-plot-inner">

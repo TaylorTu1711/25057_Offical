@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import MidaNavbar from '../../components/mida/MidaNavbar';
@@ -6,6 +6,17 @@ import MidaMachineSidebar from '../../components/mida/MidaMachineSidebar';
 import { BASE_URL } from '../../config/config';
 import { authHeaders } from '../../utils/auth';
 import '../../css/MidaCnc.css';
+
+const FALLBACK_REASONS = [
+  { code: 'thieu_nhan_su', label: 'Thiếu nhân sự' },
+  { code: 'khong_ke_hoach', label: 'Không kế hoạch' },
+  { code: 'setup_may', label: 'Setup máy' },
+  { code: 'nghi_le_chu_nhat', label: 'Nghỉ lễ / chủ nhật' },
+  { code: 'bao_tri_may', label: 'Bảo trì máy' },
+  { code: 'giao_ca', label: 'Giao ca' },
+  { code: 'thieu_vat_tu', label: 'Thiếu vật tư' },
+  { code: 'khac', label: 'Nguyên nhân khác' },
+];
 
 function todayKey() {
   return new Intl.DateTimeFormat('en-CA', {
@@ -16,20 +27,24 @@ function todayKey() {
   }).format(new Date());
 }
 
-function secondsToHm(total) {
-  const sec = Math.max(0, Number(total) || 0);
-  return {
-    hours: Math.floor(sec / 3600),
-    minutes: Math.floor((sec % 3600) / 60),
-  };
-}
-
 function formatDuration(seconds) {
-  const { hours, minutes } = secondsToHm(seconds);
+  const sec = Math.max(0, Number(seconds) || 0);
+  const hours = Math.floor(sec / 3600);
+  const minutes = Math.floor((sec % 3600) / 60);
   if (hours <= 0 && minutes <= 0) return '0 phút';
   if (hours <= 0) return `${minutes} phút`;
   if (minutes <= 0) return `${hours} giờ`;
   return `${hours} giờ ${minutes} phút`;
+}
+
+function durationFromTimes(start, end) {
+  if (!start || !end) return 0;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let startMin = sh * 60 + sm;
+  let endMin = eh * 60 + em;
+  if (endMin <= startMin) endMin += 24 * 60;
+  return (endMin - startMin) * 60;
 }
 
 export default function MidaMaintenanceSetupPage() {
@@ -39,9 +54,13 @@ export default function MidaMaintenanceSetupPage() {
   const [machines, setMachines] = useState([]);
   const [machine, setMachine] = useState(null);
   const [date, setDate] = useState(todayKey);
-  const [hours, setHours] = useState(0);
-  const [minutes, setMinutes] = useState(0);
-  const [savedSeconds, setSavedSeconds] = useState(0);
+  const [events, setEvents] = useState([]);
+  const [reasons, setReasons] = useState(FALLBACK_REASONS);
+  const [setupSeconds, setSetupSeconds] = useState(0);
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [reasonCode, setReasonCode] = useState('setup_may');
+  const [reasonNote, setReasonNote] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -70,17 +89,17 @@ export default function MidaMaintenanceSetupPage() {
     setMachine(res.data || null);
   }, [machine_id]);
 
-  const fetchSetup = useCallback(async () => {
+  const fetchDowntime = useCallback(async () => {
     if (!machine_id || !date) return;
     const res = await axios.get(
-      `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machine_id)}/daily-setup`,
+      `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machine_id)}/downtime`,
       { headers: authHeaders(), params: { date } },
     );
-    const seconds = Number(res.data?.setup_seconds) || 0;
-    const hm = secondsToHm(seconds);
-    setSavedSeconds(seconds);
-    setHours(hm.hours);
-    setMinutes(hm.minutes);
+    setEvents(Array.isArray(res.data?.events) ? res.data.events : []);
+    setSetupSeconds(Number(res.data?.setup_seconds) || 0);
+    if (Array.isArray(res.data?.reasons) && res.data.reasons.length > 0) {
+      setReasons(res.data.reasons);
+    }
   }, [machine_id, date]);
 
   useEffect(() => {
@@ -90,7 +109,7 @@ export default function MidaMaintenanceSetupPage() {
       setError('');
       setMessage('');
       try {
-        await Promise.all([fetchMachines(), fetchMachine(), fetchSetup()]);
+        await Promise.all([fetchMachines(), fetchMachine(), fetchDowntime()]);
       } catch (err) {
         if (!cancelled) {
           setError(err.response?.data?.error || 'Không tải được dữ liệu máy');
@@ -100,7 +119,12 @@ export default function MidaMaintenanceSetupPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [fetchMachines, fetchMachine, fetchSetup]);
+  }, [fetchMachines, fetchMachine, fetchDowntime]);
+
+  const previewDuration = useMemo(
+    () => durationFromTimes(startTime, endTime),
+    [startTime, endTime],
+  );
 
   const handleSave = async (event) => {
     event.preventDefault();
@@ -108,21 +132,42 @@ export default function MidaMaintenanceSetupPage() {
     setError('');
     setMessage('');
     try {
-      const res = await axios.put(
-        `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machine_id)}/daily-setup`,
-        { date, hours: Number(hours) || 0, minutes: Number(minutes) || 0 },
+      await axios.post(
+        `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machine_id)}/downtime`,
+        {
+          date,
+          start_time: startTime,
+          end_time: endTime,
+          reason_code: reasonCode,
+          reason_note: reasonNote,
+        },
         { headers: authHeaders() },
       );
-      const seconds = Number(res.data?.setup_seconds) || 0;
-      setSavedSeconds(seconds);
-      const hm = secondsToHm(seconds);
-      setHours(hm.hours);
-      setMinutes(hm.minutes);
-      setMessage(`Đã lưu setup ${formatDuration(seconds)} cho ngày ${date}`);
+      setStartTime('');
+      setEndTime('');
+      setReasonNote('');
+      await fetchDowntime();
+      setMessage('Đã lưu khoảng dừng máy');
     } catch (err) {
-      setError(err.response?.data?.error || 'Không lưu được thời gian setup');
+      setError(err.response?.data?.error || 'Không lưu được khoảng dừng máy');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async (eventId) => {
+    if (!window.confirm('Xóa khoảng dừng này?')) return;
+    setError('');
+    setMessage('');
+    try {
+      await axios.delete(
+        `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machine_id)}/downtime/${eventId}`,
+        { headers: authHeaders() },
+      );
+      await fetchDowntime();
+      setMessage('Đã xóa khoảng dừng');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Không xóa được khoảng dừng');
     }
   };
 
@@ -140,11 +185,12 @@ export default function MidaMaintenanceSetupPage() {
         />
         <div className="flex-grow-1 mida-detail__main">
           <div className="mida-maint">
-            <div className="mida-maint__card">
-              <h2 className="mida-maint__title">Nhập thời gian setup</h2>
+            <div className="mida-maint__card mida-maint__card--wide">
+              <h2 className="mida-maint__title">Nhật ký dừng máy</h2>
               <p className="mida-maint__machine">{name}</p>
               <p className="mida-maint__hint">
-                Chỉ nhập tổng thời gian setup của máy trong ngày đã chọn.
+                Nhập giờ bắt đầu, giờ kết thúc và nguyên nhân. Chỉ các khoảng
+                {' '}<strong>Setup máy</strong> được cộng vào biểu đồ thời gian setup.
               </p>
 
               {width <= 1200 && machines.length > 0 ? (
@@ -182,37 +228,96 @@ export default function MidaMaintenanceSetupPage() {
                 </label>
                 <div className="mida-maint__row">
                   <label className="mida-maint__field">
-                    <span>Giờ</span>
+                    <span>Bắt đầu</span>
                     <input
-                      type="number"
-                      min="0"
-                      max="24"
-                      step="1"
+                      type="time"
                       className="mida-maint__input"
-                      value={hours}
-                      onChange={(e) => setHours(Math.max(0, Math.min(24, Number(e.target.value) || 0)))}
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      required
                     />
                   </label>
                   <label className="mida-maint__field">
-                    <span>Phút</span>
+                    <span>Kết thúc</span>
                     <input
-                      type="number"
-                      min="0"
-                      max="59"
-                      step="1"
+                      type="time"
                       className="mida-maint__input"
-                      value={minutes}
-                      onChange={(e) => setMinutes(Math.max(0, Math.min(59, Number(e.target.value) || 0)))}
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      required
                     />
                   </label>
                 </div>
+                <label className="mida-maint__field">
+                  <span>Nguyên nhân dừng máy</span>
+                  <select
+                    className="mida-maint__input"
+                    value={reasonCode}
+                    onChange={(e) => setReasonCode(e.target.value)}
+                    required
+                  >
+                    {reasons.map((reason) => (
+                      <option key={reason.code} value={reason.code}>
+                        {reason.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {reasonCode === 'khac' ? (
+                  <label className="mida-maint__field">
+                    <span>Mô tả nguyên nhân khác</span>
+                    <input
+                      type="text"
+                      className="mida-maint__input"
+                      value={reasonNote}
+                      onChange={(e) => setReasonNote(e.target.value)}
+                      placeholder="Nhập nguyên nhân…"
+                      required
+                    />
+                  </label>
+                ) : null}
                 <p className="mida-maint__saved">
-                  Đã lưu: <strong>{formatDuration(savedSeconds)}</strong>
+                  Thời lượng: <strong>{formatDuration(previewDuration)}</strong>
+                  {endTime && startTime && endTime <= startTime
+                    ? ' (qua ngày hôm sau)'
+                    : ''}
                 </p>
                 <button type="submit" className="mida-maint__save" disabled={saving || loading}>
-                  {saving ? 'Đang lưu…' : 'Lưu thời gian setup'}
+                  {saving ? 'Đang lưu…' : 'Thêm khoảng dừng'}
                 </button>
               </form>
+
+              <div className="mida-maint__history">
+                <h3 className="mida-maint__history-title">Lịch sử trong ngày</h3>
+                <p className="mida-maint__saved">
+                  Tổng setup: <strong>{formatDuration(setupSeconds)}</strong>
+                </p>
+                {events.length === 0 && !loading ? (
+                  <p className="mida-maint__status">Chưa có khoảng dừng nào.</p>
+                ) : (
+                  <ul className="mida-maint__list">
+                    {events.map((item) => (
+                      <li key={item.id} className="mida-maint__item">
+                        <div>
+                          <strong>{item.start_time} – {item.end_time}</strong>
+                          <span> · {item.reason_label}</span>
+                          {item.reason_note ? <span> ({item.reason_note})</span> : null}
+                          <div className="mida-maint__item-meta">
+                            {formatDuration(item.duration_seconds)}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="mida-maint__delete"
+                          onClick={() => handleDelete(item.id)}
+                        >
+                          Xóa
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         </div>

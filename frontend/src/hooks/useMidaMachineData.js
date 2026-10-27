@@ -237,6 +237,7 @@ export default function useMidaMachineData(machineId, {
   const [totalTimeOn, setTotalTimeOn] = useState(0);
   const [totalTimeOnSeconds, setTotalTimeOnSeconds] = useState(0);
   const [totalTimeRunningSeconds, setTotalTimeRunningSeconds] = useState(0);
+  const [dailySumTimeRunningSeconds, setDailySumTimeRunningSeconds] = useState(0);
   const [totalTimeSetupSeconds, setTotalTimeSetupSeconds] = useState(0);
   const [performanceMachine, setPerformanceMachine] = useState(0);
   const [utilizationMachine, setUtilizationMachine] = useState(0);
@@ -281,6 +282,7 @@ export default function useMidaMachineData(machineId, {
     setTotalTimeOn(0);
     setTotalTimeOnSeconds(0);
     setTotalTimeRunningSeconds(0);
+    setDailySumTimeRunningSeconds(0);
     setTotalTimeSetupSeconds(0);
     setPerformanceMachine(0);
     setUtilizationMachine(0);
@@ -420,6 +422,7 @@ export default function useMidaMachineData(machineId, {
     setTotalTimeOn(gauges.totalTimeOn);
     setTotalTimeOnSeconds(gauges.totalTimeOnSeconds);
     setTotalTimeRunningSeconds(gauges.totalTimeRunningSeconds);
+    setDailySumTimeRunningSeconds(Number(summary?.time_running_daily_sum) || 0);
     setTotalTimeSetupSeconds(gauges.totalTimeSetupSeconds);
     setPerformanceMachine(gauges.performanceMachine);
     setUtilizationMachine(gauges.utilizationMachine);
@@ -761,6 +764,7 @@ export default function useMidaMachineData(machineId, {
     totalTimeOn,
     totalTimeOnSeconds,
     totalTimeRunningSeconds,
+    dailySumTimeRunningSeconds,
     totalTimeSetupSeconds,
     performanceMachine,
     utilizationMachine,

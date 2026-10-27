@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticate, authorizeRoles } from '../middleware/authMiddleware.js';
 import { attachUserScope, requirePortal } from '../middleware/portalMiddleware.js';
-import { addMidaCncMachine, bootMidaCncMachineData, deleteMidaCncMachine, getMidaCncMachineAlarms, getMidaCncMachineById, getMidaCncMachineDailySetup, getMidaCncMachinePerformance, getMidaCncMachineTelemetry, getMidaCncMachineTelemetryDaily, getMidaCncMachines, getPortalHome, putMidaCncMachineDailySetup, updateMidaCncMachineInfo, updateMidaMachineLayout } from '../controllers/portalController.js';
+import { addMidaCncMachine, bootMidaCncMachineData, deleteMidaCncMachine, deleteMidaCncMachineDowntime, getMidaCncMachineAlarms, getMidaCncMachineById, getMidaCncMachineDailySetup, getMidaCncMachineDowntime, getMidaCncMachineDowntimePareto, getMidaCncMachinePerformance, getMidaCncMachineTelemetry, getMidaCncMachineTelemetryDaily, getMidaCncMachines, getPortalHome, postMidaCncMachineDowntime, putMidaCncMachineDailySetup, updateMidaCncMachineInfo, updateMidaMachineLayout } from '../controllers/portalController.js';
 import { PORTALS } from '../utils/userScope.js';
 import { machineImageUpload } from '../utils/upload.js';
 
@@ -18,6 +18,18 @@ portalRoutes.put(
   '/mida/cnc-machines/:machine_id/daily-setup',
   requirePortal(PORTALS.MIDA_CNC),
   putMidaCncMachineDailySetup,
+);
+portalRoutes.get('/mida/cnc-machines/:machine_id/downtime/pareto', requirePortal(PORTALS.MIDA_CNC), getMidaCncMachineDowntimePareto);
+portalRoutes.get('/mida/cnc-machines/:machine_id/downtime', requirePortal(PORTALS.MIDA_CNC), getMidaCncMachineDowntime);
+portalRoutes.post(
+  '/mida/cnc-machines/:machine_id/downtime',
+  requirePortal(PORTALS.MIDA_CNC),
+  postMidaCncMachineDowntime,
+);
+portalRoutes.delete(
+  '/mida/cnc-machines/:machine_id/downtime/:event_id',
+  requirePortal(PORTALS.MIDA_CNC),
+  deleteMidaCncMachineDowntime,
 );
 portalRoutes.get('/mida/cnc-machines/:machine_id/alarms', requirePortal(PORTALS.MIDA_CNC), getMidaCncMachineAlarms);
 portalRoutes.delete(

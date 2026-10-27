@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Chart } from 'react-chartjs-2';
+import MidaChartExpand from './MidaChartExpand';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import {
@@ -380,6 +381,44 @@ export default function MidaRunStopStackedBar({
               giờ
             </button>
           </div>
+          <MidaChartExpand
+            title="HIỆU SUẤT KHAI THÁC"
+            extraHead={(
+              <div
+                className="mida-run-stop-unit-toggle"
+                role="tablist"
+                aria-label="Đơn vị hiệu suất khai thác"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!isHours}
+                  className={`mida-run-stop-unit-btn${!isHours ? ' is-active' : ''}`}
+                  onClick={() => setUnitMode(UNIT_PCT)}
+                >
+                  %
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isHours}
+                  className={`mida-run-stop-unit-btn${isHours ? ' is-active' : ''}`}
+                  onClick={() => setUnitMode(UNIT_HOURS)}
+                >
+                  giờ
+                </button>
+              </div>
+            )}
+          >
+            <Chart
+              key={`fs-${theme}-${unitMode}`}
+              type="bar"
+              data={data}
+              options={options}
+              className="mida-run-stop-stacked"
+              style={{ position: 'relative' }}
+            />
+          </MidaChartExpand>
         </div>
         <div className="machine-chart-plot">
           <div className="machine-chart-plot-inner">

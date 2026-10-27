@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useId, useMemo } from 'react';
+import MidaChartExpand from './MidaChartExpand';
 
 const VIEW = 220;
 const CX = 110;
@@ -61,7 +62,9 @@ export default function MidaRunStopPieChart({
   runSeconds = 0,
   setupSeconds = 0,
   onSeconds = 0,
+  expandable = true,
 }) {
+  const uid = useId().replace(/:/g, '');
   const { runPct, setupPct, stopPct } = useMemo(() => {
     const on = Math.max(0, Number(onSeconds) || 0);
     let run = Math.max(0, Number(runSeconds) || 0);
@@ -89,9 +92,9 @@ export default function MidaRunStopPieChart({
 
   const slices = useMemo(() => {
     const defs = [
-      { key: 'run', pct: runPct, fill: 'url(#midaPieRunGrad)', stroke: COLORS.runDeep },
-      { key: 'setup', pct: setupPct, fill: 'url(#midaPieSetupGrad)', stroke: COLORS.setupDeep },
-      { key: 'stop', pct: stopPct, fill: 'url(#midaPieStopGrad)', stroke: COLORS.stopDeep },
+      { key: 'run', pct: runPct, fill: `url(#midaPieRunGrad-${uid})`, stroke: COLORS.runDeep },
+      { key: 'setup', pct: setupPct, fill: `url(#midaPieSetupGrad-${uid})`, stroke: COLORS.setupDeep },
+      { key: 'stop', pct: stopPct, fill: `url(#midaPieStopGrad-${uid})`, stroke: COLORS.stopDeep },
     ];
     let cursor = 0;
     return defs.map((slice) => {
@@ -107,12 +110,26 @@ export default function MidaRunStopPieChart({
         show: sweep > 1,
       };
     });
-  }, [runPct, setupPct, stopPct]);
+  }, [runPct, setupPct, stopPct, uid]);
 
   const empty = runPct === 0 && setupPct === 0 && stopPct === 0;
 
   return (
     <div className="mida-gauge mida-run-stop-pie">
+      {expandable ? (
+        <MidaChartExpand
+          title="CẮT GỌT · SETUP · NGƯNG"
+          variant="pie"
+          buttonClassName="mida-chart-expand-btn--corner"
+        >
+          <MidaRunStopPieChart
+            runSeconds={runSeconds}
+            setupSeconds={setupSeconds}
+            onSeconds={onSeconds}
+            expandable={false}
+          />
+        </MidaChartExpand>
+      ) : null}
       <div className="mida-run-stop-pie__chart">
         {empty ? (
           <div className="mida-run-stop-pie__empty">Chưa có dữ liệu</div>
@@ -124,27 +141,27 @@ export default function MidaRunStopPieChart({
             aria-label={`Cắt gọt ${runPct}%, Setup ${setupPct}%, Ngưng ${stopPct}%`}
           >
             <defs>
-              <radialGradient id="midaPieRunGrad" cx="40%" cy="35%" r="75%">
+              <radialGradient id={`midaPieRunGrad-${uid}`} cx="40%" cy="35%" r="75%">
                 <stop offset="0%" stopColor="#4ade80" />
                 <stop offset="100%" stopColor={COLORS.runDeep} />
               </radialGradient>
-              <radialGradient id="midaPieSetupGrad" cx="40%" cy="35%" r="75%">
+              <radialGradient id={`midaPieSetupGrad-${uid}`} cx="40%" cy="35%" r="75%">
                 <stop offset="0%" stopColor="#fbbf24" />
                 <stop offset="100%" stopColor={COLORS.setupDeep} />
               </radialGradient>
-              <radialGradient id="midaPieStopGrad" cx="40%" cy="35%" r="75%">
+              <radialGradient id={`midaPieStopGrad-${uid}`} cx="40%" cy="35%" r="75%">
                 <stop offset="0%" stopColor="#f87171" />
                 <stop offset="100%" stopColor={COLORS.stopDeep} />
               </radialGradient>
-              <filter id="midaPieSoftShadow" x="-25%" y="-25%" width="150%" height="150%">
+              <filter id={`midaPieSoftShadow-${uid}`} x="-25%" y="-25%" width="150%" height="150%">
                 <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#94a3b8" floodOpacity="0.35" />
               </filter>
-              <filter id="midaPieBadgeShadow" x="-40%" y="-40%" width="180%" height="180%">
+              <filter id={`midaPieBadgeShadow-${uid}`} x="-40%" y="-40%" width="180%" height="180%">
                 <feDropShadow dx="0" dy="2" stdDeviation="2.2" floodOpacity="0.28" />
               </filter>
             </defs>
 
-            <g filter="url(#midaPieSoftShadow)">
+            <g filter={`url(#midaPieSoftShadow-${uid})`}>
               {slices.map((slice) => (
                 slice.show ? (
                   <path
@@ -186,7 +203,7 @@ export default function MidaRunStopPieChart({
                     stroke={slice.stroke}
                     strokeWidth="1.8"
                   />
-                  <g filter="url(#midaPieBadgeShadow)">
+                  <g filter={`url(#midaPieBadgeShadow-${uid})`}>
                     <rect
                       x={slice.callout.label.x - 40}
                       y={slice.callout.label.y - 16}

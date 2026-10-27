@@ -17,7 +17,8 @@ import MidaNavbar from '../../components/mida/MidaNavbar';
 import MidaMachineSidebar from '../../components/mida/MidaMachineSidebar';
 import MidaMachineSidebarMobile from '../../components/mida/MidaMachineSidebarMobile';
 import MidaElectricalCards from '../../components/mida/MidaElectricalCards';
-import MidaPowerCurrentChart from '../../components/mida/MidaPowerCurrentChart';
+import MidaChartExpand from '../../components/mida/MidaChartExpand';
+import MidaDowntimeParetoChart from '../../components/mida/MidaDowntimeParetoChart';
 import MidaRunStopPieChart from '../../components/mida/MidaRunStopPieChart';
 import MidaRunStopStackedBar from '../../components/mida/MidaRunStopStackedBar';
 import MidaTimeEnergyWithTotal from '../../components/mida/MidaTimeEnergyWithTotal';
@@ -49,7 +50,6 @@ import {
 import { parseHandoverDate } from '../../utils/parseStandardProductivity';
 import {
   buildStatusTimelineChartSeconds,
-  buildPowerCurrentTimelineChart,
 } from '../../utils/machineStatusTimeline';
 
 import '../../css/Machine.css';
@@ -72,6 +72,28 @@ function isSameLocalDay(a, b) {
     && a.getMonth() === b.getMonth()
     && a.getDate() === b.getDate()
   );
+}
+
+function pad2(n) {
+  return String(n).padStart(2, '0');
+}
+
+function paretoDateRange({ viewMode, year, month, day, dateFrom, dateTo }) {
+  if (viewMode === CHART_VIEW_MODES.hour) {
+    const key = `${year}-${pad2(month)}-${pad2(day)}`;
+    return { from: key, to: key };
+  }
+  if (viewMode === CHART_VIEW_MODES.day || viewMode === CHART_VIEW_MODES.week) {
+    const last = new Date(year, month, 0).getDate();
+    return { from: `${year}-${pad2(month)}-01`, to: `${year}-${pad2(month)}-${pad2(last)}` };
+  }
+  if (viewMode === CHART_VIEW_MODES.month || viewMode === CHART_VIEW_MODES.quarter) {
+    return { from: `${year}-01-01`, to: `${year}-12-31` };
+  }
+  if (viewMode === CHART_VIEW_MODES.range && dateFrom && dateTo) {
+    return { from: String(dateFrom).slice(0, 10), to: String(dateTo).slice(0, 10) };
+  }
+  return { from: null, to: null };
 }
 
 /** Resolve khoảng thời gian biểu đồ trạng thái theo preset / custom. */
@@ -211,6 +233,7 @@ function MidaCncMachineDetailInner() {
     machines,
     totalTimeOnSeconds,
     totalTimeRunningSeconds,
+    dailySumTimeRunningSeconds,
     totalTimeSetupSeconds,
     shootMachine,
     powerKw,
@@ -267,8 +290,7 @@ function MidaCncMachineDetailInner() {
   };
 
 
-  const [powerChartValues, setPowerChartValues] = useState([]);
-  const [elecChartTimestamps, setElecChartTimestamps] = useState([]);
+  const [downtimeParetoItems, setDowntimeParetoItems] = useState([]);
   const [statusChartTimestamps, setStatusChartTimestamps] = useState([]);
   const [statusDataValuesChart3, setStatusDataValuesChart3] = useState([]);
   const [showStatusRangeModal, setShowStatusRangeModal] = useState(false);
@@ -434,37 +456,38 @@ function MidaCncMachineDetailInner() {
     return true;
   };
 
-  // Biểu đồ công suất — cùng khoảng thời gian với biểu đồ trạng thái
+  const paretoRange = useMemo(
+    () =>
+      paretoDateRange({
+        viewMode: chartViewMode,
+        year: selectedYear,
+        month: selectedMonth,
+        day: selectedDay,
+        dateFrom: rangeFrom,
+        dateTo: rangeTo,
+      }),
+    [chartViewMode, selectedYear, selectedMonth, selectedDay, rangeFrom, rangeTo],
+  );
+
   useEffect(() => {
-    const nowMs = nowBucket10s * 10_000;
-    const { from, to, isLive } = resolveStatusRange(
-      statusRangeMode,
-      statusFrom,
-      statusTo,
-      nowMs,
-    );
-    const electrical = buildPowerCurrentTimelineChart(
-      rawMachineData,
-      from,
-      to,
-      10,
-      isLive ? powerKw : null,
-      null,
-    );
-    setElecChartTimestamps((prev) =>
-      chartSeriesEqual(prev, electrical.timestamps) ? prev : electrical.timestamps,
-    );
-    setPowerChartValues((prev) =>
-      chartSeriesEqual(prev, electrical.power) ? prev : electrical.power,
-    );
-  }, [
-    rawMachineData,
-    nowBucket10s,
-    statusRangeMode,
-    statusFrom,
-    statusTo,
-    powerKw,
-  ]);
+    if (!machine_id) return undefined;
+    let cancelled = false;
+    const params = {};
+    if (paretoRange.from) params.from = paretoRange.from;
+    if (paretoRange.to) params.to = paretoRange.to;
+    axios
+      .get(
+        `${BASE_URL}/api/portal/mida/cnc-machines/${encodeURIComponent(machine_id)}/downtime/pareto`,
+        { headers: authHeaders(), params },
+      )
+      .then((res) => {
+        if (!cancelled) setDowntimeParetoItems(Array.isArray(res.data?.items) ? res.data.items : []);
+      })
+      .catch(() => {
+        if (!cancelled) setDowntimeParetoItems([]);
+      });
+    return () => { cancelled = true; };
+  }, [machine_id, paretoRange.from, paretoRange.to]);
 
   const handleDelete = async () => {
     const name = machineInfo?.machine_name || machine_id;
@@ -623,9 +646,9 @@ function MidaCncMachineDetailInner() {
                         <p className="fw-semibold mb-0 text-brand">THỜI GIAN CẮT GỌT LŨY KẾ</p>
                         <div className="flex-grow-1 d-flex align-items-center justify-content-center px-1">
                           <CumulativeRuntimeDisplay
-                            serverSeconds={totalTimeRunningSeconds}
+                            serverSeconds={dailySumTimeRunningSeconds}
                             isRunning={machineIsRunningRaw}
-                            machineId={`${machine_id}-run`}
+                            machineId={`${machine_id}-run-daily-sum`}
                           />
                         </div>
                       </div>
@@ -635,44 +658,19 @@ function MidaCncMachineDetailInner() {
               </div>
             </div>
 
-            {/* Biểu đồ trạng thái */}
+            {/* Pareto nguyên nhân dừng máy — theo khoảng ngày/tháng/năm bên phải */}
             <div className="machine-top-panel__center">
               <div className="machine-top-panel__status-wrap d-flex min-h-0">
                 <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--status machine-top-panel__status-chart w-100">
-                  <div className="chart-title-brand machine-chart-head mida-status-chart-head">
-                    <div>BIỂU ĐỒ TRẠNG THÁI</div>
-                    <div className="mida-status-range" role="group" aria-label="Khoảng thời gian trạng thái">
-                      {STATUS_RANGE_PRESETS.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          className={`mida-status-range__btn${
-                            statusRangeMode === p.id ? ' is-active' : ''
-                          }`}
-                          onClick={() => setStatusRangeMode(p.id)}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        className={`mida-status-range__btn mida-status-range__btn--custom${
-                          statusRangeMode === 'custom' ? ' is-active' : ''
-                        }`}
-                        onClick={openStatusRangeModal}
-                        title="Chọn khoảng thời gian tùy chỉnh"
-                      >
-                        Tuỳ chọn
-                      </button>
-                    </div>
+                  <div className="chart-title-brand machine-chart-head d-flex align-items-center justify-content-between gap-2">
+                    <div>PARETO NGUYÊN NHÂN DỪNG MÁY</div>
+                    <MidaChartExpand title="PARETO NGUYÊN NHÂN DỪNG MÁY">
+                      <MidaDowntimeParetoChart items={downtimeParetoItems} />
+                    </MidaChartExpand>
                   </div>
                   <div className="machine-chart-plot">
                     <div className="machine-chart-plot-inner">
-                      <MidaStatusChart
-                        key={`${statusRangeMode}-${statusFrom?.getTime?.() ?? ''}-${statusTo?.getTime?.() ?? ''}`}
-                        timestamps={statusChartTimestamps}
-                        statusValues={statusDataValuesChart3}
-                      />
+                      <MidaDowntimeParetoChart items={downtimeParetoItems} />
                     </div>
                   </div>
                 </div>
@@ -737,15 +735,73 @@ function MidaCncMachineDetailInner() {
 
             <div className="mida-charts-cell mida-charts-cell--power">
               <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--tall">
-                <div className="chart-title-brand machine-chart-head">
-                  <div>CÔNG SUẤT TRỤC SPINDLE</div>
+                <div className="chart-title-brand machine-chart-head mida-status-chart-head">
+                  <div>BIỂU ĐỒ TRẠNG THÁI</div>
+                  <div className="mida-status-range" role="group" aria-label="Khoảng thời gian trạng thái">
+                    {STATUS_RANGE_PRESETS.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`mida-status-range__btn${
+                          statusRangeMode === p.id ? ' is-active' : ''
+                        }`}
+                        onClick={() => setStatusRangeMode(p.id)}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className={`mida-status-range__btn mida-status-range__btn--custom${
+                        statusRangeMode === 'custom' ? ' is-active' : ''
+                      }`}
+                      onClick={openStatusRangeModal}
+                      title="Chọn khoảng thời gian tùy chỉnh"
+                    >
+                      Tuỳ chọn
+                    </button>
+                    <MidaChartExpand
+                      title="BIỂU ĐỒ TRẠNG THÁI"
+                      extraHead={(
+                        <div className="mida-status-range" role="group" aria-label="Khoảng thời gian trạng thái">
+                          {STATUS_RANGE_PRESETS.map((p) => (
+                            <button
+                              key={`fs-${p.id}`}
+                              type="button"
+                              className={`mida-status-range__btn${
+                                statusRangeMode === p.id ? ' is-active' : ''
+                              }`}
+                              onClick={() => setStatusRangeMode(p.id)}
+                            >
+                              {p.label}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            className={`mida-status-range__btn mida-status-range__btn--custom${
+                              statusRangeMode === 'custom' ? ' is-active' : ''
+                            }`}
+                            onClick={openStatusRangeModal}
+                            title="Chọn khoảng thời gian tùy chỉnh"
+                          >
+                            Tuỳ chọn
+                          </button>
+                        </div>
+                      )}
+                    >
+                      <MidaStatusChart
+                        timestamps={statusChartTimestamps}
+                        statusValues={statusDataValuesChart3}
+                      />
+                    </MidaChartExpand>
+                  </div>
                 </div>
                 <div className="machine-chart-plot">
                   <div className="machine-chart-plot-inner">
-                    <MidaPowerCurrentChart
-                      key={`${statusRangeMode}-${statusFrom?.getTime?.() ?? ''}-${statusTo?.getTime?.() ?? ''}`}
-                      timestamps={elecChartTimestamps}
-                      powerValues={powerChartValues}
+                    <MidaStatusChart
+                      key={`status-${statusRangeMode}-${statusFrom?.getTime?.() ?? ''}-${statusTo?.getTime?.() ?? ''}`}
+                      timestamps={statusChartTimestamps}
+                      statusValues={statusDataValuesChart3}
                     />
                   </div>
                 </div>

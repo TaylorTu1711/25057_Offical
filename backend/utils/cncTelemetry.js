@@ -210,7 +210,9 @@ export async function ensureAllCncTelemetryColumns(db) {
     WHERE table_schema = 'cnc'
       AND table_type = 'BASE TABLE'
       AND table_name <> 'machines'
+      AND table_name <> 'machine_daily_setup'
       AND table_name NOT LIKE 'alarm%'
+      AND table_name NOT LIKE '%\\_downtime' ESCAPE '\\'
   `);
   for (const row of rows) {
     const qualified = `"cnc"."${row.table_name}"`;
@@ -579,6 +581,7 @@ export async function fetchCncPerformanceSummary(db, machineId, machine) {
       last_timestamp: null,
       time_on: 0,
       time_running: 0,
+      time_running_daily_sum: 0,
       time_setup: 0,
     };
   }
@@ -631,11 +634,48 @@ export async function fetchCncPerformanceSummary(db, machineId, machine) {
     timeSetup = Number(normalized?.time_setup) || 0;
   }
 
+  let timeRunningDailySum = 0;
+  if (hasTimeRunning) {
+    const { rows: sumRows } = await db.query(
+      `
+      WITH days AS (
+        SELECT
+          ("timestamp")::date AS day,
+          COALESCE(time_running, 0)::bigint AS time_running,
+          "timestamp",
+          id
+        FROM ${qualified}
+        WHERE "timestamp" IS NOT NULL
+      ),
+      firsts AS (
+        SELECT DISTINCT ON (day) day, time_running AS first_run
+        FROM days
+        ORDER BY day ASC, "timestamp" ASC, id ASC
+      ),
+      lasts AS (
+        SELECT DISTINCT ON (day) day, time_running AS last_run
+        FROM days
+        ORDER BY day ASC, "timestamp" DESC, id DESC
+      )
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN l.last_run >= f.first_run THEN l.last_run - f.first_run
+          ELSE l.last_run
+        END
+      ), 0)::bigint AS total_run
+      FROM firsts f
+      JOIN lasts l USING (day)
+      `,
+    );
+    timeRunningDailySum = Number(sumRows[0]?.total_run) || 0;
+  }
+
   return {
     first_timestamp: boundRows[0]?.first_ts ?? null,
     last_timestamp: boundRows[0]?.last_ts ?? null,
     time_on: timeOn,
     time_running: timeRunning,
+    time_running_daily_sum: timeRunningDailySum,
     time_setup: timeSetup,
   };
 }

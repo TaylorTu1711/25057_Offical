@@ -107,18 +107,22 @@ export async function sumDailySetupSeconds(db, machineId) {
   return Number(rows[0]?.total) || 0;
 }
 
-/** Ghi đè time_setup của dòng daily bằng số maintenance đã nhập (nếu có). */
+/** Ghi đè time_setup: ưu tiên tổng khoảng Setup máy, fallback bảng daily-setup cũ. */
 export async function overlayDailySetupOnRows(db, machineId, rows) {
   if (!Array.isArray(rows) || rows.length === 0) return rows;
   const dates = rows.map(dateKeyFromRow).filter(Boolean);
   if (dates.length === 0) return rows;
   const from = dates.reduce((a, b) => (a < b ? a : b));
   const to = dates.reduce((a, b) => (a > b ? a : b));
+  const { fetchSetupSecondsByDate } = await import('./cncDowntime.js');
+  const downtimeMap = await fetchSetupSecondsByDate(db, machineId, from, to);
   const { map } = await fetchDailySetupMap(db, machineId, from, to);
-  if (map.size === 0) return rows;
+  if (downtimeMap.size === 0 && map.size === 0) return rows;
   return rows.map((row) => {
     const key = dateKeyFromRow(row);
-    if (!key || !map.has(key)) return row;
-    return { ...row, time_setup: map.get(key) };
+    if (!key) return row;
+    if (downtimeMap.has(key)) return { ...row, time_setup: downtimeMap.get(key) };
+    if (map.has(key)) return { ...row, time_setup: map.get(key) };
+    return row;
   });
 }

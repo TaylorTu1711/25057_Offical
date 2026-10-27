@@ -2,6 +2,7 @@ import pool from '../db.js';
 import { ensureCncMachinesTable, ensurePublicMachinesTable } from './machineSchema.js';
 import { ensureAllCncTelemetryColumns } from './cncTelemetry.js';
 import { ensureDailySetupTable } from './cncDailySetup.js';
+import { ensureAllCncDowntimeTables } from './cncDowntime.js';
 
 export async function migrateUserAccessSchema() {
   try {
@@ -21,6 +22,7 @@ export async function migrateUserAccessSchema() {
     await ensureCncMachinesTable(pool);
     await ensureAllCncTelemetryColumns(pool);
     await ensureDailySetupTable(pool);
+    await ensureAllCncDowntimeTables(pool);
     console.log('✅ User access schema migrated');
   } catch (error) {
     console.error('User access migration error:', error.message);
