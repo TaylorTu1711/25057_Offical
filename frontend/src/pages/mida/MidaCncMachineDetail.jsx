@@ -150,24 +150,16 @@ function computeLiveTelemetryFromIso({ statusRangeMode, statusFrom, nowMinute })
 function computeDailyTelemetryFromIso({ selectedYear, chartViewMode, nowMinute }) {
   const nowMs = nowMinute * 60_000;
   const currentYear = new Date(nowMs).getFullYear();
-  // Mode năm: lấy nhiều năm; còn lại: cả năm đang chọn (đổi tháng/tuần không refetch)
+  // Mode năm: lấy nhiều năm; còn lại: cả năm đang chọn.
+  // Luôn phủ 12 tháng lăn để đổi tab Ngày/Tuần/Tháng/Giờ không refetch daily.
   let earliest = chartViewMode === CHART_VIEW_MODES.year
     ? new Date(currentYear - 10, 0, 1).getTime()
     : new Date(selectedYear, 0, 1).getTime();
-  if (chartViewMode === CHART_VIEW_MODES.day || chartViewMode === CHART_VIEW_MODES.week) {
-    const lookbackDays = chartViewMode === CHART_VIEW_MODES.week ? 34 : 29;
-    const rollingStart = new Date(nowMs);
-    rollingStart.setDate(rollingStart.getDate() - lookbackDays);
-    rollingStart.setHours(0, 0, 0, 0);
-    earliest = Math.min(earliest, rollingStart.getTime());
-  }
-  if (chartViewMode === CHART_VIEW_MODES.month) {
-    const rollingStart = new Date(nowMs);
-    rollingStart.setDate(1);
-    rollingStart.setHours(0, 0, 0, 0);
-    rollingStart.setMonth(rollingStart.getMonth() - 12);
-    earliest = Math.min(earliest, rollingStart.getTime());
-  }
+  const rollingStart = new Date(nowMs);
+  rollingStart.setDate(1);
+  rollingStart.setHours(0, 0, 0, 0);
+  rollingStart.setMonth(rollingStart.getMonth() - 12);
+  earliest = Math.min(earliest, rollingStart.getTime());
   return new Date(Math.min(earliest, nowMs) - 5 * 60_000).toISOString();
 }
 

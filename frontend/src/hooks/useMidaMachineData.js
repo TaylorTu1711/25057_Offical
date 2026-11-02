@@ -698,7 +698,7 @@ export default function useMidaMachineData(machineId, {
     };
   }, [machineId, dailyFrom, dailyTo, fetchDailyTelemetry, beginRangeLoading, endRangeLoading]);
 
-  // Mode giờ: tải raw đúng 1 ngày
+  // Mode giờ: tải raw đúng 1 ngày (im lặng — không overlay khi đổi tab)
   const skipHourRefetchRef = useRef(true);
   useEffect(() => {
     skipHourRefetchRef.current = true;
@@ -708,6 +708,8 @@ export default function useMidaMachineData(machineId, {
     if (!hourFrom) {
       setHourTelemetryRows([]);
       lastHourFingerprintRef.current = '';
+      // Mặc định là tab Ngày: tiêu cờ skip ở đây để lần vào Giờ đầu tiên vẫn fetch.
+      skipHourRefetchRef.current = false;
       return undefined;
     }
     if (skipHourRefetchRef.current) {
@@ -717,18 +719,13 @@ export default function useMidaMachineData(machineId, {
     let cancelled = false;
     const timer = setTimeout(async () => {
       if (cancelled) return;
-      beginRangeLoading();
-      try {
-        await fetchHourTelemetry();
-      } finally {
-        endRangeLoading();
-      }
+      await fetchHourTelemetry();
     }, 150);
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [machineId, hourFrom, hourTo, fetchHourTelemetry, beginRangeLoading, endRangeLoading]);
+  }, [machineId, hourFrom, hourTo, fetchHourTelemetry]);
 
   usePolling(fetchStatusLive, POLL_INTERVALS.status, Boolean(machineId));
   usePolling(fetchLiveData, POLL_INTERVALS.live, Boolean(machineId));
