@@ -97,6 +97,7 @@ function formatHourLabel(value) {
  */
 export default function MidaRunStopStackedBar({
   labels = [],
+  tooltipLabels,
   cutPctValues = [],
   setupPctValues = [],
   stopPctValues = [],
@@ -270,7 +271,7 @@ export default function MidaRunStopStackedBar({
         title: { display: false },
         tooltip: {
           callbacks: {
-            title: getCategoryTooltipTitleCallback(labels, categoryPrefix),
+            title: getCategoryTooltipTitleCallback(tooltipLabels || labels, categoryPrefix),
             label: (context) => {
               const raw = context.raw;
               if (raw == null || raw === '') return null;
@@ -326,6 +327,7 @@ export default function MidaRunStopStackedBar({
     [
       theme,
       labels,
+      tooltipLabels,
       categoryPrefix,
       xTickMode,
       zoomPluginOptions,

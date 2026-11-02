@@ -52,6 +52,7 @@ ChartJS.register(
 
 const LineChart_TimeOn = ({
   labels,
+  tooltipLabels,
   line3,
   energyKwhValues,
   performanceValues,
@@ -306,7 +307,7 @@ const LineChart_TimeOn = ({
         },
         tooltip: {
           callbacks: {
-            title: getCategoryTooltipTitleCallback(labels, categoryPrefix),
+            title: getCategoryTooltipTitleCallback(tooltipLabels || labels, categoryPrefix),
             label: (context) => {
               const raw = context.raw;
               if (raw == null || raw === '') return null;
@@ -423,6 +424,7 @@ const LineChart_TimeOn = ({
       hasStandard,
       labelCount,
       labels,
+      tooltipLabels,
       categoryPrefix,
       xTickMode,
       zoomPluginOptions,

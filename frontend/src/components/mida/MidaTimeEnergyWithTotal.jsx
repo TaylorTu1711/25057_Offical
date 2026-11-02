@@ -34,6 +34,7 @@ function barHeight(total, peak) {
  */
 export default function MidaTimeEnergyWithTotal({
   labels = [],
+  tooltipLabels,
   timeRunValues = [],
   energyKwhValues = [],
   xTickMode = 'month',
@@ -66,6 +67,7 @@ export default function MidaTimeEnergyWithTotal({
           <MidaChartExpand title="THỜI GIAN CẮT GỌT & ĐIỆN NĂNG">
             <LineChart_TimeOn
               labels={labels}
+              tooltipLabels={tooltipLabels}
               line3={timeRunValues}
               energyKwhValues={energyKwhValues}
               xTickMode={xTickMode}
@@ -79,6 +81,7 @@ export default function MidaTimeEnergyWithTotal({
           <div className="machine-chart-plot-inner">
             <LineChart_TimeOn
               labels={labels}
+              tooltipLabels={tooltipLabels}
               line3={timeRunValues}
               energyKwhValues={energyKwhValues}
               xTickMode={xTickMode}

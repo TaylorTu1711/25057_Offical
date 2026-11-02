@@ -194,41 +194,230 @@ function energyKwhFromPowerSamples(rows) {
   return total;
 }
 
-/**
- * Gom telemetry thô theo giờ trong một ngày (delta time_on / time_running; kWh từ power).
- * @returns {Record<string, { time_on: number, time_running: number, time_setup: number, power_consumption: number, product: number }>}
- */
-export function aggregateTelemetryByHour(rawRows = [], dayDate) {
+const hourSlotKey = (date) => {
+  const d = date instanceof Date ? date : new Date(date);
+  return `${toLocalDateKey(d)}T${String(d.getHours()).padStart(2, '0')}`;
+};
+
+const emptyHourBucket = () => ({
+  time_on: 0,
+  time_running: 0,
+  time_setup: 0,
+  power_consumption: 0,
+  product: 0,
+});
+
+export function isLocalCalendarToday(year, month, day, now = new Date()) {
+  return (
+    Number(year) === now.getFullYear()
+    && Number(month) === now.getMonth() + 1
+    && Number(day) === now.getDate()
+  );
+}
+
+/** 24 cột 00h–23h của một ngày lịch. */
+export function getCalendarDayHourSlots(dayDate) {
   const dayStart = startOfDay(dayDate);
-  const dayEnd = endOfDay(dayDate);
+  return Array.from({ length: 24 }, (_, h) => {
+    const start = new Date(dayStart);
+    start.setHours(h, 0, 0, 0);
+    const end = h === 23
+      ? endOfDay(dayStart)
+      : new Date(start.getTime() + 3600 * 1000);
+    return { start, end, hour: h, key: hourSlotKey(start) };
+  });
+}
+
+/** 24 giờ đồng hồ kết thúc ở giờ hiện tại (cột cuối = giờ đang chạy). */
+export function getRollingHourSlots(now = new Date()) {
+  const currentHourStart = new Date(now);
+  currentHourStart.setMinutes(0, 0, 0);
+  return Array.from({ length: 24 }, (_, i) => {
+    const start = new Date(currentHourStart.getTime() - (23 - i) * 3600 * 1000);
+    const end = i === 23 ? new Date(now) : new Date(start.getTime() + 3600 * 1000);
+    return { start, end, hour: start.getHours(), key: hourSlotKey(start) };
+  });
+}
+
+const formatDayMonthLabel = (date) => `${date.getDate()}/${date.getMonth() + 1}`;
+
+function startOfCurrentMonthWeek(now) {
+  const d = startOfDay(now);
+  const weekIndex0 = Math.floor((d.getDate() - 1) / 7);
+  return new Date(d.getFullYear(), d.getMonth(), weekIndex0 * 7 + 1);
+}
+
+function formatWeekRangeTooltip(label, from, to) {
+  return `${label} (${formatDayMonthLabel(from)}–${formatDayMonthLabel(to)})`;
+}
+
+/** 30 ngày lịch kết thúc ở hôm nay (gồm hôm nay). */
+export function getRollingDaySlots(now = new Date(), count = 30) {
+  const end = startOfDay(now);
+  return Array.from({ length: count }, (_, i) => {
+    const date = new Date(end);
+    date.setDate(end.getDate() - (count - 1 - i));
+    return {
+      date,
+      key: toLocalDateKey(date),
+      label: String(date.getDate()),
+      tooltipLabel: formatDayMonthLabel(date),
+    };
+  });
+}
+
+function resolveHourSlots(selection = {}) {
+  const { from, year, month, day } = getSelectionRange(CHART_VIEW_MODES.hour, selection);
+  const now = selection.now instanceof Date
+    ? selection.now
+    : new Date(selection.now || Date.now());
+  if (selection.rollingHourFromNow && isLocalCalendarToday(year, month, day, now)) {
+    return getRollingHourSlots(now);
+  }
+  return getCalendarDayHourSlots(from);
+}
+
+function resolveDaySlots(selection = {}) {
+  const { year, month } = getSelectionRange(CHART_VIEW_MODES.day, selection);
+  const now = selection.now instanceof Date
+    ? selection.now
+    : new Date(selection.now || Date.now());
+  if (
+    selection.rollingDayFromNow
+    && Number(year) === now.getFullYear()
+    && Number(month) === now.getMonth() + 1
+  ) {
+    return getRollingDaySlots(now, 30);
+  }
+  return getDaysInMonth(year, month - 1).map((date) => ({
+    date,
+    key: toLocalDateKey(date),
+    label: formatDayLabel(date),
+    tooltipLabel: formatDayMonthLabel(date),
+  }));
+}
+
+/** 5 tuần 7 ngày kết thúc ở tuần hiện tại (gồm tuần hiện tại). */
+export function getRollingWeekSlots(now = new Date(), count = 5) {
+  const currentStart = startOfCurrentMonthWeek(now);
+  return Array.from({ length: count }, (_, i) => {
+    const from = new Date(currentStart);
+    from.setDate(currentStart.getDate() - (count - 1 - i) * 7);
+    from.setHours(0, 0, 0, 0);
+    const days = Array.from({ length: 7 }, (_, dayOffset) => {
+      const date = new Date(from);
+      date.setDate(from.getDate() + dayOffset);
+      return date;
+    });
+    const to = days[days.length - 1];
+    const label = `T${i + 1}`;
+    return {
+      key: toLocalDateKey(from),
+      label,
+      tooltipLabel: formatWeekRangeTooltip(label, from, to),
+      weekIndex: i + 1,
+      days,
+      from: startOfDay(from),
+      to: endOfDay(to),
+      dayCount: days.length,
+    };
+  });
+}
+
+function resolveWeekSlots(selection = {}) {
+  const { year, month } = getSelectionRange(CHART_VIEW_MODES.week, selection);
+  const now = selection.now instanceof Date
+    ? selection.now
+    : new Date(selection.now || Date.now());
+  if (
+    selection.rollingWeekFromNow
+    && Number(year) === now.getFullYear()
+    && Number(month) === now.getMonth() + 1
+  ) {
+    return getRollingWeekSlots(now, 5);
+  }
+  return getWeeksInMonth(year, month - 1).map((week) => ({
+    ...week,
+    tooltipLabel: formatWeekRangeTooltip(week.label, week.from, week.to),
+  }));
+}
+
+function monthSlotFromParts(year, month) {
+  const lastDay = new Date(year, month, 0).getDate();
+  const from = new Date(year, month - 1, 1);
+  return {
+    key: `${year}-${String(month).padStart(2, '0')}`,
+    year,
+    month,
+    label: `T${month}`,
+    tooltipLabel: `T${month}/${year}`,
+    from,
+    to: endOfDay(new Date(year, month, 0)),
+    dayCount: lastDay,
+  };
+}
+
+/** Tháng hiện tại và 12 tháng liền trước (13 cột). */
+export function getRollingMonthSlots(now = new Date(), count = 13) {
+  const end = new Date(now.getFullYear(), now.getMonth(), 1);
+  return Array.from({ length: count }, (_, i) => {
+    const date = new Date(end.getFullYear(), end.getMonth() - (count - 1 - i), 1);
+    return monthSlotFromParts(date.getFullYear(), date.getMonth() + 1);
+  });
+}
+
+function resolveMonthSlots(selection = {}) {
+  const { year } = getSelectionRange(CHART_VIEW_MODES.month, selection);
+  const now = selection.now instanceof Date
+    ? selection.now
+    : new Date(selection.now || Date.now());
+  if (selection.rollingMonthFromNow && Number(year) === now.getFullYear()) {
+    return getRollingMonthSlots(now, 13);
+  }
+  return getMonthKeysInYear(year).map((key) => {
+    const month = parseInt(key.split('-')[1], 10);
+    return monthSlotFromParts(year, month);
+  });
+}
+
+/**
+ * Gom telemetry thô theo danh sách slot giờ (delta time_on / time_running; kWh từ power).
+ */
+export function aggregateTelemetryByHourSlots(rawRows = [], slots = []) {
+  const byHour = {};
+  slots.forEach((slot) => {
+    byHour[slot.key] = emptyHourBucket();
+  });
+  if (!slots.length) return byHour;
+
+  const windowStart = slots[0].start.getTime();
+  const windowEnd = slots[slots.length - 1].end.getTime();
   const samples = (Array.isArray(rawRows) ? rawRows : [])
     .filter((d) => d?.timestamp)
     .map((d) => ({ ...d, _ts: new Date(d.timestamp).getTime() }))
-    .filter((d) => Number.isFinite(d._ts) && d._ts >= dayStart.getTime() && d._ts <= dayEnd.getTime())
+    .filter((d) => Number.isFinite(d._ts))
     .sort((a, b) => a._ts - b._ts);
 
-  const byHour = {};
-  for (let h = 0; h < 24; h += 1) {
-    const key = `${toLocalDateKey(dayStart)}T${String(h).padStart(2, '0')}`;
-    byHour[key] = { time_on: 0, time_running: 0, time_setup: 0, power_consumption: 0, product: 0 };
-  }
-
-  if (samples.length === 0) return byHour;
-
-  const hourBuckets = Array.from({ length: 24 }, () => []);
+  const buckets = slots.map(() => []);
   samples.forEach((s) => {
-    hourBuckets[new Date(s._ts).getHours()].push(s);
+    if (s._ts < windowStart || s._ts > windowEnd) return;
+    for (let i = 0; i < slots.length; i += 1) {
+      const start = slots[i].start.getTime();
+      const end = slots[i].end.getTime();
+      const last = i === slots.length - 1;
+      if (s._ts >= start && (last ? s._ts <= end : s._ts < end)) {
+        buckets[i].push(s);
+        break;
+      }
+    }
   });
 
   let prevClose = null;
-  // Seed: mẫu cuối trước ngày (nếu có trong rawRows)
-  const before = (Array.isArray(rawRows) ? rawRows : [])
-    .filter((d) => d?.timestamp && new Date(d.timestamp).getTime() < dayStart.getTime())
-    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const before = samples.filter((s) => s._ts < windowStart);
   if (before.length > 0) prevClose = before[before.length - 1];
 
-  for (let h = 0; h < 24; h += 1) {
-    const bucket = hourBuckets[h];
+  for (let i = 0; i < slots.length; i += 1) {
+    const bucket = buckets[i];
     if (bucket.length === 0) continue;
     const first = bucket[0];
     const last = bucket[bucket.length - 1];
@@ -236,25 +425,26 @@ export function aggregateTelemetryByHour(rawRows = [], dayDate) {
     const baseRun = Number(prevClose?.time_running ?? first.time_running) || 0;
     const baseSetup = Number(prevClose?.time_setup ?? first.time_setup) || 0;
     const baseProduct = Number(prevClose?.product ?? first.product) || 0;
-
-    const endOn = Number(last.time_on) || 0;
-    const endRun = Number(last.time_running) || 0;
-    const endSetup = Number(last.time_setup) || 0;
-    const endProduct = Number(last.product) || 0;
-
     const chain = prevClose ? [prevClose, ...bucket] : bucket;
-    const key = `${toLocalDateKey(dayStart)}T${String(h).padStart(2, '0')}`;
-    byHour[key] = {
-      time_on: Math.max(0, endOn - baseOn),
-      time_running: Math.max(0, endRun - baseRun),
-      time_setup: Math.max(0, endSetup - baseSetup),
+    byHour[slots[i].key] = {
+      time_on: Math.max(0, (Number(last.time_on) || 0) - baseOn),
+      time_running: Math.max(0, (Number(last.time_running) || 0) - baseRun),
+      time_setup: Math.max(0, (Number(last.time_setup) || 0) - baseSetup),
       power_consumption: energyKwhFromPowerSamples(chain),
-      product: Math.max(0, endProduct - baseProduct),
+      product: Math.max(0, (Number(last.product) || 0) - baseProduct),
     };
     prevClose = last;
   }
 
   return byHour;
+}
+
+/**
+ * Gom telemetry thô theo giờ trong một ngày (delta time_on / time_running; kWh từ power).
+ * @returns {Record<string, { time_on: number, time_running: number, time_setup: number, power_consumption: number, product: number }>}
+ */
+export function aggregateTelemetryByHour(rawRows = [], dayDate) {
+  return aggregateTelemetryByHourSlots(rawRows, getCalendarDayHourSlots(dayDate));
 }
 
 export const getYearKeysFromData = (rawData = [], errors = [], reference = new Date()) => {
@@ -502,39 +692,31 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
     (Number(row.time_running ?? row.time_on ?? 0) || 0) / 3600;
 
   if (viewMode === CHART_VIEW_MODES.hour) {
-    const { from, year, month, day } = getSelectionRange(viewMode, selection);
-    const hourMap = aggregateTelemetryByHour(
+    const slots = resolveHourSlots(selection);
+    const hourMap = aggregateTelemetryByHourSlots(
       selection.telemetryRows ?? rawData,
-      from,
+      slots,
     );
-    const hours = Array.from({ length: 24 }, (_, h) => h);
     return {
-      labels: hours.map(formatHourLabel),
-      timeRun: hours.map((h) => {
-        const key = `${toLocalDateKey(new Date(year, month - 1, day))}T${String(h).padStart(2, '0')}`;
-        return (Number(hourMap[key]?.time_running) || 0) / 3600;
-      }),
-      energyKwh: hours.map((h) => {
-        const key = `${toLocalDateKey(new Date(year, month - 1, day))}T${String(h).padStart(2, '0')}`;
-        return Number(hourMap[key]?.power_consumption) || 0;
-      }),
-      performance: hours.map((h) => {
-        const key = `${toLocalDateKey(new Date(year, month - 1, day))}T${String(h).padStart(2, '0')}`;
-        const runH = (Number(hourMap[key]?.time_running) || 0) / 3600;
+      labels: slots.map((slot) => formatHourLabel(slot.hour)),
+      timeRun: slots.map((slot) => (Number(hourMap[slot.key]?.time_running) || 0) / 3600),
+      energyKwh: slots.map((slot) => Number(hourMap[slot.key]?.power_consumption) || 0),
+      performance: slots.map((slot) => {
+        const runH = (Number(hourMap[slot.key]?.time_running) || 0) / 3600;
         return Math.min(100, Number((runH * 100).toFixed(1)));
       }),
-      outputRate: hours.map((h) => {
-        const key = `${toLocalDateKey(new Date(year, month - 1, day))}T${String(h).padStart(2, '0')}`;
-        const runH = (Number(hourMap[key]?.time_running) || 0) / 3600;
-        return calcOutputRateTonsPerHour(hourMap[key]?.product ?? 0, runH);
+      outputRate: slots.map((slot) => {
+        const runH = (Number(hourMap[slot.key]?.time_running) || 0) / 3600;
+        return calcOutputRateTonsPerHour(hourMap[slot.key]?.product ?? 0, runH);
       }),
     };
   }
 
   if (viewMode === CHART_VIEW_MODES.day) {
-    const { from, to, year, month } = getSelectionRange(viewMode, selection);
+    const slots = resolveDaySlots(selection);
+    const from = startOfDay(slots[0]?.date || new Date());
+    const to = endOfDay(slots[slots.length - 1]?.date || new Date());
     const filtered = filterInRange(rawData, from, to);
-    const days = getDaysInMonth(year, month - 1);
     const timeMap = {};
     const energyMap = {};
     const outputMap = {};
@@ -547,21 +729,22 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
     });
 
     return {
-      labels: days.map(formatDayLabel),
-      timeRun: days.map((d) => timeMap[toLocalDateKey(d)] ?? 0),
-      energyKwh: days.map((d) => energyMap[toLocalDateKey(d)] ?? 0),
-      performance: days.map((d) => calcPerformancePct(timeMap[toLocalDateKey(d)] ?? 0, 1)),
-      outputRate: days.map((d) => {
-        const key = toLocalDateKey(d);
-        return calcOutputRateTonsPerHour(outputMap[key] ?? 0, timeMap[key] ?? 0);
-      }),
+      labels: slots.map((slot) => slot.label),
+      tooltipLabels: slots.map((slot) => slot.tooltipLabel || slot.label),
+      timeRun: slots.map((slot) => timeMap[slot.key] ?? 0),
+      energyKwh: slots.map((slot) => energyMap[slot.key] ?? 0),
+      performance: slots.map((slot) => calcPerformancePct(timeMap[slot.key] ?? 0, 1)),
+      outputRate: slots.map((slot) => (
+        calcOutputRateTonsPerHour(outputMap[slot.key] ?? 0, timeMap[slot.key] ?? 0)
+      )),
     };
   }
 
   if (viewMode === CHART_VIEW_MODES.week) {
-    const { from, to, year, month } = getSelectionRange(viewMode, selection);
+    const weeks = resolveWeekSlots(selection);
+    const from = weeks[0]?.from || new Date();
+    const to = weeks[weeks.length - 1]?.to || new Date();
     const filtered = filterInRange(rawData, from, to);
-    const weeks = getWeeksInMonth(year, month - 1);
     const timeMap = {};
     const energyMap = {};
     const outputMap = {};
@@ -575,6 +758,7 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
 
     return {
       labels: weeks.map((w) => w.label),
+      tooltipLabels: weeks.map((w) => w.tooltipLabel || w.label),
       timeRun: weeks.map((w) =>
         w.days.reduce((sum, d) => sum + (timeMap[toLocalDateKey(d)] ?? 0), 0),
       ),
@@ -594,9 +778,10 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
   }
 
   if (viewMode === CHART_VIEW_MODES.month) {
-    const { from, to, year } = getSelectionRange(viewMode, selection);
+    const slots = resolveMonthSlots(selection);
+    const from = slots[0]?.from || new Date();
+    const to = slots[slots.length - 1]?.to || new Date();
     const filtered = filterInRange(rawData, from, to);
-    const monthKeys = getMonthKeysInYear(year);
     const timeMap = {};
     const energyMap = {};
     const outputMap = {};
@@ -610,16 +795,15 @@ export function buildTimeSeries(rawData, viewMode, selection = {}) {
     });
 
     return {
-      labels: monthKeys.map(formatMonthLabel),
-      timeRun: monthKeys.map((key) => timeMap[key] ?? 0),
-      energyKwh: monthKeys.map((key) => energyMap[key] ?? 0),
-      performance: monthKeys.map((key) => {
-        const [, m] = key.split('-');
-        const daysInMonth = new Date(year, parseInt(m, 10), 0).getDate();
-        return calcPerformancePct(timeMap[key] ?? 0, daysInMonth);
-      }),
-      outputRate: monthKeys.map((key) =>
-        calcOutputRateTonsPerHour(outputMap[key] ?? 0, timeMap[key] ?? 0),
+      labels: slots.map((slot) => slot.label),
+      tooltipLabels: slots.map((slot) => slot.tooltipLabel || slot.label),
+      timeRun: slots.map((slot) => timeMap[slot.key] ?? 0),
+      energyKwh: slots.map((slot) => energyMap[slot.key] ?? 0),
+      performance: slots.map((slot) =>
+        calcPerformancePct(timeMap[slot.key] ?? 0, slot.dayCount),
+      ),
+      outputRate: slots.map((slot) =>
+        calcOutputRateTonsPerHour(outputMap[slot.key] ?? 0, timeMap[slot.key] ?? 0),
       ),
     };
   }
@@ -1253,6 +1437,7 @@ export function buildRunStopPctSeries(rawData, viewMode, selection = {}) {
 
   return {
     labels: buckets.labels,
+    tooltipLabels: buckets.tooltipLabels || buckets.labels,
     cutPct,
     setupPct,
     stopPct,
@@ -1269,36 +1454,27 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
   const rowSetupSec = (row) => Number(row.time_setup) || 0;
 
   if (viewMode === CHART_VIEW_MODES.hour) {
-    const { from, year, month, day } = getSelectionRange(viewMode, selection);
-    const hourMap = aggregateTelemetryByHour(
+    const slots = resolveHourSlots(selection);
+    const hourMap = aggregateTelemetryByHourSlots(
       selection.telemetryRows ?? rawData,
-      from,
+      slots,
     );
-    const hours = Array.from({ length: 24 }, (_, h) => h);
-    const dayKey = toLocalDateKey(new Date(year, month - 1, day));
     return {
-      labels: hours.map(formatHourLabel),
-      runSec: hours.map((h) => {
-        const key = `${dayKey}T${String(h).padStart(2, '0')}`;
-        return Number(hourMap[key]?.time_running) || 0;
-      }),
-      onSec: hours.map((h) => {
-        const key = `${dayKey}T${String(h).padStart(2, '0')}`;
-        return Number(hourMap[key]?.time_on) || 0;
-      }),
-      setupSec: hours.map((h) => {
-        const key = `${dayKey}T${String(h).padStart(2, '0')}`;
-        return Number(hourMap[key]?.time_setup) || 0;
-      }),
-      // Mỗi cột = 1 giờ
-      availSec: hours.map(() => 3600),
+      labels: slots.map((slot) => formatHourLabel(slot.hour)),
+      runSec: slots.map((slot) => Number(hourMap[slot.key]?.time_running) || 0),
+      onSec: slots.map((slot) => Number(hourMap[slot.key]?.time_on) || 0),
+      setupSec: slots.map((slot) => Number(hourMap[slot.key]?.time_setup) || 0),
+      availSec: slots.map((slot) => (
+        Math.max(1, Math.round((slot.end.getTime() - slot.start.getTime()) / 1000))
+      )),
     };
   }
 
   if (viewMode === CHART_VIEW_MODES.day) {
-    const { from, to, year, month } = getSelectionRange(viewMode, selection);
+    const slots = resolveDaySlots(selection);
+    const from = startOfDay(slots[0]?.date || new Date());
+    const to = endOfDay(slots[slots.length - 1]?.date || new Date());
     const filtered = filterInRange(rawData, from, to);
-    const days = getDaysInMonth(year, month - 1);
     const runMap = {};
     const onMap = {};
     const setupMap = {};
@@ -1308,20 +1484,30 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
       onMap[key] = rowOnSec(row);
       setupMap[key] = rowSetupSec(row);
     });
+    const now = selection.now instanceof Date
+      ? selection.now
+      : new Date(selection.now || Date.now());
     return {
-      labels: days.map(formatDayLabel),
-      runSec: days.map((d) => runMap[toLocalDateKey(d)] ?? 0),
-      onSec: days.map((d) => onMap[toLocalDateKey(d)] ?? 0),
-      setupSec: days.map((d) => setupMap[toLocalDateKey(d)] ?? 0),
-      // Mỗi cột = 24h
-      availSec: days.map(() => SEC_PER_DAY),
+      labels: slots.map((slot) => slot.label),
+      tooltipLabels: slots.map((slot) => slot.tooltipLabel || slot.label),
+      runSec: slots.map((slot) => runMap[slot.key] ?? 0),
+      onSec: slots.map((slot) => onMap[slot.key] ?? 0),
+      setupSec: slots.map((slot) => setupMap[slot.key] ?? 0),
+      availSec: slots.map((slot, index) => {
+        if (index === slots.length - 1 && selection.rollingDayFromNow) {
+          const elapsed = Math.round((now.getTime() - slot.date.getTime()) / 1000);
+          return Math.max(1, Math.min(SEC_PER_DAY, elapsed));
+        }
+        return SEC_PER_DAY;
+      }),
     };
   }
 
   if (viewMode === CHART_VIEW_MODES.week) {
-    const { from, to, year, month } = getSelectionRange(viewMode, selection);
+    const weeks = resolveWeekSlots(selection);
+    const from = weeks[0]?.from || new Date();
+    const to = weeks[weeks.length - 1]?.to || new Date();
     const filtered = filterInRange(rawData, from, to);
-    const weeks = getWeeksInMonth(year, month - 1);
     const runMap = {};
     const onMap = {};
     const setupMap = {};
@@ -1331,8 +1517,13 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
       onMap[key] = rowOnSec(row);
       setupMap[key] = rowSetupSec(row);
     });
+    const now = selection.now instanceof Date
+      ? selection.now
+      : new Date(selection.now || Date.now());
+    const todayStart = startOfDay(now);
     return {
       labels: weeks.map((w) => w.label),
+      tooltipLabels: weeks.map((w) => w.tooltipLabel || w.label),
       runSec: weeks.map((w) =>
         w.days.reduce((sum, d) => sum + (runMap[toLocalDateKey(d)] ?? 0), 0),
       ),
@@ -1342,14 +1533,30 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
       setupSec: weeks.map((w) =>
         w.days.reduce((sum, d) => sum + (setupMap[toLocalDateKey(d)] ?? 0), 0),
       ),
-      availSec: weeks.map((w) => w.dayCount * SEC_PER_DAY),
+      availSec: weeks.map((w, index) => {
+        if (index !== weeks.length - 1 || !selection.rollingWeekFromNow) {
+          return w.dayCount * SEC_PER_DAY;
+        }
+        let sec = 0;
+        w.days.forEach((date) => {
+          const dayStart = startOfDay(date);
+          if (dayStart > todayStart) return;
+          if (dayStart.getTime() === todayStart.getTime()) {
+            sec += Math.max(1, Math.round((now.getTime() - dayStart.getTime()) / 1000));
+          } else {
+            sec += SEC_PER_DAY;
+          }
+        });
+        return Math.max(1, sec);
+      }),
     };
   }
 
   if (viewMode === CHART_VIEW_MODES.month) {
-    const { from, to, year } = getSelectionRange(viewMode, selection);
+    const slots = resolveMonthSlots(selection);
+    const from = slots[0]?.from || new Date();
+    const to = slots[slots.length - 1]?.to || new Date();
     const filtered = filterInRange(rawData, from, to);
-    const monthKeys = getMonthKeysInYear(year);
     const runMap = {};
     const onMap = {};
     const setupMap = {};
@@ -1360,15 +1567,22 @@ function buildRunStopBuckets(rawData, viewMode, selection = {}) {
       onMap[key] = (onMap[key] || 0) + rowOnSec(row);
       setupMap[key] = (setupMap[key] || 0) + rowSetupSec(row);
     });
+    const now = selection.now instanceof Date
+      ? selection.now
+      : new Date(selection.now || Date.now());
     return {
-      labels: monthKeys.map(formatMonthLabel),
-      runSec: monthKeys.map((key) => runMap[key] ?? 0),
-      onSec: monthKeys.map((key) => onMap[key] ?? 0),
-      setupSec: monthKeys.map((key) => setupMap[key] ?? 0),
-      availSec: monthKeys.map((key) => {
-        const [, m] = key.split('-');
-        const daysInMonth = new Date(year, parseInt(m, 10), 0).getDate();
-        return daysInMonth * SEC_PER_DAY;
+      labels: slots.map((slot) => slot.label),
+      tooltipLabels: slots.map((slot) => slot.tooltipLabel || slot.label),
+      runSec: slots.map((slot) => runMap[slot.key] ?? 0),
+      onSec: slots.map((slot) => onMap[slot.key] ?? 0),
+      setupSec: slots.map((slot) => setupMap[slot.key] ?? 0),
+      availSec: slots.map((slot, index) => {
+        if (index === slots.length - 1 && selection.rollingMonthFromNow) {
+          const elapsedDays = Math.max(0, now.getDate() - 1);
+          const todayElapsed = Math.round((now.getTime() - startOfDay(now).getTime()) / 1000);
+          return Math.max(1, elapsedDays * SEC_PER_DAY + Math.max(1, todayElapsed));
+        }
+        return slot.dayCount * SEC_PER_DAY;
       }),
     };
   }

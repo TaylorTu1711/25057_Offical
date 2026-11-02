@@ -151,9 +151,23 @@ function computeDailyTelemetryFromIso({ selectedYear, chartViewMode, nowMinute }
   const nowMs = nowMinute * 60_000;
   const currentYear = new Date(nowMs).getFullYear();
   // Mode năm: lấy nhiều năm; còn lại: cả năm đang chọn (đổi tháng/tuần không refetch)
-  const earliest = chartViewMode === CHART_VIEW_MODES.year
+  let earliest = chartViewMode === CHART_VIEW_MODES.year
     ? new Date(currentYear - 10, 0, 1).getTime()
     : new Date(selectedYear, 0, 1).getTime();
+  if (chartViewMode === CHART_VIEW_MODES.day || chartViewMode === CHART_VIEW_MODES.week) {
+    const lookbackDays = chartViewMode === CHART_VIEW_MODES.week ? 34 : 29;
+    const rollingStart = new Date(nowMs);
+    rollingStart.setDate(rollingStart.getDate() - lookbackDays);
+    rollingStart.setHours(0, 0, 0, 0);
+    earliest = Math.min(earliest, rollingStart.getTime());
+  }
+  if (chartViewMode === CHART_VIEW_MODES.month) {
+    const rollingStart = new Date(nowMs);
+    rollingStart.setDate(1);
+    rollingStart.setHours(0, 0, 0, 0);
+    rollingStart.setMonth(rollingStart.getMonth() - 12);
+    earliest = Math.min(earliest, rollingStart.getTime());
+  }
   return new Date(Math.min(earliest, nowMs) - 5 * 60_000).toISOString();
 }
 
@@ -212,10 +226,23 @@ function MidaCncMachineDetailInner() {
     if (chartViewMode !== CHART_VIEW_MODES.hour) {
       return { hourFrom: null, hourTo: null };
     }
+    const nowDate = new Date(nowMinute * 60_000);
+    const isToday = (
+      selectedYear === nowDate.getFullYear()
+      && selectedMonth === nowDate.getMonth() + 1
+      && selectedDay === nowDate.getDate()
+    );
+    if (isToday) {
+      const from = new Date(nowDate);
+      from.setHours(from.getHours() - 25, 0, 0, 0);
+      const to = new Date(nowDate);
+      to.setMinutes(59, 59, 999);
+      return { hourFrom: from.toISOString(), hourTo: to.toISOString() };
+    }
     const from = new Date(selectedYear, selectedMonth - 1, selectedDay, 0, 0, 0, 0);
     const to = new Date(selectedYear, selectedMonth - 1, selectedDay, 23, 59, 59, 999);
     return { hourFrom: from.toISOString(), hourTo: to.toISOString() };
-  }, [chartViewMode, selectedYear, selectedMonth, selectedDay]);
+  }, [chartViewMode, selectedYear, selectedMonth, selectedDay, nowMinute]);
 
   const machineData = useMidaMachineData(machine_id, {
     liveFrom,
@@ -344,9 +371,35 @@ function MidaCncMachineDetailInner() {
       dateTo: rangeTo,
       rangeDisplay,
     };
-    // Mode giờ: raw đúng 1 ngày (không dùng cửa sổ status 1h/24h)
+    // Mode giờ: raw 1 ngày, hoặc 24h gần nhất nếu đang chọn hôm nay
     if (chartViewMode === CHART_VIEW_MODES.hour) {
-      return { ...base, telemetryRows: hourTelemetryRows };
+      return {
+        ...base,
+        telemetryRows: hourTelemetryRows,
+        rollingHourFromNow: true,
+        now: nowMinute * 60_000,
+      };
+    }
+    if (chartViewMode === CHART_VIEW_MODES.day) {
+      return {
+        ...base,
+        rollingDayFromNow: true,
+        now: nowMinute * 60_000,
+      };
+    }
+    if (chartViewMode === CHART_VIEW_MODES.week) {
+      return {
+        ...base,
+        rollingWeekFromNow: true,
+        now: nowMinute * 60_000,
+      };
+    }
+    if (chartViewMode === CHART_VIEW_MODES.month) {
+      return {
+        ...base,
+        rollingMonthFromNow: true,
+        now: nowMinute * 60_000,
+      };
     }
     return base;
   }, [
@@ -358,6 +411,7 @@ function MidaCncMachineDetailInner() {
     rangeTo,
     rangeDisplay,
     chartViewMode,
+    nowMinute,
     chartViewMode === CHART_VIEW_MODES.hour ? hourTelemetryRows : null,
   ]);
 
@@ -380,9 +434,11 @@ function MidaCncMachineDetailInner() {
   );
 
   const chartLabels = timeChartSeries.labels || [];
+  const chartTooltipLabels = timeChartSeries.tooltipLabels || chartLabels;
   const timeRunValues = timeChartSeries.timeRun || [];
   const energyKwhValues = timeChartSeries.energyKwh || [];
   const runStopBarLabels = runStopChartSeries.labels || [];
+  const runStopTooltipLabels = runStopChartSeries.tooltipLabels || runStopBarLabels;
   const runStopCutPctValues = runStopChartSeries.cutPct || [];
   const runStopSetupPctValues = runStopChartSeries.setupPct || [];
   const runStopIdlePctValues = runStopChartSeries.stopPct || [];
@@ -812,6 +868,7 @@ function MidaCncMachineDetailInner() {
               <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--time">
                 <MidaTimeEnergyWithTotal
                   labels={chartLabels}
+                  tooltipLabels={chartTooltipLabels}
                   timeRunValues={timeRunValues}
                   energyKwhValues={energyKwhValues}
                   xTickMode={chartXTickMode}
@@ -826,6 +883,7 @@ function MidaCncMachineDetailInner() {
               <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--status">
                 <MidaRunStopStackedBar
                   labels={runStopBarLabels}
+                  tooltipLabels={runStopTooltipLabels}
                   cutPctValues={runStopCutPctValues}
                   setupPctValues={runStopSetupPctValues}
                   stopPctValues={runStopIdlePctValues}
