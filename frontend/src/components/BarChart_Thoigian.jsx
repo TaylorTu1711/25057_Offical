@@ -185,11 +185,7 @@ const LineChart_TimeOn = ({
         },
         hoverBorderColor: energyBarPalette.border,
         hoverBorderWidth: 2,
-        datalabels: {
-          ...getBarColumnDataLabelOptions(TIME_CHART_COLORS.barDataLabel),
-          rotation: -90,
-          clamp: true,
-        },
+        datalabels: getBarColumnDataLabelOptions(TIME_CHART_COLORS.barDataLabel),
         order: 1,
       });
     }

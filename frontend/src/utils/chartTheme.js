@@ -496,7 +496,7 @@ export function formatChartTooltipValue(value, maxFractionDigits = 3) {
   });
 }
 
-/** Nhãn số giữa cột — cỡ chữ tự co theo chiều ngang cột. */
+/** Nhãn số giữa cột — xoay dọc theo cột, cỡ chữ tự co theo bề rộng/cao cột. */
 export function getBarColumnDataLabelOptions(labelColor, maxFractionDigits = 1) {
   return {
     display: (ctx) => {
@@ -507,6 +507,9 @@ export function getBarColumnDataLabelOptions(labelColor, maxFractionDigits = 1) 
     align: 'center',
     offset: 0,
     textAlign: 'center',
+    // -90: chữ đọc từ dưới lên, nằm dọc xuôi theo cột
+    rotation: -90,
+    clamp: true,
     clip: true,
     formatter: (value) => {
       const n = Number(value);
@@ -517,8 +520,12 @@ export function getBarColumnDataLabelOptions(labelColor, maxFractionDigits = 1) 
     font: (ctx) => {
       const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex];
       const w = Math.max(8, bar?.width ?? 24);
-      // Tỷ lệ theo độ rộng cột — zoom to thì cột rộng hơn → chữ lớn hơn
-      const size = Math.min(15, Math.max(8, Math.round(w * 0.38)));
+      const h = Math.max(
+        8,
+        Math.abs((bar?.base ?? 0) - (bar?.y ?? 0)) || Math.abs(bar?.height ?? 24),
+      );
+      // Chữ dọc: bề ngang chữ ≤ rộng cột; dài chữ ≤ cao cột
+      const size = Math.min(14, Math.max(8, Math.round(Math.min(w * 0.55, h * 0.14))));
       return { size, weight: '600' };
     },
   };

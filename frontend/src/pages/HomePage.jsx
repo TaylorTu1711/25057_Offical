@@ -10,7 +10,9 @@ import { POLL_INTERVALS } from '../config/polling';
 import usePolling from '../hooks/usePolling';
 import useNow from '../hooks/useNow';
 import useResizableTableColumns from '../hooks/useResizableTableColumns';
+import useTreeSidebarResize from '../hooks/useTreeSidebarResize';
 import ResizableTableHeader from '../components/home/ResizableTableHeader';
+import HomeLocationTree from '../components/home/HomeLocationTree';
 import {
   getMachineStatusLabelWithEmojiForDisplay,
 } from '../utils/machineStatus';
@@ -18,6 +20,7 @@ import {
   readInitialHomePageFilters,
   saveHomePageFilters,
 } from '../utils/homePageState';
+import '../css/MachineTree.css';
 
 const HOME_MACHINE_TABLE_COLUMN_ORDER = ['name', 'machineId', 'status', 'actions'];
 
@@ -39,7 +42,6 @@ function HomePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialFilters = readInitialHomePageFilters(searchParams);
   const now = useNow(POLL_INTERVALS.connectionTick);
-  const [allLocations, setAllLocations] = useState([]);
   const [machines, setMachines] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(
     () => initialFilters.selectedLocation,
@@ -95,6 +97,16 @@ function HomePage() {
       HOME_MACHINE_TABLE_COLUMNS,
       HOME_MACHINE_TABLE_MIN,
     );
+  const {
+    width: areaSidebarWidth,
+    isResizing: isAreaSidebarResizing,
+    onResizeStart: onAreaSidebarResizeStart,
+  } = useTreeSidebarResize({
+    storageKey: 'home_area_sidebar_width',
+    defaultWidth: 280,
+    minWidth: 200,
+    maxWidth: 480,
+  });
 
     // 🧩 Lấy thông tin người dùng hiện tại
   const fetchUser = async () => {
@@ -150,15 +162,14 @@ function HomePage() {
     try {
       const response = await axios.get(`${BASE_URL}/api/locations`);
       const jsonData = response.data;
-      setDuyTanLocations(jsonData.dtGroup);
-      setOtherLocations(jsonData.nonDtGroup);
-      setAllLocations(
-        isDuyTanGroupSelected ? jsonData.dtGroup : jsonData.nonDtGroup,
-      );
+      setDuyTanLocations(jsonData.dtGroup || []);
+      setOtherLocations(jsonData.nonDtGroup || []);
     } catch (err) {
       console.error(err.message);
     }
   };
+
+  const locationSuggestions = newMachineForm.isdtgroup ? duyTanLocations : otherLocations;
 
   const handleSaveMachineInfo = async () => {
     const token = localStorage.getItem('token');
@@ -197,7 +208,8 @@ function HomePage() {
   };
 
 
-  const handleLocationClick = (location) => {
+  const handleLocationSelect = (location, isDuyTanGroup) => {
+    setIsDuyTanGroupSelected(Boolean(isDuyTanGroup));
     setSelectedLocation(location);
   };
 
@@ -322,8 +334,16 @@ function HomePage() {
     <div className="app-page-bg" style={{ minHeight: '100vh', overflow: 'hidden' }}>
       <AppNavbar />
       <div className="container-fluid py-2 g-0" style={{ height: '100%' }}>
-        <div className="row g-2">
-          <div className="col-md-3 mb-2">
+        <div className="home-layout d-flex g-2 gap-2">
+          <div
+            className="home-area-sidebar-wrap mb-2"
+            style={{
+              width: areaSidebarWidth,
+              minWidth: areaSidebarWidth,
+              maxWidth: areaSidebarWidth,
+              flex: `0 0 ${areaSidebarWidth}px`,
+            }}
+          >
             <div className="home-area-card p-2 rounded d-flex flex-column">
               <div className="d-flex justify-content-between align-items-center mb-2">
                 <h5 className="fw-bold mb-0 text-brand">
@@ -341,61 +361,30 @@ function HomePage() {
                 )}
 
               </div>
-              {/* Button Group */}
-              <div className="d-flex gap-2 mb-3">
-                <button
-                  type="button"
-                  className={`btn flex-fill home-group-btn home-group-btn--duytan${
-                    isDuyTanGroupSelected ? ' is-active' : ''
-                  }`}
-                  onClick={() => {
-                    setAllLocations(duyTanLocations);
-                    setIsDuyTanGroupSelected(true);
-                  }}
-                >
-                  DUY TÂN
-                </button>
-
-                <button
-                  type="button"
-                  className={`btn flex-fill home-group-btn home-group-btn--other${
-                    !isDuyTanGroupSelected ? ' is-active' : ''
-                  }`}
-                  onClick={() => {
-                    setAllLocations(otherLocations);
-                    setIsDuyTanGroupSelected(false);
-                  }}
-                >
-                  KHÁC
-                </button>
-              </div>
-
-              {/* Location List */}
-              <div className="list-group small home-location-list">
-                {allLocations.map((loc, index) => {
-                  const isActive = selectedLocation === loc.location;
-                  return (
-                    <button
-                      key={index}
-                      type="button"
-                      className={`list-group-item list-group-item-action text-start location-button home-location-btn${
-                        isActive ? ' is-active' : ''
-                      }`}
-                      onClick={(e) => {
-                        handleLocationClick(loc.location);
-                        e.currentTarget.blur();
-                      }}
-                    >
-                      {loc.location}
-                    </button>
-                  );
-                })}
+              <div className="home-location-tree-wrap flex-grow-1 min-h-0">
+                <HomeLocationTree
+                  duyTanLocations={duyTanLocations}
+                  otherLocations={otherLocations}
+                  selectedLocation={selectedLocation}
+                  isDuyTanGroupSelected={isDuyTanGroupSelected}
+                  onSelectLocation={handleLocationSelect}
+                />
               </div>
             </div>
+            <div
+              className={`machine-tree-sidebar-resizer home-area-sidebar-resizer${
+                isAreaSidebarResizing ? ' machine-tree-sidebar-resizer--active' : ''
+              }`}
+              onMouseDown={onAreaSidebarResizeStart}
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Kéo để thay đổi độ rộng khu vực nhà máy"
+              title="Kéo để thay đổi độ rộng"
+            />
           </div>
 
           {/* Main content - Machines */}
-          <div className="col-md-9">
+          <div className="home-machines-col flex-grow-1 min-w-0">
             <div className="home-machines-panel p-4 rounded d-flex flex-column">
               <h4 className="mb-1 text-brand">
                 Danh sách máy {selectedLocation && `tại ${selectedLocation}`}
@@ -691,7 +680,7 @@ function HomePage() {
                 onChange={handleChange}
               />
               <datalist id="location-options">
-                {allLocations.map((loc, index) => (
+                {locationSuggestions.map((loc, index) => (
                   <option key={index} value={loc.location} />
                 ))}
               </datalist>

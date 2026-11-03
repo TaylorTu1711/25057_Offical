@@ -1298,6 +1298,13 @@
 }
 
 .machine-view-mode-segment--alarm-stats {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: calc(100% - 34px);
+}
+
+.machine-chart-head--detail.mida-status-chart-head {
   width: 100%;
 }
 
@@ -1424,4 +1431,228 @@
   .machine-chart-half {
     min-height: 220px;
   }
+}
+/* Bi?u d? tr?ng thái — cùng tính nang CNC MIDA (range / expand / pause) */
+.mida-power-chart {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.mida-power-chart__resume {
+  position: absolute;
+  z-index: 5;
+  top: 0.35rem;
+  right: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--brand-color, #20409a) 45%, transparent);
+  background: color-mix(in srgb, var(--app-surface, #fff) 92%, transparent);
+  color: var(--brand-color, #20409a);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0.28rem 0.5rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.mida-power-chart__resume:hover {
+  background: var(--brand-color, #20409a);
+  border-color: transparent;
+  color: #fff;
+}
+
+.mida-status-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.mida-status-range {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.mida-status-range__btn {
+  border: 1px solid color-mix(in srgb, var(--brand-color, #20409a) 35%, transparent);
+  background: transparent;
+  color: var(--app-text, #334155);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mida-status-range__btn:hover {
+  border-color: var(--brand-color, #20409a);
+  color: var(--brand-color, #20409a);
+}
+
+.mida-status-range__btn.is-active {
+  background: linear-gradient(135deg, #16327a, var(--brand-color, #20409a));
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.mida-status-range__btn.is-active:hover {
+  color: #ffffff;
+}
+
+.mida-status-range__btn--custom {
+  min-width: 4.2rem;
+}
+
+.mida-chart-expand-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--brand-color, #20409a) 42%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--brand-color, #20409a) 8%, transparent);
+  color: var(--brand-color, #20409a);
+  line-height: 1;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.mida-chart-expand-btn:hover,
+.mida-chart-expand-btn--close:hover {
+  background: var(--brand-color, #20409a);
+  border-color: transparent;
+  color: #fff;
+}
+
+/* Plenma detail: brand blue even when MidaCnc.css (red) is loaded later */
+.mida-chart-expand-btn--plenma {
+  border-color: color-mix(in srgb, var(--brand-color, #20409a) 42%, transparent) !important;
+  background: color-mix(in srgb, var(--brand-color, #20409a) 8%, transparent) !important;
+  color: var(--brand-color, #20409a) !important;
+}
+
+.mida-chart-expand-btn--plenma:hover,
+.mida-chart-fs--plenma .mida-chart-expand-btn--close:hover {
+  background: var(--brand-color, #20409a) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
+.mida-chart-fs--plenma .mida-chart-fs__title {
+  color: var(--brand-color, #20409a) !important;
+}
+
+.machine-charts-row .mida-status-range__btn {
+  border-color: color-mix(in srgb, var(--brand-color, #20409a) 35%, transparent) !important;
+  color: #334155 !important;
+}
+
+.machine-charts-row .mida-status-range__btn:hover {
+  border-color: var(--brand-color, #20409a) !important;
+  color: var(--brand-color, #20409a) !important;
+}
+
+.machine-charts-row .mida-status-range__btn.is-active,
+.machine-charts-row .mida-status-range__btn.is-active:hover,
+.mida-chart-fs--plenma .mida-status-range__btn.is-active,
+.mida-chart-fs--plenma .mida-status-range__btn.is-active:hover {
+  background: linear-gradient(135deg, #16327a, var(--brand-color, #20409a)) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+}
+
+.mida-chart-fs--plenma .mida-status-range__btn {
+  border-color: color-mix(in srgb, var(--brand-color, #20409a) 35%, transparent) !important;
+  color: #334155 !important;
+}
+
+.mida-chart-fs--plenma .mida-status-range__btn:hover {
+  border-color: var(--brand-color, #20409a) !important;
+  color: var(--brand-color, #20409a) !important;
+}
+
+.mida-chart-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  display: flex;
+  background: rgba(8, 12, 20, 0.55);
+}
+
+.mida-chart-fs__panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  margin: 0.45rem;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-surface, #fff);
+  border: 1px solid var(--app-border, rgba(15, 23, 42, 0.12));
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.mida-chart-fs__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.55rem 0.75rem 0.4rem;
+}
+
+.mida-chart-fs__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 800;
+  font-size: clamp(14px, 1.7vw, 18px);
+  color: var(--brand-color, #20409a);
+  letter-spacing: 0.02em;
+}
+
+.mida-chart-expand-btn--close {
+  width: 34px;
+  height: 34px;
+  font-size: 0.95rem;
+}
+
+.mida-chart-fs__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  padding: 0 0.55rem 0.55rem;
+}
+
+.mida-chart-fs__plot {
+  position: absolute;
+  inset: 0 0.55rem 0.55rem;
+  min-height: 0;
+}
+
+.mida-chart-fs__body--chart .mida-chart-fs__plot {
+  position: absolute;
+  inset: 0;
+}
+
+[data-theme='dark'] .mida-chart-fs {
+  background: rgba(4, 10, 22, 0.72);
+}
+
+[data-theme='dark'] .mida-chart-fs__panel {
+  background: var(--app-surface, #0b1b36);
+  border-color: rgba(125, 211, 252, 0.18);
+}
+
+[data-theme='dark'] .mida-chart-fs__title {
+  color: #fff;
 }

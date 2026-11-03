@@ -1,21 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const STORAGE_KEY = 'tree_sidebar_width';
-const DEFAULT_WIDTH = 250;
-const MIN_WIDTH = 180;
-const MAX_WIDTH = 520;
-
-const clampWidth = (value) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, value));
-
-const readSavedWidth = () => {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return DEFAULT_WIDTH;
-  const parsed = parseInt(saved, 10);
-  return Number.isFinite(parsed) ? clampWidth(parsed) : DEFAULT_WIDTH;
+const DEFAULTS = {
+  storageKey: 'tree_sidebar_width',
+  defaultWidth: 250,
+  minWidth: 180,
+  maxWidth: 520,
 };
 
-export default function useTreeSidebarResize() {
-  const [width, setWidth] = useState(readSavedWidth);
+const clampWidth = (value, minWidth, maxWidth) =>
+  Math.min(maxWidth, Math.max(minWidth, value));
+
+const readSavedWidth = (storageKey, defaultWidth, minWidth, maxWidth) => {
+  const saved = localStorage.getItem(storageKey);
+  if (!saved) return defaultWidth;
+  const parsed = parseInt(saved, 10);
+  return Number.isFinite(parsed) ? clampWidth(parsed, minWidth, maxWidth) : defaultWidth;
+};
+
+export default function useTreeSidebarResize(options = {}) {
+  const storageKey = options.storageKey ?? DEFAULTS.storageKey;
+  const defaultWidth = options.defaultWidth ?? DEFAULTS.defaultWidth;
+  const minWidth = options.minWidth ?? DEFAULTS.minWidth;
+  const maxWidth = options.maxWidth ?? DEFAULTS.maxWidth;
+
+  const [width, setWidth] = useState(() =>
+    readSavedWidth(storageKey, defaultWidth, minWidth, maxWidth),
+  );
   const [isResizing, setIsResizing] = useState(false);
   const widthRef = useRef(width);
   const startXRef = useRef(0);
@@ -37,12 +47,12 @@ export default function useTreeSidebarResize() {
 
     const onMove = (event) => {
       const delta = event.clientX - startXRef.current;
-      setWidth(clampWidth(startWidthRef.current + delta));
+      setWidth(clampWidth(startWidthRef.current + delta, minWidth, maxWidth));
     };
 
     const onUp = () => {
       setIsResizing(false);
-      localStorage.setItem(STORAGE_KEY, String(widthRef.current));
+      localStorage.setItem(storageKey, String(widthRef.current));
     };
 
     window.addEventListener('mousemove', onMove);
@@ -53,7 +63,7 @@ export default function useTreeSidebarResize() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [isResizing]);
+  }, [isResizing, storageKey, minWidth, maxWidth]);
 
   return { width, isResizing, onResizeStart };
 }

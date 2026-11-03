@@ -38,13 +38,55 @@
   color: #ffffff !important;
 }
 
+.home-layout {
+  align-items: stretch;
+  min-height: calc(100vh - 72px);
+}
+
+.home-area-sidebar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+.home-area-sidebar-resizer {
+  right: -5px;
+}
+
+.home-machines-col {
+  min-width: 0;
+}
+
 /* Thẻ Khu vực nhà máy */
 .home-area-card {
   background-color: var(--app-surface);
   color: var(--app-text);
   border: 1px solid var(--home-card-border, var(--app-border));
   box-shadow: var(--card-shadow);
-  height: 350px;
+  height: calc(100vh - 80px);
+  min-height: 350px;
+  width: 100%;
+}
+
+.home-location-tree-wrap {
+  overflow: auto;
+  min-height: 0;
+  margin: 0 -0.25rem;
+}
+
+.home-location-tree.machine-tree-sidebar {
+  height: auto;
+  min-height: 100%;
+  border-left: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-theme='light'] .home-location-tree.machine-tree-sidebar,
+[data-theme='dark'] .home-location-tree.machine-tree-sidebar {
+  background: transparent;
+  box-shadow: none;
+  border-left: none;
 }
 
 [data-theme='light'] .home-area-card,

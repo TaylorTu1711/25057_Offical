@@ -6,10 +6,13 @@ export default function MidaChartExpand({
   extraHead = null,
   variant = 'chart',
   buttonClassName = '',
+  tone = '',
   children,
 }) {
   const [open, setOpen] = useState(false);
   const titleId = useId();
+  const toneBtnClass = tone === 'plenma' ? 'mida-chart-expand-btn--plenma' : '';
+  const toneFsClass = tone === 'plenma' ? 'mida-chart-fs--plenma' : '';
 
   useEffect(() => {
     if (!open) return undefined;
@@ -29,7 +32,7 @@ export default function MidaChartExpand({
     <>
       <button
         type="button"
-        className={`mida-chart-expand-btn ${buttonClassName}`.trim()}
+        className={`mida-chart-expand-btn ${toneBtnClass} ${buttonClassName}`.trim()}
         onClick={() => setOpen(true)}
         title="Phóng to biểu đồ"
         aria-label={`Phóng to ${title}`}
@@ -38,7 +41,7 @@ export default function MidaChartExpand({
       </button>
       {open
         ? createPortal(
-            <div className="mida-chart-fs" role="presentation">
+            <div className={`mida-chart-fs ${toneFsClass}`.trim()} role="presentation">
               <div
                 className="mida-chart-fs__panel"
                 role="dialog"
@@ -52,7 +55,7 @@ export default function MidaChartExpand({
                   {extraHead}
                   <button
                     type="button"
-                    className="mida-chart-expand-btn mida-chart-expand-btn--close"
+                    className={`mida-chart-expand-btn mida-chart-expand-btn--close ${toneBtnClass}`.trim()}
                     onClick={() => setOpen(false)}
                     title="Thu nhỏ"
                     aria-label="Đóng biểu đồ phóng to"

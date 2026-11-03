@@ -3,7 +3,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import BarLineChart_Sanluong from '../components/BarChart';
 import LineChart_TimeOn from '../components/BarChart_Thoigian';
-import BarChartStatus from '../components/BarChart_Status';
 import BarChart_LoiTheoNgay from '../components/BarChart_LoiTheoNgay';
 import BarChart_AnalysisError from '../components/BarChart_AnalysisError';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -31,7 +30,10 @@ import MachineInfoModal from '../components/machine/MachineInfoModal';
 import MachineStatusIconPanel from '../components/machine/MachineStatusIconPanel';
 import AnalysisErrorModal from '../components/machine/AnalysisErrorModal';
 import MachineTimeRangePanel from '../components/machine/MachineTimeRangePanel';
+import TimeRangeModal from '../components/machine/TimeRangeModal';
 import AutoFitMachineName from '../components/machine/AutoFitMachineName';
+import MidaStatusChart from '../components/mida/MidaStatusChart';
+import MidaChartExpand from '../components/mida/MidaChartExpand';
 import useResizableTableColumns from '../hooks/useResizableTableColumns';
 import ResizableTableHeader from '../components/home/ResizableTableHeader';
 import {
@@ -47,7 +49,48 @@ import {
 } from '../utils/chartViewRange';
 import { parseStandardProductivity, parseHandoverDate } from '../utils/parseStandardProductivity';
 import { hasInputProductInfo, hasOutputProductInfo } from '../utils/machineProductInfo';
-import { buildStatusTimelineChart } from '../utils/machineStatusTimeline';
+import { buildStatusTimelineChartSeconds } from '../utils/machineStatusTimeline';
+
+const STATUS_RANGE_PRESETS = [
+  { id: '1h', label: '1h', minutes: 60 },
+  { id: 'today', label: 'Hôm nay' },
+];
+
+const PLENMA_STATUS_TICKS = { 1: 'Dừng', 2: 'Chạy' };
+
+/** Độ phân giải bucket trạng thái cố định 10 giây (giống CNC MIDA). */
+const STATUS_CHART_INTERVAL_SECONDS = 10;
+
+function isSameLocalDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate()
+  );
+}
+
+function resolveStatusRange(mode, customFrom, customTo, nowMs) {
+  const to = new Date(nowMs);
+  if (mode === 'custom' && customFrom && customTo) {
+    const from = new Date(customFrom);
+    let end = new Date(customTo);
+    if (!isSameLocalDay(from, end)) {
+      end = new Date(from);
+      end.setHours(23, 59, 59, 999);
+    }
+    if (from.getTime() <= end.getTime()) {
+      return { from, to: end, isLive: false };
+    }
+  }
+  if (mode === 'today') {
+    const from = new Date(to);
+    from.setHours(0, 0, 0, 0);
+    return { from, to, isLive: true };
+  }
+  const preset = STATUS_RANGE_PRESETS.find((p) => p.id === mode);
+  const minutes = preset?.minutes ?? 1440;
+  return { from: getRollingFromDate(minutes, to), to, isLive: true };
+}
 
 const ALARM_TABLE_COLUMN_ORDER = ['code', 'description', 'timestamp'];
 
@@ -145,8 +188,14 @@ function Machine() {
   const [errorChartLabels, setErrorChartLabels] = useState([]);
   const [errorChartValues, setErrorChartValues] = useState([]);
   const [errorChartView, setErrorChartView] = useState(ERROR_CHART_VIEWS.timeline);
-  const [labelsChart3, setLabelsChart3] = useState([]);
+  const [statusChartTimestamps, setStatusChartTimestamps] = useState([]);
   const [statusDataValuesChart3, setStatusDataValuesChart3] = useState([]);
+  const [statusRangeMode, setStatusRangeMode] = useState('1h');
+  const [statusFrom, setStatusFrom] = useState(null);
+  const [statusTo, setStatusTo] = useState(null);
+  const [showStatusRangeModal, setShowStatusRangeModal] = useState(false);
+  const [tempStatusFrom, setTempStatusFrom] = useState(null);
+  const [tempStatusTo, setTempStatusTo] = useState(null);
   const [selectedDay, setSelectedDay] = useState('');
   const [selectedMachineData, setSelectedMachineData] = useState([]);
   const [modals, setModals] = useState({
@@ -311,21 +360,75 @@ function Machine() {
 
   const isConnected = (lastUpdated) => isMachineConnected(lastUpdated, now);
 
+  // Live charts: làm tròn 10s để khớp bucket, giảm rebuild mỗi 3s
+  const nowBucket10s = Math.floor(now / 10_000);
+
   useEffect(() => {
-    const effectiveTo = new Date(now);
-    const effectiveFrom = getRollingFromDate(1440, effectiveTo);
-    const liveStatus = statusMachine?.status ?? machineInfo?.status ?? null;
-    const { labels, mappedData } = buildStatusTimelineChart(
+    const nowMs = nowBucket10s * 10_000;
+    const { from, to, isLive } = resolveStatusRange(
+      statusRangeMode,
+      statusFrom,
+      statusTo,
+      nowMs,
+    );
+    const liveStatus = isLive
+      ? (statusMachine?.status ?? machineInfo?.status ?? null)
+      : null;
+    const statusTimeline = buildStatusTimelineChartSeconds(
       rawMachineData,
-      effectiveFrom,
-      effectiveTo,
-      5,
+      from,
+      to,
+      STATUS_CHART_INTERVAL_SECONDS,
       liveStatus,
     );
 
-    setLabelsChart3((prev) => (chartSeriesEqual(prev, labels) ? prev : labels));
-    setStatusDataValuesChart3((prev) => (chartSeriesEqual(prev, mappedData) ? prev : mappedData));
-  }, [rawMachineData, now, statusMachine?.status, machineInfo?.status]);
+    setStatusChartTimestamps((prev) =>
+      chartSeriesEqual(prev, statusTimeline.timestamps) ? prev : statusTimeline.timestamps,
+    );
+    setStatusDataValuesChart3((prev) =>
+      chartSeriesEqual(prev, statusTimeline.values) ? prev : statusTimeline.values,
+    );
+  }, [
+    rawMachineData,
+    nowBucket10s,
+    statusRangeMode,
+    statusFrom,
+    statusTo,
+    statusMachine?.status,
+    machineInfo?.status,
+  ]);
+
+  const openStatusRangeModal = () => {
+    const { from, to } = resolveStatusRange(statusRangeMode, statusFrom, statusTo, Date.now());
+    setTempStatusFrom(from);
+    setTempStatusTo(to);
+    setShowStatusRangeModal(true);
+  };
+
+  const applyCustomStatusRange = () => {
+    if (!tempStatusFrom || !tempStatusTo) {
+      window.alert('Vui lòng chọn đủ thời gian bắt đầu và kết thúc');
+      return false;
+    }
+    if (tempStatusFrom.getTime() > tempStatusTo.getTime()) {
+      window.alert('Thời gian bắt đầu phải trước thời gian kết thúc');
+      return false;
+    }
+    if (!isSameLocalDay(tempStatusFrom, tempStatusTo)) {
+      window.alert('Khoảng tùy chọn chỉ trong cùng một ngày');
+      return false;
+    }
+    setStatusFrom(tempStatusFrom);
+    setStatusTo(tempStatusTo);
+    setStatusRangeMode('custom');
+    return true;
+  };
+
+  useEffect(() => {
+    setStatusRangeMode('1h');
+    setStatusFrom(null);
+    setStatusTo(null);
+  }, [machine_id]);
 
   return (
    <div className="app-page-bg" style={{ height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
@@ -627,8 +730,29 @@ function Machine() {
           {/* Chart 1 - Sản lượng */}
           <div className="col-12 col-xl-6 d-flex flex-column gap-1 machine-charts-stack machine-charts-stack--split machine-charts-stack--equal-pair h-100">
             <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--tall">
-              <div className="chart-title-brand machine-chart-head">
+              <div className="chart-title-brand machine-chart-head mida-status-chart-head">
                 <div>BIỂU ĐỒ SẢN LƯỢNG</div>
+                <MidaChartExpand title="BIỂU ĐỒ SẢN LƯỢNG" tone="plenma">
+                  <BarLineChart_Sanluong
+                    labels={chartLabels}
+                    dataValues={productivityOutputValues}
+                    lineValues={productivityInputValues}
+                    showOutputBar
+                    showInputLine={hasInputProductInfo(machineInfo)}
+                    barLabel={
+                      hasOutputProductInfo(machineInfo)
+                        ? `${machineInfo.output_name} (${machineInfo.output_unit})`
+                        : 'Sản lượng đầu ra'
+                    }
+                    lineLabel={
+                      hasInputProductInfo(machineInfo)
+                        ? `${machineInfo.input_name} (${machineInfo.input_unit})`
+                        : ''
+                    }
+                    xTickMode={chartXTickMode}
+                    categoryPrefix={chartCategoryPrefix}
+                  />
+                </MidaChartExpand>
               </div>
 
               <div className="machine-chart-plot">
@@ -658,8 +782,19 @@ function Machine() {
 
             {/* Chart 2 - Thời gian */}
             <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--time">
-              <div className="chart-title-brand machine-chart-head">
+              <div className="chart-title-brand machine-chart-head mida-status-chart-head">
                 <div>BIỂU ĐỒ THỜI GIAN & NĂNG SUẤT</div>
+                <MidaChartExpand title="BIỂU ĐỒ THỜI GIAN & NĂNG SUẤT" tone="plenma">
+                  <LineChart_TimeOn
+                    labels={chartLabels}
+                    line3={timeRunValues}
+                    performanceValues={performanceValues}
+                    outputRateValues={outputRateValues}
+                    standardProductivity={standardProductivity}
+                    xTickMode={chartXTickMode}
+                    categoryPrefix={chartCategoryPrefix}
+                  />
+                </MidaChartExpand>
               </div>
 
               <div className="machine-chart-plot">
@@ -681,7 +816,7 @@ function Machine() {
           {/* Thống kê lỗi + Trạng thái */}
           <div className="col-12 col-xl-6 d-flex flex-column gap-1 machine-charts-stack machine-charts-stack--split machine-charts-stack--equal-pair h-100">
             <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--tall">
-              <div className="chart-title-brand machine-chart-head machine-chart-head--detail">
+              <div className="chart-title-brand machine-chart-head machine-chart-head--detail mida-status-chart-head">
                 <div
                   className="machine-view-mode-segment machine-view-mode-segment--compact machine-view-mode-segment--alarm-stats"
                   role="tablist"
@@ -710,6 +845,68 @@ function Machine() {
                     {ERROR_CHART_VIEW_LABELS[ERROR_CHART_VIEWS.byType]}
                   </button>
                 </div>
+                <MidaChartExpand
+                  tone="plenma"
+                  title={
+                    showErrorByType
+                      ? ERROR_CHART_VIEW_LABELS[ERROR_CHART_VIEWS.byType]
+                      : ERROR_CHART_VIEW_LABELS[ERROR_CHART_VIEWS.timeline]
+                  }
+                  extraHead={(
+                    <div
+                      className="machine-view-mode-segment machine-view-mode-segment--compact machine-view-mode-segment--alarm-stats"
+                      role="tablist"
+                      aria-label="Chế độ thống kê cảnh báo"
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={!showErrorByType}
+                        className={`machine-view-mode-segment__btn${
+                          !showErrorByType ? ' machine-view-mode-segment__btn--active' : ''
+                        }`}
+                        onClick={() => setErrorChartView(ERROR_CHART_VIEWS.timeline)}
+                      >
+                        {ERROR_CHART_VIEW_LABELS[ERROR_CHART_VIEWS.timeline]}
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={showErrorByType}
+                        className={`machine-view-mode-segment__btn${
+                          showErrorByType ? ' machine-view-mode-segment__btn--active' : ''
+                        }`}
+                        onClick={() => setErrorChartView(ERROR_CHART_VIEWS.byType)}
+                      >
+                        {ERROR_CHART_VIEW_LABELS[ERROR_CHART_VIEWS.byType]}
+                      </button>
+                    </div>
+                  )}
+                >
+                  {showErrorByType ? (
+                    hasErrorDetailData ? (
+                      <BarChart_AnalysisError
+                        embedded
+                        initialVisibleCount={ERROR_DETAIL_TOP_N}
+                        labels={errorDetailStats.labels}
+                        displayLabels={errorDetailStats.displayLabels}
+                        dataValues={errorDetailStats.dataValues}
+                        tooltipLabels={errorDetailStats.tooltipLabels}
+                      />
+                    ) : (
+                      <div className="d-flex align-items-center justify-content-center h-100 w-100 text-muted">
+                        Chưa có dữ liệu lỗi
+                      </div>
+                    )
+                  ) : errorChartLabels.length > 0 ? (
+                    <BarChart_LoiTheoNgay
+                      labels={errorChartLabels}
+                      dataValues={errorChartValues}
+                      viewMode={chartXTickMode}
+                      categoryPrefix={chartCategoryPrefix}
+                    />
+                  ) : null}
+                </MidaChartExpand>
               </div>
 
               <div className="machine-chart-plot">
@@ -742,24 +939,78 @@ function Machine() {
             </div>
 
             <div className="card p-2 shadow d-flex flex-column machine-chart-card machine-chart-card--status">
-              <div className="chart-title-brand machine-chart-head">
+              <div className="chart-title-brand machine-chart-head mida-status-chart-head">
                 <div>BIỂU ĐỒ TRẠNG THÁI</div>
+                <div className="mida-status-range" role="group" aria-label="Khoảng thời gian trạng thái">
+                  {STATUS_RANGE_PRESETS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`mida-status-range__btn${
+                        statusRangeMode === p.id ? ' is-active' : ''
+                      }`}
+                      onClick={() => setStatusRangeMode(p.id)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={`mida-status-range__btn mida-status-range__btn--custom${
+                      statusRangeMode === 'custom' ? ' is-active' : ''
+                    }`}
+                    onClick={openStatusRangeModal}
+                    title="Chọn khoảng thời gian tùy chỉnh"
+                  >
+                    Tuỳ chọn
+                  </button>
+                  <MidaChartExpand
+                    tone="plenma"
+                    title="BIỂU ĐỒ TRẠNG THÁI"
+                    extraHead={(
+                      <div className="mida-status-range" role="group" aria-label="Khoảng thời gian trạng thái">
+                        {STATUS_RANGE_PRESETS.map((p) => (
+                          <button
+                            key={`fs-${p.id}`}
+                            type="button"
+                            className={`mida-status-range__btn${
+                              statusRangeMode === p.id ? ' is-active' : ''
+                            }`}
+                            onClick={() => setStatusRangeMode(p.id)}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className={`mida-status-range__btn mida-status-range__btn--custom${
+                            statusRangeMode === 'custom' ? ' is-active' : ''
+                          }`}
+                          onClick={openStatusRangeModal}
+                          title="Chọn khoảng thời gian tùy chỉnh"
+                        >
+                          Tuỳ chọn
+                        </button>
+                      </div>
+                    )}
+                  >
+                    <MidaStatusChart
+                      timestamps={statusChartTimestamps}
+                      statusValues={statusDataValuesChart3}
+                      statusTicks={PLENMA_STATUS_TICKS}
+                    />
+                  </MidaChartExpand>
+                </div>
               </div>
 
               <div className="machine-chart-plot">
                 <div className="machine-chart-plot-inner">
-                  <BarChartStatus labels={labelsChart3} line1={statusDataValuesChart3} />
-                </div>
-              </div>
-
-              <div className="d-flex justify-content-between flex-wrap machine-chart-foot machine-chart-foot--balance" aria-hidden="true">
-                <div className="text-brand" style={{ fontWeight: 'bold' }}>
-                  &nbsp;
-                </div>
-                <div className="d-flex gap-1 flex-wrap">
-                  <div>min: 0</div>
-                  <div>max: 0</div>
-                  <div>avg: 0</div>
+                  <MidaStatusChart
+                    key={`status-${statusRangeMode}-${statusFrom?.getTime?.() ?? ''}-${statusTo?.getTime?.() ?? ''}`}
+                    timestamps={statusChartTimestamps}
+                    statusValues={statusDataValuesChart3}
+                    statusTicks={PLENMA_STATUS_TICKS}
+                  />
                 </div>
               </div>
             </div>
@@ -782,6 +1033,20 @@ function Machine() {
       tooltipLabelsChartErr={tooltipLabelsChartErr}
       dataValuesChartErr={dataValuesChartErr}
       onClose={() => setModals((prev) => ({ ...prev, errorAnalysis: false }))}
+    />
+
+    <TimeRangeModal
+      open={showStatusRangeModal}
+      title="Chọn khoảng thời gian"
+      fromDate={tempStatusFrom}
+      toDate={tempStatusTo}
+      onFromDateChange={setTempStatusFrom}
+      onToDateChange={setTempStatusTo}
+      showTimeSelect
+      sameCalendarDayOnly
+      onCancel={() => setShowStatusRangeModal(false)}
+      onUpdate={applyCustomStatusRange}
+      onClose={() => setShowStatusRangeModal(false)}
     />
 
     {/* Offcanvas cho mobile */}
