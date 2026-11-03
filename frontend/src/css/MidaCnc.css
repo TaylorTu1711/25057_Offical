@@ -958,68 +958,76 @@
   min-width: 0;
 }
 
+/* Đồng bộ style với nút 1h / Hôm nay (mida-status-range) — bỏ nền hồng + glow chói */
 .mida-run-stop-unit-toggle {
   flex: 0 0 auto;
   display: inline-flex;
+  align-items: center;
   margin-left: 0.35rem;
-  padding: 2px;
-  gap: 1px;
-  border-radius: 7px;
-  background: var(--mida-brand-soft, rgba(211, 47, 47, 0.12));
-  border: 1px solid var(--mida-brand-border, rgba(211, 47, 47, 0.42));
-  box-shadow: 0 0 10px rgba(211, 47, 47, 0.12);
+  padding: 0;
+  gap: 0.2rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .mida-run-stop-unit-btn {
   appearance: none;
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--mida-brand, #dc2626) 28%, #cbd5e1);
   background: transparent;
-  color: #944848;
-  font-size: 0.62rem;
-  font-weight: 800;
+  color: #334155;
+  font-size: 0.68rem;
+  font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1;
-  padding: 0.28rem 0.5rem;
-  border-radius: 5px;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.35rem;
   cursor: pointer;
   min-width: 1.7rem;
-  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
 .mida-run-stop-unit-btn:hover:not(.is-active) {
-  color: var(--mida-brand, #d32f2f);
-  background: rgba(255, 255, 255, 0.55);
+  border-color: var(--mida-brand, #d32f2f);
+  color: var(--mida-brand-dark, #b71c1c);
+  background: transparent;
 }
 
 .mida-run-stop-unit-btn.is-active {
   color: #fff;
-  background: linear-gradient(135deg, #ef5350 0%, #d32f2f 55%, #b71c1c 100%);
-  box-shadow:
-    0 0 8px rgba(239, 83, 80, 0.55),
-    0 1px 3px rgba(183, 28, 28, 0.35);
+  background: linear-gradient(135deg, var(--mida-brand-dark, #b91c1c), var(--mida-brand, #dc2626));
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.mida-run-stop-unit-btn.is-active:hover {
+  color: #fff;
 }
 
 [data-theme='dark'] .mida-run-stop-unit-toggle {
-  background: rgba(239, 83, 80, 0.14);
-  border-color: rgba(239, 83, 80, 0.4);
-  box-shadow: 0 0 12px rgba(239, 83, 80, 0.18);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 [data-theme='dark'] .mida-run-stop-unit-btn {
-  color: #fca5a5;
+  color: var(--mida-text, #e5e7eb);
+  border-color: color-mix(in srgb, var(--mida-brand, #dc2626) 35%, transparent);
+  background: transparent;
 }
 
 [data-theme='dark'] .mida-run-stop-unit-btn:hover:not(.is-active) {
-  color: #fecaca;
-  background: rgba(239, 83, 80, 0.16);
+  border-color: var(--mida-brand, #dc2626);
+  color: var(--mida-brand, #dc2626);
+  background: transparent;
 }
 
 [data-theme='dark'] .mida-run-stop-unit-btn.is-active {
   color: #fff;
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 50%, #b91c1c 100%);
-  box-shadow:
-    0 0 12px rgba(248, 113, 113, 0.65),
-    0 1px 3px rgba(185, 28, 28, 0.45);
+  background: linear-gradient(135deg, var(--mida-brand-dark, #b91c1c), var(--mida-brand, #dc2626));
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .mida-run-stop-avg {
@@ -4181,9 +4189,9 @@
 }
 
 .mida-status-range__btn.is-active {
-  background: linear-gradient(135deg, var(--mida-brand-dark, #b91c1c), var(--mida-brand, #dc2626));
-  border-color: transparent;
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--mida-brand-dark, #b91c1c), var(--mida-brand, #dc2626)) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
 }
 
 .mida-status-range__btn--custom {

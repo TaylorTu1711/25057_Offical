@@ -257,11 +257,13 @@ export function getRollingDaySlots(now = new Date(), count = 30) {
   return Array.from({ length: count }, (_, i) => {
     const date = new Date(end);
     date.setDate(end.getDate() - (count - 1 - i));
+    const dayMonth = formatDayMonthLabel(date);
     return {
       date,
       key: toLocalDateKey(date),
-      label: String(date.getDate()),
-      tooltipLabel: formatDayMonthLabel(date),
+      // Trục X / tooltip: ngày/tháng — vd. 20/10
+      label: dayMonth,
+      tooltipLabel: dayMonth,
     };
   });
 }
@@ -289,12 +291,16 @@ function resolveDaySlots(selection = {}) {
   ) {
     return getRollingDaySlots(now, 30);
   }
-  return getDaysInMonth(year, month - 1).map((date) => ({
-    date,
-    key: toLocalDateKey(date),
-    label: formatDayLabel(date),
-    tooltipLabel: formatDayMonthLabel(date),
-  }));
+  return getDaysInMonth(year, month - 1).map((date) => {
+    const dayMonth = formatDayMonthLabel(date);
+    return {
+      date,
+      key: toLocalDateKey(date),
+      // Trục X / tooltip: ngày/tháng — vd. 20/10
+      label: dayMonth,
+      tooltipLabel: dayMonth,
+    };
+  });
 }
 
 /** 5 tuần 7 ngày kết thúc ở tuần hiện tại (gồm tuần hiện tại). */

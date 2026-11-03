@@ -1496,7 +1496,12 @@
 }
 
 .mida-status-range__btn.is-active {
-  background: linear-gradient(135deg, #16327a, var(--brand-color, #20409a));
+  /* Dùng brand-color — không hardcode xanh (tránh MIDA đỏ bị pha xanh) */
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--brand-color, #20409a) 82%, #000),
+    var(--brand-color, #20409a)
+  );
   border-color: transparent;
   color: #ffffff;
 }
@@ -1552,18 +1557,19 @@
   color: var(--brand-color, #20409a) !important;
 }
 
-.machine-charts-row .mida-status-range__btn {
+/* Chỉ Plenma (không có --mida) — tránh đè nút đỏ trang CNC MIDA */
+.machine-charts-row:not(.machine-charts-row--mida) .mida-status-range__btn {
   border-color: color-mix(in srgb, var(--brand-color, #20409a) 35%, transparent) !important;
   color: #334155 !important;
 }
 
-.machine-charts-row .mida-status-range__btn:hover {
+.machine-charts-row:not(.machine-charts-row--mida) .mida-status-range__btn:hover {
   border-color: var(--brand-color, #20409a) !important;
   color: var(--brand-color, #20409a) !important;
 }
 
-.machine-charts-row .mida-status-range__btn.is-active,
-.machine-charts-row .mida-status-range__btn.is-active:hover,
+.machine-charts-row:not(.machine-charts-row--mida) .mida-status-range__btn.is-active,
+.machine-charts-row:not(.machine-charts-row--mida) .mida-status-range__btn.is-active:hover,
 .mida-chart-fs--plenma .mida-status-range__btn.is-active,
 .mida-chart-fs--plenma .mida-status-range__btn.is-active:hover {
   background: linear-gradient(135deg, #16327a, var(--brand-color, #20409a)) !important;

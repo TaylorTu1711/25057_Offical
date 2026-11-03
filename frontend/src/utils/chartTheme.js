@@ -339,9 +339,9 @@ export function getCategoryXAxisTickOptions(labelCount, tickMode = 'month') {
     };
   }
 
-  const dense = labelCount > 20;
   return {
-    maxRotation: dense ? 45 : 0,
+    // Luôn nằm ngang trên một đường thẳng — không xoay xiên
+    maxRotation: 0,
     minRotation: 0,
     autoSkip: true,
     maxTicksLimit:
