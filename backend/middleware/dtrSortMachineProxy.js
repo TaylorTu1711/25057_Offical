@@ -179,7 +179,8 @@ function isEmbedRequest(req) {
 
 /**
  * Address bar: /dtr/sortmachine/:id/s
- * iframe: /s?dtr_embed=1 (pathname đúng cho React Router)
+ * Layout: sidebar danh sách máy (trái) + iframe app máy (phải)
+ * iframe: /s?dtr_embed=1
  */
 export function buildFrameShell({ machineId, restPath, query = '' }) {
   const prefix = machinePrefix(machineId);
@@ -192,6 +193,7 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
   const safePrefix = JSON.stringify(prefix);
   const safeSrc = JSON.stringify(iframeSrc);
   const safeId = String(machineId).replace(/[<>&"]/g, '');
+  const safeMachineId = JSON.stringify(String(machineId));
   return `<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -199,16 +201,97 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DTR Sort Machine ${safeId}</title>
   <style>
-    html,body{margin:0;height:100%;background:#0b1220;overflow:hidden}
-    iframe{border:0;width:100%;height:100%;display:block;background:#fff}
+    :root {
+      --dtr-side: 240px;
+      --dtr-bg: #0b1220;
+      --dtr-panel: #111827;
+      --dtr-line: #1f2a3d;
+      --dtr-text: #e5eefc;
+      --dtr-muted: #94a3b8;
+      --dtr-accent: #3b82f6;
+      --dtr-active: #1d4ed8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--dtr-bg); overflow: hidden; font-family: Segoe UI, system-ui, sans-serif; }
+    .dtr-shell { display: flex; height: 100%; width: 100%; }
+    .dtr-side {
+      width: var(--dtr-side); flex: 0 0 var(--dtr-side);
+      background: var(--dtr-panel); color: var(--dtr-text);
+      border-right: 1px solid var(--dtr-line);
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .dtr-side__head {
+      padding: 0.85rem 0.9rem 0.7rem;
+      border-bottom: 1px solid var(--dtr-line);
+    }
+    .dtr-side__eyebrow {
+      margin: 0 0 0.2rem; font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--dtr-muted);
+    }
+    .dtr-side__title { margin: 0; font-size: 0.95rem; font-weight: 700; }
+    .dtr-side__link {
+      display: inline-block; margin-top: 0.55rem; font-size: 0.78rem;
+      color: #93c5fd; text-decoration: none;
+    }
+    .dtr-side__link:hover { text-decoration: underline; }
+    .dtr-tree {
+      flex: 1; overflow: auto; padding: 0.55rem 0.45rem 0.85rem;
+    }
+    .dtr-tree__group {
+      margin: 0 0.35rem 0.35rem; padding: 0.25rem 0.4rem;
+      font-size: 0.7rem; font-weight: 700; color: var(--dtr-muted);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .dtr-tree__item {
+      display: block; width: 100%; text-align: left;
+      border: 0; background: transparent; color: var(--dtr-text);
+      border-radius: 8px; padding: 0.55rem 0.65rem; cursor: pointer;
+      margin: 0 0 0.2rem;
+    }
+    .dtr-tree__item:hover { background: rgba(59,130,246,0.12); }
+    .dtr-tree__item.is-active {
+      background: rgba(37,99,235,0.28);
+      box-shadow: inset 3px 0 0 var(--dtr-accent);
+    }
+    .dtr-tree__id { display: block; font-size: 0.78rem; font-weight: 700; }
+    .dtr-tree__name {
+      display: block; margin-top: 0.12rem; font-size: 0.72rem; color: var(--dtr-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .dtr-tree__status {
+      margin: 0.5rem 0.65rem; font-size: 0.75rem; color: var(--dtr-muted);
+    }
+    .dtr-main { flex: 1; min-width: 0; min-height: 0; background: #fff; }
+    .dtr-main iframe { border: 0; width: 100%; height: 100%; display: block; background: #fff; }
+    @media (max-width: 820px) {
+      :root { --dtr-side: 196px; }
+      .dtr-tree__name { display: none; }
+    }
   </style>
 </head>
 <body>
-  <iframe id="dtr-frame" title="DTR Sort Machine" src=${safeSrc} allow="fullscreen *; autoplay *"></iframe>
+  <div class="dtr-shell">
+    <aside class="dtr-side" aria-label="Danh sách máy">
+      <div class="dtr-side__head">
+        <p class="dtr-side__eyebrow">DTR Portal</p>
+        <h1 class="dtr-side__title">Sort machines</h1>
+        <a class="dtr-side__link" href="/dtr/sortmachine">← Quản lý máy</a>
+      </div>
+      <div class="dtr-tree" id="dtr-tree">
+        <p class="dtr-tree__status" id="dtr-tree-status">Đang tải máy…</p>
+      </div>
+    </aside>
+    <main class="dtr-main">
+      <iframe id="dtr-frame" title="DTR Sort Machine" src=${safeSrc} allow="fullscreen *; autoplay *"></iframe>
+    </main>
+  </div>
   <script>
   (function () {
     var prefix = ${safePrefix};
+    var currentId = ${safeMachineId};
     var frame = document.getElementById('dtr-frame');
+    var tree = document.getElementById('dtr-tree');
+    var statusEl = document.getElementById('dtr-tree-status');
     var syncing = false;
 
     function cleanSearch(search) {
@@ -249,6 +332,65 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
       setTimeout(function () { syncing = false; }, 0);
     }
 
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function openMachine(id) {
+      if (!id || id === currentId) return;
+      window.location.assign('/dtr/sortmachine/' + encodeURIComponent(id) + '/s');
+    }
+
+    function renderMachines(machines) {
+      var list = Array.isArray(machines) ? machines.slice() : [];
+      list.sort(function (a, b) {
+        return String(a.machine_id || '').localeCompare(String(b.machine_id || ''));
+      });
+      if (!list.length) {
+        tree.innerHTML = '<p class="dtr-tree__status">Chưa có máy nào.</p>';
+        return;
+      }
+      var html = '<div class="dtr-tree__group">Máy</div>';
+      list.forEach(function (m) {
+        var id = String(m.machine_id || '');
+        var name = String(m.name || id);
+        var active = id === currentId ? ' is-active' : '';
+        html += '<button type="button" class="dtr-tree__item' + active + '" data-id="' + escapeHtml(id) + '">'
+          + '<span class="dtr-tree__id">' + escapeHtml(id) + '</span>'
+          + '<span class="dtr-tree__name">' + escapeHtml(name) + '</span>'
+          + '</button>';
+      });
+      tree.innerHTML = html;
+      tree.querySelectorAll('.dtr-tree__item').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          openMachine(btn.getAttribute('data-id'));
+        });
+      });
+    }
+
+    function loadMachines() {
+      var token = '';
+      try { token = localStorage.getItem('token') || ''; } catch (e) {}
+      var headers = { Accept: 'application/json' };
+      if (token) headers.Authorization = 'Bearer ' + token;
+      fetch('/api/portal/dtr/sort-machines', { headers: headers, credentials: 'same-origin' })
+        .then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function (data) {
+          renderMachines(data && data.machines ? data.machines : []);
+        })
+        .catch(function () {
+          if (statusEl) statusEl.textContent = 'Không tải được danh sách máy.';
+          else tree.innerHTML = '<p class="dtr-tree__status">Không tải được danh sách máy.</p>';
+        });
+    }
+
     frame.addEventListener('load', syncParentFromFrame);
     setInterval(syncParentFromFrame, 300);
 
@@ -266,6 +408,8 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
         history.replaceState(null, '', next);
       }
     });
+
+    loadMachines();
   })();
   </script>
 </body>
