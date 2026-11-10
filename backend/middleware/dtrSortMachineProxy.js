@@ -7,8 +7,21 @@ import {
 
 export const DTR_MACHINE_COOKIE = 'dtr_machine';
 
-/** Route SPA máy sort (pathname iframe phải đúng — Chrome không cho patch location.pathname). */
-export const DTR_BARE_APP_ROUTES = ['/dashboard', '/online'];
+/**
+ * Route SPA máy sort — iframe phải load đúng pathname này.
+ * Chrome không cho patch Location.pathname, nên không dùng /dtr/sortmachine/:id/... trong iframe.
+ */
+export const DTR_BARE_APP_ROUTES = [
+  '/dashboard',
+  '/online',
+  '/s',
+  '/share',
+  '/tools',
+  '/autotrain',
+  '/newbottle',
+  '/productionorder',
+  '/admin',
+];
 
 const proxy = httpProxy.createProxyServer({
   xfwd: true,

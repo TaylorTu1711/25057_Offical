@@ -75,8 +75,8 @@ server {
         proxy_buffering off;
     }
 
-    # Iframe DTR — pathname /dashboard|/online (không đụng Plenma /mida)
-    location ~ ^/(dashboard|online)(/|$) {
+    # Iframe DTR — pathname trần khớp React Router (không đụng /, /mida, /api)
+    location ~ ^/(dashboard|online|s|share|tools|autotrain|newbottle|productionorder|admin)(/|$) {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
