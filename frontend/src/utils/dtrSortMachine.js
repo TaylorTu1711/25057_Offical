@@ -1,7 +1,14 @@
-/** Path công khai trên domain (Nginx/Vite → Express → Tailscale). */
+/** Entry path: Express set cookie + redirect về / (hoặc /online nếu app mặc định). */
 export function buildDtrPublicPath(machineId) {
   const id = encodeURIComponent(String(machineId || '').trim());
   return id ? `/dtr/sortmachine/${id}/` : '/dtr/sortmachine';
+}
+
+/** Deep-link tới route app máy (vd. /online, /dashboard). */
+export function buildDtrPublicDeepPath(machineId, appPath = '/') {
+  const id = encodeURIComponent(String(machineId || '').trim());
+  const rest = appPath.startsWith('/') ? appPath : `/${appPath}`;
+  return id ? `/dtr/sortmachine/${id}${rest}` : '/dtr/sortmachine';
 }
 
 /** URL nội bộ qua Tailscale — chỉ dùng debug / máy đã có Tailscale. */

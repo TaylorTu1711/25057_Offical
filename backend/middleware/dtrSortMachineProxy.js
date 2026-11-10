@@ -5,6 +5,8 @@ import {
   isDtrApiPath,
 } from '../utils/dtrSortMachines.js';
 
+export const DTR_MACHINE_COOKIE = 'dtr_machine';
+
 const proxy = httpProxy.createProxyServer({
   xfwd: true,
   changeOrigin: true,
@@ -30,99 +32,106 @@ proxy.on('error', (err, req, res) => {
   }
 });
 
+function parseCookies(header = '') {
+  const out = {};
+  String(header)
+    .split(';')
+    .forEach((part) => {
+      const idx = part.indexOf('=');
+      if (idx < 0) return;
+      const k = part.slice(0, idx).trim();
+      const v = part.slice(idx + 1).trim();
+      if (k) out[k] = decodeURIComponent(v);
+    });
+  return out;
+}
+
 function isListPath(pathname) {
   return pathname === '/dtr/sortmachine' || pathname === '/dtr/sortmachine/';
 }
 
-export function parseDtrProxyPath(pathname) {
+/** /dtr/sortmachine/:id[/rest...] */
+export function parseDtrEntryPath(pathname) {
   if (isListPath(pathname)) return null;
   const match = pathname.match(/^\/dtr\/sortmachine\/([^/]+)(\/.*)?$/);
   if (!match) return null;
-  const machineId = decodeURIComponent(match[1]);
-  const rest = match[2] && match[2].length > 0 ? match[2] : '/';
-  return { machineId, rest };
+  return {
+    machineId: decodeURIComponent(match[1]),
+    rest: match[2] && match[2].length > 0 ? match[2] : '/',
+  };
 }
 
-function publicPrefix(machineId) {
-  return `/dtr/sortmachine/${encodeURIComponent(machineId)}`;
+/** Path thuộc SCADA chính — không proxy sang máy sort dù có cookie. */
+export function isPlenmaReservedPath(pathname) {
+  if (isListPath(pathname)) return true;
+  if (pathname.startsWith('/dtr/sortmachine/')) return true; // entry xử lý riêng
+  if (pathname.startsWith('/api/')) return true;
+  if (pathname.startsWith('/uploads/')) return true;
+  if (pathname.startsWith('/login')) return true;
+  if (pathname.startsWith('/register')) return true;
+  if (pathname.startsWith('/mida')) return true;
+  if (pathname.startsWith('/machines')) return true;
+  return false;
 }
 
-/** Script chèn vào HTML: giữ subpath + đổi http://host:apiPort → HTTPS cùng origin. */
-export function buildClientShim(machineId, apiPort) {
-  const prefix = publicPrefix(machineId);
+function isHttpsRequest(req) {
+  return Boolean(req.secure || req.headers['x-forwarded-proto'] === 'https');
+}
+
+function setMachineCookie(req, res, machineId) {
+  const maxAge = 60 * 60 * 12; // 12h
+  const secure = isHttpsRequest(req) ? '; Secure' : '';
+  res.setHeader(
+    'Set-Cookie',
+    `${DTR_MACHINE_COOKIE}=${encodeURIComponent(machineId)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`,
+  );
+}
+
+function clearMachineCookie(req, res) {
+  const secure = isHttpsRequest(req) ? '; Secure' : '';
+  res.setHeader(
+    'Set-Cookie',
+    `${DTR_MACHINE_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`,
+  );
+}
+
+/** Shim nhẹ: chỉ sửa ws/http :apiPort → cùng origin (pathname đã là /online). */
+export function buildClientShim(apiPort) {
   const apiPortJson = apiPort == null ? 'null' : String(Number(apiPort));
   return `<script data-dtr-shim="1">(function(){
-var PREFIX=${JSON.stringify(prefix)};
 var API_PORT=${apiPortJson};
-function stripPrefixPath(path){
-  if(typeof path!=="string") return path;
-  if(path===PREFIX) return "/";
-  if(path.indexOf(PREFIX+"/")===0){
-    var s=path.slice(PREFIX.length);
-    return s && s.length ? s : "/";
-  }
-  return path;
-}
-function keepPrefix(url){
-  try{
-    if(typeof url!=="string") return url;
-    if(url.startsWith("http://")||url.startsWith("https://")||url.startsWith("ws://")||url.startsWith("wss://")||url.startsWith("//")) return url;
-    if(url.startsWith(PREFIX)) return url;
-    if(url.startsWith("/")) return PREFIX+url;
-    return url;
-  }catch(e){return url;}
-}
 function rewriteApi(url){
   try{
     if(API_PORT==null) return url;
     var u=new URL(url, location.href);
-    var hostOk=u.hostname===location.hostname;
+    if(u.hostname!==location.hostname) return url;
     var portOk=String(u.port||"")===String(API_PORT)
       || (u.protocol==="http:" && String(API_PORT)==="80")
       || (u.protocol==="ws:" && String(API_PORT)==="80");
-    if(hostOk && portOk){
-      var path=(u.pathname||"/")+(u.search||"")+(u.hash||"");
-      if(u.protocol==="ws:" || u.protocol==="wss:"){
-        return (location.protocol==="https:"?"wss://":"ws://")+location.host+PREFIX+path;
-      }
-      return location.origin+PREFIX+path;
+    if(!portOk) return url;
+    var path=(u.pathname||"/")+(u.search||"")+(u.hash||"");
+    if(u.protocol==="ws:"||u.protocol==="wss:"){
+      return (location.protocol==="https:"?"wss://":"ws://")+location.host+path;
     }
-    return url;
+    return location.origin+path;
   }catch(e){return url;}
 }
-function rewrite(url){ return rewriteApi(keepPrefix(String(url||""))); }
-
-/* React Router đọc location.pathname — bỏ prefix để khớp /dashboard, /online */
-try{
-  var desc=Object.getOwnPropertyDescriptor(Location.prototype,"pathname");
-  if(desc && desc.get && desc.configurable!==false){
-    Object.defineProperty(Location.prototype,"pathname",{
-      configurable:true,
-      enumerable:true,
-      get:function(){
-        return stripPrefixPath(desc.get.call(this));
-      }
-    });
-  }
-}catch(e){}
-
 var _fetch=window.fetch;
 window.fetch=function(input, init){
-  if(typeof input==="string") input=rewrite(input);
-  else if(input && typeof input.url==="string") input=new Request(rewrite(input.url), input);
+  if(typeof input==="string") input=rewriteApi(input);
+  else if(input && typeof input.url==="string") input=new Request(rewriteApi(input.url), input);
   return _fetch.call(this, input, init);
 };
 var XO=XMLHttpRequest.prototype.open;
-XMLHttpRequest.prototype.open=function(method, url){
+XMLHttpRequest.prototype.open=function(){
   var args=Array.prototype.slice.call(arguments);
-  if(typeof args[1]==="string") args[1]=rewrite(args[1]);
+  if(typeof args[1]==="string") args[1]=rewriteApi(args[1]);
   return XO.apply(this, args);
 };
 var OrigWS=window.WebSocket;
 function DtrWS(url, protocols){
-  var next=rewrite(String(url||""));
-  if(protocols===undefined) return new OrigWS(next);
-  return new OrigWS(next, protocols);
+  var next=rewriteApi(String(url||""));
+  return protocols===undefined ? new OrigWS(next) : new OrigWS(next, protocols);
 }
 DtrWS.prototype=OrigWS.prototype;
 DtrWS.CONNECTING=OrigWS.CONNECTING;
@@ -130,63 +139,18 @@ DtrWS.OPEN=OrigWS.OPEN;
 DtrWS.CLOSING=OrigWS.CLOSING;
 DtrWS.CLOSED=OrigWS.CLOSED;
 window.WebSocket=DtrWS;
-function wrapHistory(fn){
-  return function(state, title, url){
-    if(typeof url==="string") url=keepPrefix(url);
-    return fn.call(this, state, title, url);
-  };
-}
-history.pushState=wrapHistory(history.pushState.bind(history));
-history.replaceState=wrapHistory(history.replaceState.bind(history));
-document.addEventListener("click", function(e){
-  var a=e.target && e.target.closest ? e.target.closest("a[href]") : null;
-  if(!a) return;
-  var href=a.getAttribute("href");
-  if(!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
-  if(href.startsWith("http://")||href.startsWith("https://")||href.startsWith("//")) return;
-  if(href.startsWith(PREFIX) || !href.startsWith("/")) return;
-  e.preventDefault();
-  history.pushState(null, "", PREFIX+href);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}, true);
 })();</script>`;
 }
 
-export function rewriteAbsolutePaths(content, machineId, apiPort = null) {
-  const prefix = publicPrefix(machineId);
-  let out = content;
-
-  out = out.replace(
-    /((?:href|src|action|content)=["'])\/(?!\/)/gi,
-    `$1${prefix}/`,
-  );
-  out = out.replace(/url\(\s*['"]?\/(?!\/)/gi, (m) => m.replace('/', `${prefix}/`));
-  out = out.replace(/((?:from|import)\s+["'])\/(?!\/)/g, `$1${prefix}/`);
-  out = out.replace(/(["'`])\/(@vite|@react-refresh|src\/|assets\/|node_modules\/)/g, `$1${prefix}/$2`);
-
-  if (/<head[\s>]/i.test(out)) {
-    if (!/<base\s/i.test(out)) {
-      out = out.replace(/<head([^>]*)>/i, `<head$1><base href="${prefix}/">`);
-    }
-    if (!/data-dtr-shim=/i.test(out)) {
-      out = out.replace(/<head([^>]*)>/i, `<head$1>${buildClientShim(machineId, apiPort)}`);
-    }
-  }
-
-  return out;
+export function rewriteHtml(content, apiPort) {
+  if (!/<head[\s>]/i.test(content)) return content;
+  if (/data-dtr-shim=/i.test(content)) return content;
+  return content.replace(/<head([^>]*)>/i, `<head$1>${buildClientShim(apiPort)}`);
 }
 
 function shouldRewrite(contentType = '') {
   const ct = contentType.toLowerCase();
-  return (
-    ct.includes('text/html')
-    || ct.includes('text/css')
-    || ct.includes('javascript')
-    || ct.includes('ecmascript')
-    || ct.includes('json')
-    || ct.includes('manifest')
-    || ct.includes('xml')
-  );
+  return ct.includes('text/html');
 }
 
 function decompress(buf, encoding) {
@@ -206,10 +170,8 @@ function decompress(buf, encoding) {
 }
 
 proxy.on('proxyRes', (proxyRes, req, res) => {
-  const machineId = req.dtrMachineId;
   const apiPort = req.dtrApiPort;
   const chunks = [];
-
   proxyRes.on('data', (chunk) => chunks.push(chunk));
   proxyRes.on('end', async () => {
     try {
@@ -218,32 +180,21 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
       const contentType = String(proxyRes.headers['content-type'] || '');
       let body = raw;
 
-      if (machineId && shouldRewrite(contentType) && raw.length > 0) {
+      if (shouldRewrite(contentType) && raw.length > 0) {
         const decoded = await decompress(raw, encoding);
-        const text = decoded.toString('utf8');
-        const rewritten = rewriteAbsolutePaths(text, machineId, apiPort);
+        const rewritten = rewriteHtml(decoded.toString('utf8'), apiPort);
         body = Buffer.from(rewritten, 'utf8');
-
         const headers = { ...proxyRes.headers };
         delete headers['content-encoding'];
         delete headers['content-length'];
         delete headers['transfer-encoding'];
         headers['content-length'] = String(body.length);
-
-        if (headers.location && String(headers.location).startsWith('/')) {
-          headers.location = `${publicPrefix(machineId)}${headers.location}`;
-        }
-
         res.writeHead(proxyRes.statusCode || 200, headers);
         res.end(body);
         return;
       }
 
-      const headers = { ...proxyRes.headers };
-      if (headers.location && machineId && String(headers.location).startsWith('/')) {
-        headers.location = `${publicPrefix(machineId)}${headers.location}`;
-      }
-      res.writeHead(proxyRes.statusCode || 200, headers);
+      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
       res.end(body);
     } catch (err) {
       console.error('[dtr-proxy] rewrite', err.message);
@@ -255,15 +206,13 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
   });
 });
 
-async function resolveTarget(machineId, restPath = '/') {
+async function resolveTarget(machineId, pathname = '/') {
   const machine = await getDtrSortMachineById(machineId);
   if (!machine) return { errorStatus: 404, error: 'Không tìm thấy máy' };
-
   const frontPort = Number(machine.port) > 0 ? Number(machine.port) : 5173;
   const apiPort = machine.api_port != null ? Number(machine.api_port) : null;
-  const useApi = apiPort && isDtrApiPath(restPath);
+  const useApi = apiPort && isDtrApiPath(pathname);
   const port = useApi ? apiPort : frontPort;
-
   return {
     machine,
     apiPort,
@@ -271,23 +220,14 @@ async function resolveTarget(machineId, restPath = '/') {
   };
 }
 
-export function dtrSortMachineProxy(req, res, next) {
-  const parsed = parseDtrProxyPath(req.path);
-  if (!parsed) return next();
-
-  resolveTarget(parsed.machineId, parsed.rest)
+function proxyToMachine(req, res, machineId, pathnameForPort) {
+  resolveTarget(machineId, pathnameForPort)
     .then((resolved) => {
       if (resolved.errorStatus) {
         res.status(resolved.errorStatus).type('text').send(resolved.error);
         return;
       }
-
-      const queryIdx = req.url.indexOf('?');
-      const query = queryIdx >= 0 ? req.url.slice(queryIdx) : '';
-      req.url = `${parsed.rest}${query}`;
-      req.dtrMachineId = parsed.machineId;
       req.dtrApiPort = resolved.apiPort;
-
       proxy.web(req, res, {
         target: resolved.target,
         ignorePath: false,
@@ -300,21 +240,60 @@ export function dtrSortMachineProxy(req, res, next) {
     });
 }
 
+/**
+ * 1) /dtr/sortmachine → xoá cookie (SPA list)
+ * 2) /dtr/sortmachine/:id/... → set cookie + 302 về /online|/dashboard|/
+ * 3) Có cookie → proxy path gốc sang máy Tailscale (React Router khớp pathname)
+ */
+export function dtrSortMachineProxy(req, res, next) {
+  const pathname = req.path || '/';
+  const cookies = parseCookies(req.headers.cookie);
+
+  if (isListPath(pathname)) {
+    clearMachineCookie(req, res);
+    return next();
+  }
+
+  const entry = parseDtrEntryPath(pathname);
+  if (entry) {
+    setMachineCookie(req, res, entry.machineId);
+    const dest = `${entry.rest}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
+    res.redirect(302, dest);
+    return;
+  }
+
+  const machineId = cookies[DTR_MACHINE_COOKIE];
+  if (!machineId) return next();
+  if (isPlenmaReservedPath(pathname)) return next();
+
+  proxyToMachine(req, res, machineId, pathname);
+}
+
 export function attachDtrSortMachineWsProxy(server) {
   server.on('upgrade', async (req, socket, head) => {
     try {
       const host = req.headers.host || 'localhost';
       const url = new URL(req.url || '/', `http://${host}`);
-      const parsed = parseDtrProxyPath(url.pathname);
-      if (!parsed) return;
+      const cookies = parseCookies(req.headers.cookie);
+      let machineId = cookies[DTR_MACHINE_COOKIE];
 
-      const resolved = await resolveTarget(parsed.machineId, parsed.rest);
+      const entry = parseDtrEntryPath(url.pathname);
+      if (entry) machineId = entry.machineId;
+
+      if (!machineId) return;
+      if (isPlenmaReservedPath(url.pathname) && !entry) return;
+
+      const pathname = entry ? entry.rest : url.pathname;
+      const resolved = await resolveTarget(machineId, pathname);
       if (resolved.errorStatus) {
         socket.destroy();
         return;
       }
 
-      req.url = `${parsed.rest}${url.search}`;
+      if (entry) {
+        req.url = `${entry.rest}${url.search}`;
+      }
+
       const wsProxy = httpProxy.createProxyServer({
         xfwd: true,
         changeOrigin: true,

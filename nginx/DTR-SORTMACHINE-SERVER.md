@@ -3,16 +3,18 @@
 ## Kiến trúc đã chọn (tối ưu)
 
 ```text
-User (4G / Wi‑Fi, không Tailscale)
-  → https://scada.plenmaiot.com/dtr/sortmachine/25231/
-  → Nginx
-  → Express :3000 (gateway đọc DB)
-  → Tailscale → http://100.x.x.x:5173/
+User mở https://scada.plenmaiot.com/dtr/sortmachine/25231/online
+  → Express set cookie dtr_machine=25231
+  → 302 redirect → https://scada.plenmaiot.com/online
+  → Nginx thấy cookie → Express → Tailscale :5173/online
 ```
 
-- Thêm máy trên UI = ghi DB (`machine_id`, `tailscale_ip`, `port`).
+React Router thấy pathname `/online` giống `http://100.x.x.x:5173/online` → trang hiện đúng.
+
+- Thêm máy trên UI = ghi DB (`machine_id`, `tailscale_ip`, `port`, `api_port`).
 - **Không** sửa Nginx mỗi lần thêm máy.
 - Client **không** cài Tailscale.
+- Cần cập nhật Nginx theo `scada-production.conf.example` (block `@dtr_cookie_proxy`).
 
 ---
 
