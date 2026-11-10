@@ -54,6 +54,15 @@ export function buildClientShim(machineId, apiPort) {
   return `<script data-dtr-shim="1">(function(){
 var PREFIX=${JSON.stringify(prefix)};
 var API_PORT=${apiPortJson};
+function stripPrefixPath(path){
+  if(typeof path!=="string") return path;
+  if(path===PREFIX) return "/";
+  if(path.indexOf(PREFIX+"/")===0){
+    var s=path.slice(PREFIX.length);
+    return s && s.length ? s : "/";
+  }
+  return path;
+}
 function keepPrefix(url){
   try{
     if(typeof url!=="string") return url;
@@ -82,6 +91,21 @@ function rewriteApi(url){
   }catch(e){return url;}
 }
 function rewrite(url){ return rewriteApi(keepPrefix(String(url||""))); }
+
+/* React Router đọc location.pathname — bỏ prefix để khớp /dashboard, /online */
+try{
+  var desc=Object.getOwnPropertyDescriptor(Location.prototype,"pathname");
+  if(desc && desc.get && desc.configurable!==false){
+    Object.defineProperty(Location.prototype,"pathname",{
+      configurable:true,
+      enumerable:true,
+      get:function(){
+        return stripPrefixPath(desc.get.call(this));
+      }
+    });
+  }
+}catch(e){}
+
 var _fetch=window.fetch;
 window.fetch=function(input, init){
   if(typeof input==="string") input=rewrite(input);
