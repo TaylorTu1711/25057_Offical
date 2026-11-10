@@ -92,7 +92,8 @@ curl -sI http://127.0.0.1:3000/dtr/sortmachine/25231/
 | Vẫn nhảy sang `100.x` | Frontend cũ | Deploy bản mới (mở bằng path domain) |
 | Trang trắng + `Manifest: Line 1 Syntax error` | App remote dùng `/assets`, `/manifest` tuyệt đối → Nginx trả HTML SCADA | Gateway rewrite path (code mới); restart backend; hard refresh |
 | Mixed Content `http://scada...:1411` | App gọi API HTTP port khác từ trang HTTPS | Đặt `api_port=1411` trên máy; gateway shim đổi sang HTTPS path; hard refresh |
-| Mixed Content `ws://scada...:1411/socket.io` | Socket.IO dùng WS không mã hóa | Shim đổi sang `wss://.../dtr/sortmachine/<id>/socket.io`; proxy `/socket.io` → api_port |
+| Mixed Content `ws://scada...:1411/socket.io` | Socket.IO dùng WS không mã hóa | Shim đổi sang `wss://.../dtr-p/1411/socket.io` |
+| Mixed Content / SSL error port `1007` | PLC/stream HTTP trên port khác | Shim → `/dtr-p/1007/...`; thêm Nginx `location ^~ /dtr-p/` |
 | URL nhảy `/dashboard` (mất prefix) | React Router absolute path | Shim giữ prefix; hard refresh bản backend mới |
 | CSS/JS 404 trên máy remote | Path chưa qua `/dtr/sortmachine/<id>/` | Pull code proxy rewrite; hoặc build remote với `base: './'` |
 | SPA nuốt `/dtr/sortmachine/id` | Nginx thiếu block regex trước `location /` | Thêm block như file example |

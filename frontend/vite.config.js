@@ -31,6 +31,11 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
+      '/dtr-p': {
+        target: backendTarget,
+        changeOrigin: true,
+        ws: true,
+      },
       // Khi đã có cookie dtr_machine: mọi path còn lại (trừ HMR Vite) → Express → Tailscale
       '/': {
         target: backendTarget,

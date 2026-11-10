@@ -16,20 +16,24 @@ const proxy = httpProxy.createProxyServer({
   timeout: 60_000,
 });
 
-proxy.on('error', (err, req, res) => {
+const wsProxy = httpProxy.createProxyServer({
+  xfwd: true,
+  changeOrigin: true,
+  ws: true,
+});
+
+function logProxyError(err, req, res) {
   console.error('[dtr-proxy]', err.message);
   if (res && !res.headersSent && typeof res.writeHead === 'function') {
     res.writeHead(502, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('DTR proxy error: không kết nối được máy qua Tailscale.');
-    return;
   }
-  if (res && typeof res.end === 'function') {
-    try {
-      res.end();
-    } catch {
-      /* ignore */
-    }
-  }
+}
+
+proxy.on('error', logProxyError);
+wsProxy.on('error', (err, req, socket) => {
+  console.error('[dtr-proxy] ws', err.message);
+  if (socket && typeof socket.destroy === 'function') socket.destroy();
 });
 
 function parseCookies(header = '') {
@@ -50,7 +54,6 @@ function isListPath(pathname) {
   return pathname === '/dtr/sortmachine' || pathname === '/dtr/sortmachine/';
 }
 
-/** /dtr/sortmachine/:id[/rest...] */
 export function parseDtrEntryPath(pathname) {
   if (isListPath(pathname)) return null;
   const match = pathname.match(/^\/dtr\/sortmachine\/([^/]+)(\/.*)?$/);
@@ -61,10 +64,22 @@ export function parseDtrEntryPath(pathname) {
   };
 }
 
-/** Path thuộc SCADA chính — không proxy sang máy sort dù có cookie. */
+/** /dtr-p/1007/plc/ws → { port: 1007, rest: /plc/ws } */
+export function parseDtrPortPath(pathname) {
+  const match = pathname.match(/^\/dtr-p\/(\d{2,5})(\/.*)?$/);
+  if (!match) return null;
+  const port = Number(match[1]);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
+  return {
+    port,
+    rest: match[2] && match[2].length > 0 ? match[2] : '/',
+  };
+}
+
 export function isPlenmaReservedPath(pathname) {
   if (isListPath(pathname)) return true;
-  if (pathname.startsWith('/dtr/sortmachine/')) return true; // entry xử lý riêng
+  if (pathname.startsWith('/dtr/sortmachine/')) return true;
+  if (pathname.startsWith('/dtr-p/')) return false;
   if (pathname.startsWith('/api/')) return true;
   if (pathname.startsWith('/uploads/')) return true;
   if (pathname.startsWith('/login')) return true;
@@ -79,7 +94,7 @@ function isHttpsRequest(req) {
 }
 
 function setMachineCookie(req, res, machineId) {
-  const maxAge = 60 * 60 * 12; // 12h
+  const maxAge = 60 * 60 * 12;
   const secure = isHttpsRequest(req) ? '; Secure' : '';
   res.setHeader(
     'Set-Cookie',
@@ -95,21 +110,19 @@ function clearMachineCookie(req, res) {
   );
 }
 
-/** Shim nhẹ: chỉ sửa ws/http :apiPort → cùng origin (pathname đã là /online). */
-export function buildClientShim(apiPort) {
-  const apiPortJson = apiPort == null ? 'null' : String(Number(apiPort));
+/**
+ * Mọi http(s)/ws(s) cùng hostname nhưng khác port
+ * → cùng origin /dtr-p/<port>/... (tránh Mixed Content).
+ */
+export function buildClientShim() {
   return `<script data-dtr-shim="1">(function(){
-var API_PORT=${apiPortJson};
-function rewriteApi(url){
+function rewrite(url){
   try{
-    if(API_PORT==null) return url;
-    var u=new URL(url, location.href);
+    var u=new URL(String(url||""), location.href);
     if(u.hostname!==location.hostname) return url;
-    var portOk=String(u.port||"")===String(API_PORT)
-      || (u.protocol==="http:" && String(API_PORT)==="80")
-      || (u.protocol==="ws:" && String(API_PORT)==="80");
-    if(!portOk) return url;
-    var path=(u.pathname||"/")+(u.search||"")+(u.hash||"");
+    var port=u.port||(u.protocol==="https:"||u.protocol==="wss:"?"443":"80");
+    if(port==="443"||port==="80"||port==="") return url;
+    var path="/dtr-p/"+port+(u.pathname||"/")+(u.search||"")+(u.hash||"");
     if(u.protocol==="ws:"||u.protocol==="wss:"){
       return (location.protocol==="https:"?"wss://":"ws://")+location.host+path;
     }
@@ -118,20 +131,25 @@ function rewriteApi(url){
 }
 var _fetch=window.fetch;
 window.fetch=function(input, init){
-  if(typeof input==="string") input=rewriteApi(input);
-  else if(input && typeof input.url==="string") input=new Request(rewriteApi(input.url), input);
+  if(typeof input==="string") input=rewrite(input);
+  else if(input && typeof input.url==="string") input=new Request(rewrite(input.url), input);
   return _fetch.call(this, input, init);
 };
 var XO=XMLHttpRequest.prototype.open;
 XMLHttpRequest.prototype.open=function(){
   var args=Array.prototype.slice.call(arguments);
-  if(typeof args[1]==="string") args[1]=rewriteApi(args[1]);
+  if(typeof args[1]==="string") args[1]=rewrite(args[1]);
   return XO.apply(this, args);
 };
 var OrigWS=window.WebSocket;
 function DtrWS(url, protocols){
-  var next=rewriteApi(String(url||""));
-  return protocols===undefined ? new OrigWS(next) : new OrigWS(next, protocols);
+  var next=rewrite(String(url||""));
+  try{
+    return protocols===undefined ? new OrigWS(next) : new OrigWS(next, protocols);
+  }catch(err){
+    console.error("[dtr-shim] WebSocket", next, err);
+    throw err;
+  }
 }
 DtrWS.prototype=OrigWS.prototype;
 DtrWS.CONNECTING=OrigWS.CONNECTING;
@@ -142,15 +160,14 @@ window.WebSocket=DtrWS;
 })();</script>`;
 }
 
-export function rewriteHtml(content, apiPort) {
+export function rewriteHtml(content) {
   if (!/<head[\s>]/i.test(content)) return content;
   if (/data-dtr-shim=/i.test(content)) return content;
-  return content.replace(/<head([^>]*)>/i, `<head$1>${buildClientShim(apiPort)}`);
+  return content.replace(/<head([^>]*)>/i, `<head$1>${buildClientShim()}`);
 }
 
 function shouldRewrite(contentType = '') {
-  const ct = contentType.toLowerCase();
-  return ct.includes('text/html');
+  return String(contentType).toLowerCase().includes('text/html');
 }
 
 function decompress(buf, encoding) {
@@ -170,7 +187,6 @@ function decompress(buf, encoding) {
 }
 
 proxy.on('proxyRes', (proxyRes, req, res) => {
-  const apiPort = req.dtrApiPort;
   const chunks = [];
   proxyRes.on('data', (chunk) => chunks.push(chunk));
   proxyRes.on('end', async () => {
@@ -182,7 +198,7 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
 
       if (shouldRewrite(contentType) && raw.length > 0) {
         const decoded = await decompress(raw, encoding);
-        const rewritten = rewriteHtml(decoded.toString('utf8'), apiPort);
+        const rewritten = rewriteHtml(decoded.toString('utf8'));
         body = Buffer.from(rewritten, 'utf8');
         const headers = { ...proxyRes.headers };
         delete headers['content-encoding'];
@@ -206,48 +222,46 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
   });
 });
 
-async function resolveTarget(machineId, pathname = '/') {
+async function resolveMachineTarget(machineId, pathname = '/', forcedPort = null) {
   const machine = await getDtrSortMachineById(machineId);
   if (!machine) return { errorStatus: 404, error: 'Không tìm thấy máy' };
+
   const frontPort = Number(machine.port) > 0 ? Number(machine.port) : 5173;
   const apiPort = machine.api_port != null ? Number(machine.api_port) : null;
-  const useApi = apiPort && isDtrApiPath(pathname);
-  const port = useApi ? apiPort : frontPort;
+
+  let port = frontPort;
+  if (forcedPort != null) {
+    port = forcedPort;
+  } else if (apiPort && isDtrApiPath(pathname)) {
+    port = apiPort;
+  }
+
   return {
     machine,
-    apiPort,
     target: `http://${machine.tailscale_ip}:${port}`,
   };
 }
 
-function proxyToMachine(req, res, machineId, pathnameForPort) {
-  resolveTarget(machineId, pathnameForPort)
-    .then((resolved) => {
-      if (resolved.errorStatus) {
-        res.status(resolved.errorStatus).type('text').send(resolved.error);
-        return;
-      }
-      req.dtrApiPort = resolved.apiPort;
-      proxy.web(req, res, {
-        target: resolved.target,
-        ignorePath: false,
-        selfHandleResponse: true,
-      });
-    })
-    .catch((err) => {
-      console.error('[dtr-proxy] lookup', err.message);
-      res.status(500).type('text').send('DTR proxy lookup error');
-    });
+function proxyWeb(req, res, target) {
+  const queryIdx = req.url.indexOf('?');
+  // req.url already set by caller when path rewritten
+  proxy.web(req, res, {
+    target,
+    ignorePath: false,
+    selfHandleResponse: true,
+  });
 }
 
 /**
- * 1) /dtr/sortmachine → xoá cookie (SPA list)
- * 2) /dtr/sortmachine/:id/... → set cookie + 302 về /online|/dashboard|/
- * 3) Có cookie → proxy path gốc sang máy Tailscale (React Router khớp pathname)
+ * 1) /dtr/sortmachine → clear cookie
+ * 2) /dtr/sortmachine/:id/... → cookie + redirect /online|/
+ * 3) /dtr-p/:port/... → proxy tới Tailscale IP:port (cần cookie)
+ * 4) cookie → proxy path gốc tới frontend/api port máy
  */
 export function dtrSortMachineProxy(req, res, next) {
   const pathname = req.path || '/';
   const cookies = parseCookies(req.headers.cookie);
+  const machineId = cookies[DTR_MACHINE_COOKIE];
 
   if (isListPath(pathname)) {
     clearMachineCookie(req, res);
@@ -262,11 +276,44 @@ export function dtrSortMachineProxy(req, res, next) {
     return;
   }
 
-  const machineId = cookies[DTR_MACHINE_COOKIE];
+  const portPath = parseDtrPortPath(pathname);
+  if (portPath) {
+    if (!machineId) {
+      res.status(401).type('text').send('Thiếu cookie máy DTR — mở lại từ /dtr/sortmachine/<id>/');
+      return;
+    }
+    const q = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    req.url = `${portPath.rest}${q}`;
+    resolveMachineTarget(machineId, portPath.rest, portPath.port)
+      .then((resolved) => {
+        if (resolved.errorStatus) {
+          res.status(resolved.errorStatus).type('text').send(resolved.error);
+          return;
+        }
+        proxyWeb(req, res, resolved.target);
+      })
+      .catch((err) => {
+        console.error('[dtr-proxy] port', err.message);
+        res.status(500).type('text').send('DTR port proxy error');
+      });
+    return;
+  }
+
   if (!machineId) return next();
   if (isPlenmaReservedPath(pathname)) return next();
 
-  proxyToMachine(req, res, machineId, pathname);
+  resolveMachineTarget(machineId, pathname)
+    .then((resolved) => {
+      if (resolved.errorStatus) {
+        res.status(resolved.errorStatus).type('text').send(resolved.error);
+        return;
+      }
+      proxyWeb(req, res, resolved.target);
+    })
+    .catch((err) => {
+      console.error('[dtr-proxy] lookup', err.message);
+      res.status(500).type('text').send('DTR proxy lookup error');
+    });
 }
 
 export function attachDtrSortMachineWsProxy(server) {
@@ -277,32 +324,34 @@ export function attachDtrSortMachineWsProxy(server) {
       const cookies = parseCookies(req.headers.cookie);
       let machineId = cookies[DTR_MACHINE_COOKIE];
 
+      const portPath = parseDtrPortPath(url.pathname);
+      if (portPath) {
+        if (!machineId) {
+          socket.destroy();
+          return;
+        }
+        const resolved = await resolveMachineTarget(machineId, portPath.rest, portPath.port);
+        if (resolved.errorStatus) {
+          socket.destroy();
+          return;
+        }
+        req.url = `${portPath.rest}${url.search}`;
+        wsProxy.ws(req, socket, head, { target: resolved.target });
+        return;
+      }
+
       const entry = parseDtrEntryPath(url.pathname);
       if (entry) machineId = entry.machineId;
-
       if (!machineId) return;
       if (isPlenmaReservedPath(url.pathname) && !entry) return;
 
       const pathname = entry ? entry.rest : url.pathname;
-      const resolved = await resolveTarget(machineId, pathname);
+      const resolved = await resolveMachineTarget(machineId, pathname);
       if (resolved.errorStatus) {
         socket.destroy();
         return;
       }
-
-      if (entry) {
-        req.url = `${entry.rest}${url.search}`;
-      }
-
-      const wsProxy = httpProxy.createProxyServer({
-        xfwd: true,
-        changeOrigin: true,
-        ws: true,
-      });
-      wsProxy.on('error', (err) => {
-        console.error('[dtr-proxy] ws', err.message);
-        socket.destroy();
-      });
+      if (entry) req.url = `${entry.rest}${url.search}`;
       wsProxy.ws(req, socket, head, { target: resolved.target });
     } catch (err) {
       console.error('[dtr-proxy] ws', err.message);
