@@ -111,6 +111,79 @@ function clearMachineCookie(req, res) {
 }
 
 /**
+ * Giữ URL /dtr/sortmachine/:id/dashboard trong address bar.
+ * App remote chạy trong iframe cùng origin tại /dashboard (cookie proxy).
+ */
+export function buildFrameShell({ machineId, restPath, query = '' }) {
+  const prefix = `/dtr/sortmachine/${encodeURIComponent(machineId)}`;
+  const iframeSrc = `${restPath || '/'}${query || ''}`;
+  const safePrefix = JSON.stringify(prefix);
+  const safeSrc = JSON.stringify(iframeSrc);
+  return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DTR Sort Machine ${String(machineId).replace(/[<>&"]/g, '')}</title>
+  <style>
+    html,body{margin:0;height:100%;background:#0b1220;overflow:hidden}
+    iframe{border:0;width:100%;height:100%;display:block;background:#fff}
+  </style>
+</head>
+<body>
+  <iframe id="dtr-frame" title="DTR Sort Machine" src=${safeSrc} allow="fullscreen *; autoplay *"></iframe>
+  <script>
+  (function () {
+    var prefix = ${safePrefix};
+    var frame = document.getElementById('dtr-frame');
+    var syncing = false;
+
+    function pathFromFrame() {
+      try {
+        var loc = frame.contentWindow.location;
+        if (loc.origin !== location.origin) return null;
+        return (loc.pathname || '/') + (loc.search || '') + (loc.hash || '');
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function syncParentFromFrame() {
+      if (syncing) return;
+      var inner = pathFromFrame();
+      if (!inner) return;
+      var next = prefix + (inner.charAt(0) === '/' ? inner : '/' + inner);
+      if (location.pathname + location.search + location.hash === next) return;
+      syncing = true;
+      try { history.replaceState(null, '', next); } finally { syncing = false; }
+    }
+
+    function navigateFrame(pathWithQuery) {
+      syncing = true;
+      try {
+        frame.contentWindow.location.href = pathWithQuery;
+      } catch (e) {
+        frame.src = pathWithQuery;
+      }
+      setTimeout(function () { syncing = false; }, 0);
+    }
+
+    frame.addEventListener('load', syncParentFromFrame);
+    setInterval(syncParentFromFrame, 400);
+
+    window.addEventListener('popstate', function () {
+      var rest = location.pathname;
+      if (rest.indexOf(prefix) === 0) rest = rest.slice(prefix.length) || '/';
+      else return;
+      navigateFrame(rest + location.search + location.hash);
+    });
+  })();
+  </script>
+</body>
+</html>`;
+}
+
+/**
  * Mọi http(s)/ws(s) cùng hostname nhưng khác port
  * → cùng origin /dtr-p/<port>/... (tránh Mixed Content).
  */
@@ -279,7 +352,7 @@ function proxyWeb(req, res, target) {
 
 /**
  * 1) /dtr/sortmachine → clear cookie
- * 2) /dtr/sortmachine/:id/... → cookie + redirect /online|/
+ * 2) /dtr/sortmachine/:id/... → cookie + shell iframe (URL giữ prefix)
  * 3) /dtr-p/:port/... → proxy tới Tailscale IP:port (cần cookie)
  * 4) cookie → proxy path gốc tới frontend/api port máy
  */
@@ -295,9 +368,32 @@ export function dtrSortMachineProxy(req, res, next) {
 
   const entry = parseDtrEntryPath(pathname);
   if (entry) {
-    setMachineCookie(req, res, entry.machineId);
-    const dest = `${entry.rest}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`;
-    res.redirect(302, dest);
+    const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    getDtrSortMachineById(entry.machineId)
+      .then((machine) => {
+        if (!machine) {
+          res.status(404).type('text').send('Không tìm thấy máy');
+          return;
+        }
+        setMachineCookie(req, res, entry.machineId);
+        res
+          .status(200)
+          .set({
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+          })
+          .send(
+            buildFrameShell({
+              machineId: entry.machineId,
+              restPath: entry.rest || '/',
+              query,
+            }),
+          );
+      })
+      .catch((err) => {
+        console.error('[dtr-proxy] shell', err.message);
+        res.status(500).type('text').send('DTR shell error');
+      });
     return;
   }
 

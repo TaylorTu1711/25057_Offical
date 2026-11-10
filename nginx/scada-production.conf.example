@@ -1,9 +1,8 @@
 # Mẫu cấu hình nginx trên server (SSL) cho https://scada.plenmaiot.com
 #
-# DTR dùng cookie dtr_machine:
-#   /dtr/sortmachine/25231/online  → Express set cookie + 302 → /online
-#   /online (có cookie)            → Express proxy → Tailscale máy 25231
-# React Router thấy pathname /online giống truy cập trực tiếp :5173/online
+# DTR dùng cookie dtr_machine + iframe shell:
+#   /dtr/sortmachine/25231/dashboard → Express set cookie + shell (URL giữ nguyên)
+#   iframe load /dashboard (có cookie) → Express proxy → Tailscale máy 25231
 
 # Trong http { }:
 # map $http_upgrade $connection_upgrade {

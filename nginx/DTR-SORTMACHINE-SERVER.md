@@ -3,13 +3,14 @@
 ## Kiến trúc đã chọn (tối ưu)
 
 ```text
-User mở https://scada.plenmaiot.com/dtr/sortmachine/25231/online
+User mở https://scada.plenmaiot.com/dtr/sortmachine/25231/dashboard
   → Express set cookie dtr_machine=25231
-  → 302 redirect → https://scada.plenmaiot.com/online
-  → Nginx thấy cookie → Express → Tailscale :5173/online
+  → Shell HTML (URL vẫn /dtr/sortmachine/25231/dashboard)
+  → iframe cùng origin load /dashboard
+  → Nginx thấy cookie → Express → Tailscale :5173/dashboard
 ```
 
-React Router thấy pathname `/online` giống `http://100.x.x.x:5173/online` → trang hiện đúng.
+Address bar giữ prefix máy; React Router trong iframe thấy `/dashboard` như truy cập trực tiếp.
 
 - Thêm máy trên UI = ghi DB (`machine_id`, `tailscale_ip`, `port`, `api_port`).
 - **Không** sửa Nginx mỗi lần thêm máy.

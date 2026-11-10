@@ -1,4 +1,4 @@
-/** Entry path: Express set cookie + redirect về / (hoặc /online nếu app mặc định). */
+/** Entry path: Express set cookie + iframe shell (URL giữ /dtr/sortmachine/:id/...). */
 export function buildDtrPublicPath(machineId) {
   const id = encodeURIComponent(String(machineId || '').trim());
   return id ? `/dtr/sortmachine/${id}/` : '/dtr/sortmachine';
