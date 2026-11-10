@@ -32,6 +32,16 @@ const proxy = httpProxy.createProxyServer({
   timeout: 60_000,
 });
 
+/** Port phụ (camera MJPEG :1007, …) — không buffer body (stream vô hạn). */
+const streamProxy = httpProxy.createProxyServer({
+  xfwd: true,
+  changeOrigin: true,
+  ws: true,
+  selfHandleResponse: false,
+  proxyTimeout: 0,
+  timeout: 0,
+});
+
 const wsProxy = httpProxy.createProxyServer({
   xfwd: true,
   changeOrigin: true,
@@ -47,6 +57,7 @@ function logProxyError(err, req, res) {
 }
 
 proxy.on('error', logProxyError);
+streamProxy.on('error', logProxyError);
 wsProxy.on('error', (err, req, socket) => {
   console.error('[dtr-proxy] ws', err.message);
   if (socket && typeof socket.destroy === 'function') socket.destroy();
@@ -402,16 +413,26 @@ function decompress(buf, encoding) {
 }
 
 proxy.on('proxyRes', (proxyRes, req, res) => {
+  const contentType = String(proxyRes.headers['content-type'] || '');
+
+  // JS/CSS/MJPEG/… — pipe thẳng, không chờ end (camera stream không bao giờ end)
+  if (!shouldRewrite(contentType)) {
+    const headers = { ...proxyRes.headers };
+    delete headers['x-frame-options'];
+    res.writeHead(proxyRes.statusCode || 200, headers);
+    proxyRes.pipe(res);
+    return;
+  }
+
   const chunks = [];
   proxyRes.on('data', (chunk) => chunks.push(chunk));
   proxyRes.on('end', async () => {
     try {
       const raw = Buffer.concat(chunks);
       const encoding = String(proxyRes.headers['content-encoding'] || '');
-      const contentType = String(proxyRes.headers['content-type'] || '');
       let body = raw;
 
-      if (shouldRewrite(contentType) && raw.length > 0) {
+      if (raw.length > 0) {
         const decoded = await decompress(raw, encoding);
         const rewritten = rewriteHtml(decoded.toString('utf8'), req.dtrPrefix || '');
         body = Buffer.from(rewritten, 'utf8');
@@ -464,8 +485,15 @@ async function resolveMachineTarget(machineId, pathname = '/', forcedPort = null
   };
 }
 
-function proxyWeb(req, res, target, prefix) {
+function proxyWeb(req, res, target, prefix, { stream = false } = {}) {
   req.dtrPrefix = prefix || '';
+  if (stream) {
+    streamProxy.web(req, res, {
+      target,
+      ignorePath: false,
+    });
+    return;
+  }
   proxy.web(req, res, {
     target,
     ignorePath: false,
@@ -568,7 +596,8 @@ export function dtrSortMachineProxy(req, res, next) {
           res.status(resolved.errorStatus).type('text').send(resolved.error);
           return;
         }
-        proxyWeb(req, res, resolved.target, machinePrefix(machineId));
+        // Camera MJPEG / PLC HTTP trên port phụ — stream, không buffer
+        proxyWeb(req, res, resolved.target, machinePrefix(machineId), { stream: true });
       })
       .catch((err) => {
         console.error('[dtr-proxy] port', err.message);
