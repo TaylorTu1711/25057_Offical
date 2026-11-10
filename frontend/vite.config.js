@@ -20,6 +20,13 @@ export default defineConfig({
         target: backendTarget,
         changeOrigin: true,
       },
+      // Máy DTR: /dtr/sortmachine/:id → Express gateway → Tailscale
+      // (không proxy đúng /dtr/sortmachine — để SPA danh sách)
+      '^/dtr/sortmachine/[^/]+': {
+        target: backendTarget,
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
 })

@@ -3,6 +3,7 @@ import pool from '../db.js';
 export const PORTALS = {
   DEFAULT: 'default',
   MIDA_CNC: 'mida_cnc',
+  DTR_SORTMACHINE: 'dtr_sortmachine',
 };
 
 export async function getUserAllowedLocations(userId, role) {

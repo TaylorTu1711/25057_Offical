@@ -26,6 +26,9 @@ export function requirePortal(...allowedPortals) {
 }
 
 export function getPostLoginPath(portal, role) {
+  if (portal === PORTALS.DTR_SORTMACHINE) {
+    return '/dtr/sortmachine';
+  }
   // Admin/user thuộc portal CNC → vào trang CNC
   if (portal === PORTALS.MIDA_CNC) {
     return '/mida/cnc';

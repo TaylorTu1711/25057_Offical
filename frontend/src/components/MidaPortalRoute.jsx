@@ -15,6 +15,9 @@ export function DefaultPortalRoute({ children }) {
   if (!isLoggedIn()) return <Navigate to="/login" state={{ from: location }} replace />;
   const portal = getPortal();
   const role = getRole();
+  if (portal === 'dtr_sortmachine' && role !== 'admin') {
+    return <Navigate to="/dtr/sortmachine" replace />;
+  }
   if (portal === 'mida_cnc' && role !== 'admin') return <Navigate to="/mida/cnc" replace />;
   return children;
 }

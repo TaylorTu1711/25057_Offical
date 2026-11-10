@@ -4,10 +4,13 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Machine from "./pages/Machine copy.jsx";
 import ProtectedRoute from './components/ProtectedRoute';
 import MidaPortalRoute, { DefaultPortalRoute } from './components/MidaPortalRoute';
+import DtrPortalRoute from './components/DtrPortalRoute';
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import MidaCncDashboard from "./pages/mida/MidaCncDashboard.jsx";
 import MidaCncMachineDetail from "./pages/mida/MidaCncMachineDetail.jsx";
+import SortMachinePage from "./pages/dtr/SortMachinePage.jsx";
+import SortMachineDetailPage from "./pages/dtr/SortMachineDetailPage.jsx";
 import 'react-datepicker/dist/react-datepicker.css';
 
 function App() {
@@ -20,6 +23,8 @@ function App() {
         <Route path="/machines/:machine_id" element={<ProtectedRoute><Machine /></ProtectedRoute>} />
         <Route path="/mida/cnc" element={<MidaPortalRoute><MidaCncDashboard /></MidaPortalRoute>} />
         <Route path="/mida/cnc/:machine_id" element={<MidaPortalRoute><MidaCncMachineDetail /></MidaPortalRoute>} />
+        <Route path="/dtr/sortmachine" element={<DtrPortalRoute><SortMachinePage /></DtrPortalRoute>} />
+        <Route path="/dtr/sortmachine/:machine_id" element={<DtrPortalRoute><SortMachineDetailPage /></DtrPortalRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
