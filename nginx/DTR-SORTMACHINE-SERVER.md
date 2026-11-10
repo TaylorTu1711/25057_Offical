@@ -88,8 +88,23 @@ curl -sI http://127.0.0.1:3000/dtr/sortmachine/25231/
 | 502 | Server không tới được IP:port Tailscale | `curl` từ server; bật máy/app/firewall |
 | 404 máy | Sai `machine_id` hoặc chưa thêm trên UI | Kiểm tra list `/dtr/sortmachine` |
 | Vẫn nhảy sang `100.x` | Frontend cũ | Deploy bản mới (mở bằng path domain) |
-| CSS/JS 404 trên máy remote | App remote dùng absolute path sai | App remote chạy root `/`; gateway đã strip prefix |
+| Trang trắng + `Manifest: Line 1 Syntax error` | App remote dùng `/assets`, `/manifest` tuyệt đối → Nginx trả HTML SCADA | Gateway rewrite path (code mới); restart backend; hard refresh |
+| CSS/JS 404 trên máy remote | Path chưa qua `/dtr/sortmachine/<id>/` | Pull code proxy rewrite; hoặc build remote với `base: './'` |
 | SPA nuốt `/dtr/sortmachine/id` | Nginx thiếu block regex trước `location /` | Thêm block như file example |
+
+### Máy sort (khuyến nghị thêm)
+
+Production build Vite trên máy nội bộ nên dùng base tương đối để chắc chắn:
+
+```js
+// vite.config.js trên máy sort
+export default defineConfig({
+  base: './',
+  // ...
+})
+```
+
+Rồi `npm run build` và serve `dist` (hoặc `vite preview --host`).
 
 ---
 
