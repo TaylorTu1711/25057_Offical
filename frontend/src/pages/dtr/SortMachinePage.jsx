@@ -109,8 +109,7 @@ export default function SortMachinePage() {
           <p className="dtr-page__eyebrow">DTR Portal</p>
           <h1 className="dtr-page__title">Sort Machine</h1>
           <p className="dtr-page__sub">
-            Bấm Mở → luôn ở <code>/dtr/sortmachine/&lt;id&gt;/dashboard</code>
-            (không còn URL trần <code>/dashboard</code>).
+            Quản lý máy sort — mở qua domain, không cần Tailscale trên thiết bị.
           </p>
         </div>
         <div className="dtr-page__header-actions">
