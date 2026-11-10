@@ -4,7 +4,7 @@ const MACHINE_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const IPV4_RE = /^(?:\d{1,3}\.){3}\d{1,3}$/;
 
 /** Path backend trên máy sort → chuyển sang api_port thay vì port frontend. */
-export const DTR_API_PATH_PREFIXES = ['/stats', '/api', '/uploads', '/ws'];
+export const DTR_API_PATH_PREFIXES = ['/stats', '/api', '/uploads', '/ws', '/socket.io'];
 
 export async function ensureDtrSortMachinesTable(db = pool) {
   await db.query(`

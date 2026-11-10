@@ -57,7 +57,7 @@ var API_PORT=${apiPortJson};
 function keepPrefix(url){
   try{
     if(typeof url!=="string") return url;
-    if(url.startsWith("http://")||url.startsWith("https://")||url.startsWith("//")) return url;
+    if(url.startsWith("http://")||url.startsWith("https://")||url.startsWith("ws://")||url.startsWith("wss://")||url.startsWith("//")) return url;
     if(url.startsWith(PREFIX)) return url;
     if(url.startsWith("/")) return PREFIX+url;
     return url;
@@ -68,9 +68,15 @@ function rewriteApi(url){
     if(API_PORT==null) return url;
     var u=new URL(url, location.href);
     var hostOk=u.hostname===location.hostname;
-    var portOk=String(u.port||"")===String(API_PORT) || (u.protocol==="http:" && String(API_PORT)==="80");
+    var portOk=String(u.port||"")===String(API_PORT)
+      || (u.protocol==="http:" && String(API_PORT)==="80")
+      || (u.protocol==="ws:" && String(API_PORT)==="80");
     if(hostOk && portOk){
-      return location.origin+PREFIX+(u.pathname||"/")+(u.search||"")+(u.hash||"");
+      var path=(u.pathname||"/")+(u.search||"")+(u.hash||"");
+      if(u.protocol==="ws:" || u.protocol==="wss:"){
+        return (location.protocol==="https:"?"wss://":"ws://")+location.host+PREFIX+path;
+      }
+      return location.origin+PREFIX+path;
     }
     return url;
   }catch(e){return url;}
@@ -88,6 +94,18 @@ XMLHttpRequest.prototype.open=function(method, url){
   if(typeof args[1]==="string") args[1]=rewrite(args[1]);
   return XO.apply(this, args);
 };
+var OrigWS=window.WebSocket;
+function DtrWS(url, protocols){
+  var next=rewrite(String(url||""));
+  if(protocols===undefined) return new OrigWS(next);
+  return new OrigWS(next, protocols);
+}
+DtrWS.prototype=OrigWS.prototype;
+DtrWS.CONNECTING=OrigWS.CONNECTING;
+DtrWS.OPEN=OrigWS.OPEN;
+DtrWS.CLOSING=OrigWS.CLOSING;
+DtrWS.CLOSED=OrigWS.CLOSED;
+window.WebSocket=DtrWS;
 function wrapHistory(fn){
   return function(state, title, url){
     if(typeof url==="string") url=keepPrefix(url);
