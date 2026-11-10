@@ -1,13 +1,13 @@
-/** Deep-link tới route app máy (vd. /online, /dashboard). */
-export function buildDtrPublicDeepPath(machineId, appPath = '/dashboard') {
+/** Deep-link tới route app máy (vd. /s, /online, /dashboard). */
+export function buildDtrPublicDeepPath(machineId, appPath = '/s') {
   const id = encodeURIComponent(String(machineId || '').trim());
   const rest = appPath.startsWith('/') ? appPath : `/${appPath}`;
   return id ? `/dtr/sortmachine/${id}${rest}` : '/dtr/sortmachine';
 }
 
-/** Entry mặc định: luôn /dashboard (cùng URL gõ tay đang chạy đúng). */
+/** Entry mặc định: /s trên máy sort. */
 export function buildDtrPublicPath(machineId) {
-  return buildDtrPublicDeepPath(machineId, '/dashboard');
+  return buildDtrPublicDeepPath(machineId, '/s');
 }
 
 /** URL nội bộ qua Tailscale — chỉ dùng debug / máy đã có Tailscale. */

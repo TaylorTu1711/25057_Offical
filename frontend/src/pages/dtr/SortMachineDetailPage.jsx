@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { buildDtrPublicPath } from '../../utils/dtrSortMachine';
 
 /**
- * Nếu SPA bắt /dtr/sortmachine/:id → hard redirect sang /dashboard
+ * Nếu SPA bắt /dtr/sortmachine/:id → hard redirect sang /s
  * (tránh MIME lỗi khi RR nuốt path thay vì Express shell).
  */
 export default function SortMachineDetailPage() {

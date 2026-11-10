@@ -178,8 +178,8 @@ function isEmbedRequest(req) {
 }
 
 /**
- * Address bar: /dtr/sortmachine/:id/dashboard
- * iframe: /dashboard?dtr_embed=1 (pathname đúng cho React Router)
+ * Address bar: /dtr/sortmachine/:id/s
+ * iframe: /s?dtr_embed=1 (pathname đúng cho React Router)
  */
 export function buildFrameShell({ machineId, restPath, query = '' }) {
   const prefix = machinePrefix(machineId);
@@ -187,7 +187,7 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
     query.startsWith('?') ? query.slice(1) : query,
   );
   params.set('dtr_embed', '1');
-  const rest = restPath && restPath !== '/' ? restPath : '/dashboard';
+  const rest = restPath && restPath !== '/' ? restPath : '/s';
   const iframeSrc = `${rest.startsWith('/') ? rest : `/${rest}`}?${params.toString()}`;
   const safePrefix = JSON.stringify(prefix);
   const safeSrc = JSON.stringify(iframeSrc);
@@ -502,7 +502,7 @@ function proxyWeb(req, res, target, prefix, { stream = false } = {}) {
 }
 
 function redirectToMachinePath(res, machineId, pathname, query = '') {
-  const rest = !pathname || pathname === '/' ? '/dashboard' : pathname;
+  const rest = !pathname || pathname === '/' ? '/s' : pathname;
   const params = new URLSearchParams(
     query.startsWith('?') ? query.slice(1) : query,
   );
@@ -551,7 +551,7 @@ export function dtrSortMachineProxy(req, res, next) {
             .send(
               buildFrameShell({
                 machineId: entry.machineId,
-                restPath: entry.rest || '/dashboard',
+                restPath: entry.rest || '/s',
                 query,
               }),
             );
