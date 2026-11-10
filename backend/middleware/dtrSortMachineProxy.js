@@ -118,7 +118,9 @@ export function buildClientShim() {
   return `<script data-dtr-shim="1">(function(){
 function rewrite(url){
   try{
-    var u=new URL(String(url||""), location.href);
+    var raw=String(url==null?"":url);
+    if(!raw||raw.indexOf("blob:")===0||raw.indexOf("data:")===0) return url;
+    var u=new URL(raw, location.href);
     if(u.hostname!==location.hostname) return url;
     var port=u.port||(u.protocol==="https:"||u.protocol==="wss:"?"443":"80");
     if(port==="443"||port==="80"||port==="") return url;
@@ -157,6 +159,29 @@ DtrWS.OPEN=OrigWS.OPEN;
 DtrWS.CLOSING=OrigWS.CLOSING;
 DtrWS.CLOSED=OrigWS.CLOSED;
 window.WebSocket=DtrWS;
+function hookAttr(proto, attr){
+  if(!proto) return;
+  var desc=Object.getOwnPropertyDescriptor(proto, attr);
+  if(!desc||!desc.set) return;
+  Object.defineProperty(proto, attr, {
+    configurable:true,
+    enumerable:desc.enumerable,
+    get:desc.get,
+    set:function(v){ return desc.set.call(this, rewrite(v)); }
+  });
+}
+hookAttr(HTMLImageElement&&HTMLImageElement.prototype,"src");
+hookAttr(HTMLScriptElement&&HTMLScriptElement.prototype,"src");
+hookAttr(HTMLSourceElement&&HTMLSourceElement.prototype,"src");
+hookAttr(HTMLMediaElement&&HTMLMediaElement.prototype,"src");
+hookAttr(HTMLIFrameElement&&HTMLIFrameElement.prototype,"src");
+hookAttr(HTMLLinkElement&&HTMLLinkElement.prototype,"href");
+var SA=Element.prototype.setAttribute;
+Element.prototype.setAttribute=function(name, value){
+  var n=String(name||"").toLowerCase();
+  if(n==="src"||n==="href"||n==="poster"||n==="data") value=rewrite(value);
+  return SA.call(this, name, value);
+};
 })();</script>`;
 }
 

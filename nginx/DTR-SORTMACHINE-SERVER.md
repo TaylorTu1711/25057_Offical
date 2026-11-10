@@ -50,6 +50,9 @@ npm run seed:dtr-sortmachine
 6. Cập nhật Nginx theo `nginx/scada-production.conf.example`:
    - Exact `/dtr/sortmachine` → SPA
    - Regex `/dtr/sortmachine/<id>` → `proxy_pass http://127.0.0.1:3000`
+   - `^~ /dtr-p/` → Express (port phụ 1007/1411…)
+   - `^~ /socket.io/` và `^~ /stats` → Express (WSS ổn định)
+   - `location /` + cookie `dtr_machine` → `@dtr_cookie_proxy` (chỉ **một** `location /`)
 7. Đảm bảo trong `http { }` có:
 
 ```nginx
