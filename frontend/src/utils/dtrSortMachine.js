@@ -1,4 +1,4 @@
-/** Entry path: proxy dưới /dtr/sortmachine/:id/... (không dùng URL trần /dashboard). */
+/** Entry path: shell + iframe; address bar = /dtr/sortmachine/:id/... */
 export function buildDtrPublicPath(machineId) {
   const id = encodeURIComponent(String(machineId || '').trim());
   return id ? `/dtr/sortmachine/${id}/` : '/dtr/sortmachine';

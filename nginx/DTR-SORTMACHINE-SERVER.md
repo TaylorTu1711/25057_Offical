@@ -4,10 +4,10 @@
 
 ```text
 User mở https://scada.plenmaiot.com/dtr/sortmachine/25231/dashboard
-  → Express set cookie + proxy Tailscale :5173/dashboard
-  → Shim: React Router thấy /dashboard; address bar giữ /dtr/sortmachine/25231/dashboard
-  → Mọi link/WS/port phụ cũng dưới prefix hoặc /dtr-p/<port>/
-  → Nếu lỡ vào /dashboard (cookie) → 302 lại /dtr/sortmachine/25231/dashboard
+  → Express set cookie + shell HTML (address bar giữ nguyên)
+  → iframe load /dashboard?dtr_embed=1 (React Router đúng path)
+  → Cookie proxy → Tailscale :5173/dashboard
+  → Top-level /dashboard (không embed) → 302 về /dtr/sortmachine/<id>/dashboard
 ```
 
 - Thêm máy trên UI = ghi DB (`machine_id`, `tailscale_ip`, `port`, `api_port`).
