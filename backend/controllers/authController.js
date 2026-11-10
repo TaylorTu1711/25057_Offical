@@ -28,8 +28,9 @@ export const login = async (req, res) => {
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const role = user.role || 'factory';
-  const portal = user.portal || 'default';
+  const scope = await loadUserScope(user.id);
+  const role = scope?.role || user.role || 'factory';
+  const portal = scope?.portal || user.portal || 'default';
   const signOptions = {};
   const expiresIn = process.env.JWT_EXPIRES_IN;
   if (expiresIn) signOptions.expiresIn = expiresIn;
@@ -40,7 +41,13 @@ export const login = async (req, res) => {
     signOptions,
   );
 
-  const scope = await loadUserScope(user.id);
+  const secure =
+    req.secure || req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+  res.setHeader(
+    'Set-Cookie',
+    `dtr_machine=; Path=/; Max-Age=0; SameSite=Lax${secure}`,
+  );
+
   res.json({
     token,
     role,

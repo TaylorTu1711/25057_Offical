@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { saveToken, saveUserSession } from '../utils/auth';
+import {
+  clearDtrMachineCookie,
+  getPostLoginPath,
+  saveToken,
+  saveUserSession,
+} from '../utils/auth';
 import { BASE_URL } from '../config/config';
 
 export default function Login() {
@@ -10,11 +15,16 @@ export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  useEffect(() => {
+    clearDtrMachineCookie();
+  }, []);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const res = await axios.post(`${BASE_URL}/api/auth/login`, { email, password });
       const data = res.data;
+      clearDtrMachineCookie();
       saveToken(data.token);
       saveUserSession({
         role: data.role,
@@ -23,7 +33,8 @@ export default function Login() {
         locations: data.locations,
       });
       localStorage.setItem('email', email);
-      navigate(data.redirectPath || '/');
+      // Ưu tiên portal (tránh vào Plenma home rồi reload mới đúng vì cookie/redirect cũ)
+      navigate(getPostLoginPath(data.portal, data.role) || data.redirectPath || '/');
     } catch {
       setError('Email hoặc mật khẩu không đúng');
     }
