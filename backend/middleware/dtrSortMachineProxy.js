@@ -114,11 +114,29 @@ function clearMachineCookie(req, res) {
   );
 }
 
-function wantsHtml(req) {
+const STATIC_ASSET_RE =
+  /\.(?:js|mjs|cjs|css|map|json|wasm|ico|png|jpe?g|gif|svg|webp|woff2?|ttf|eot|mp4|webm|txt|xml)$/i;
+
+function isStaticAssetPath(pathname = '') {
+  if (pathname.startsWith('/assets/')) return true;
+  if (pathname.startsWith('/static/')) return true;
+  if (pathname.startsWith('/@') || pathname.startsWith('/node_modules/')) return true;
+  return STATIC_ASSET_RE.test(pathname.split('?')[0]);
+}
+
+/** Chỉ navigation document mới ra shell/redirect — không được bắt /assets/*.js (Accept: */*). */
+function isDocumentNavigation(req) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return false;
+  const pathname = req.path || '/';
+  if (isStaticAssetPath(pathname)) return false;
+
+  const dest = String(req.headers['sec-fetch-dest'] || '').toLowerCase();
+  if (dest && dest !== 'document' && dest !== 'iframe') return false;
+
   const accept = String(req.headers.accept || '');
-  if (!accept || accept === '*/*') return true;
-  return accept.includes('text/html');
+  if (dest === 'document') return true;
+  if (accept.includes('text/html')) return true;
+  return false;
 }
 
 function isEmbedRequest(req) {
@@ -454,7 +472,7 @@ export function dtrSortMachineProxy(req, res, next) {
     const prefix = machinePrefix(entry.machineId);
     const embed = isEmbedRequest(req);
 
-    if (wantsHtml(req) && !embed) {
+    if (isDocumentNavigation(req) && !embed) {
       getDtrSortMachineById(entry.machineId)
         .then((machine) => {
           if (!machine) {
@@ -530,7 +548,8 @@ export function dtrSortMachineProxy(req, res, next) {
   if (isPlenmaReservedPath(pathname)) return next();
 
   // Top-level /dashboard → luôn về URL có prefix (address bar đúng)
-  if (wantsHtml(req) && !isEmbedRequest(req)) {
+  // Asset /assets/*.js phải proxy thẳng — không redirect/shell (tránh MIME text/html)
+  if (isDocumentNavigation(req) && !isEmbedRequest(req)) {
     redirectToMachinePath(res, machineId, pathname, query);
     return;
   }
