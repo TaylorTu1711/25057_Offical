@@ -1,8 +1,9 @@
 # Mẫu cấu hình nginx trên server (SSL) cho https://scada.plenmaiot.com
 #
-# DTR dùng cookie dtr_machine + iframe shell:
-#   /dtr/sortmachine/25231/dashboard → Express set cookie + shell (URL giữ nguyên)
-#   iframe load /dashboard (có cookie) → Express proxy → Tailscale máy 25231
+# DTR path-prefix (không dùng URL trần /dashboard):
+#   /dtr/sortmachine/25231/dashboard → Express proxy → Tailscale :5173/dashboard
+#   Cookie + /dashboard → 302 về /dtr/sortmachine/<id>/dashboard
+#   /dtr-p/1007/... → port phụ (PLC/stream)
 
 # Trong http { }:
 # map $http_upgrade $connection_upgrade {

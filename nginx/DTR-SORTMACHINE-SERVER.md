@@ -4,13 +4,11 @@
 
 ```text
 User mở https://scada.plenmaiot.com/dtr/sortmachine/25231/dashboard
-  → Express set cookie dtr_machine=25231
-  → Shell HTML (URL vẫn /dtr/sortmachine/25231/dashboard)
-  → iframe cùng origin load /dashboard
-  → Nginx thấy cookie → Express → Tailscale :5173/dashboard
+  → Express set cookie + proxy Tailscale :5173/dashboard
+  → Shim: React Router thấy /dashboard; address bar giữ /dtr/sortmachine/25231/dashboard
+  → Mọi link/WS/port phụ cũng dưới prefix hoặc /dtr-p/<port>/
+  → Nếu lỡ vào /dashboard (cookie) → 302 lại /dtr/sortmachine/25231/dashboard
 ```
-
-Address bar giữ prefix máy; React Router trong iframe thấy `/dashboard` như truy cập trực tiếp.
 
 - Thêm máy trên UI = ghi DB (`machine_id`, `tailscale_ip`, `port`, `api_port`).
 - **Không** sửa Nginx mỗi lần thêm máy.

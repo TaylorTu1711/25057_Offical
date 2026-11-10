@@ -1,4 +1,4 @@
-/** Entry path: Express set cookie + iframe shell (URL giữ /dtr/sortmachine/:id/...). */
+/** Entry path: proxy dưới /dtr/sortmachine/:id/... (không dùng URL trần /dashboard). */
 export function buildDtrPublicPath(machineId) {
   const id = encodeURIComponent(String(machineId || '').trim());
   return id ? `/dtr/sortmachine/${id}/` : '/dtr/sortmachine';
