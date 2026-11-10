@@ -1,6 +1,9 @@
 import httpProxy from 'http-proxy';
 import zlib from 'zlib';
-import { getDtrSortMachineById } from '../utils/dtrSortMachines.js';
+import {
+  getDtrSortMachineById,
+  isDtrApiPath,
+} from '../utils/dtrSortMachines.js';
 
 const proxy = httpProxy.createProxyServer({
   xfwd: true,
@@ -27,15 +30,10 @@ proxy.on('error', (err, req, res) => {
   }
 });
 
-/** /dtr/sortmachine và /dtr/sortmachine/ → SPA danh sách (không proxy). */
 function isListPath(pathname) {
   return pathname === '/dtr/sortmachine' || pathname === '/dtr/sortmachine/';
 }
 
-/**
- * /dtr/sortmachine/:id[/...] → http://{tailscale_ip}:{port}/...
- * Strip prefix /dtr/sortmachine/:id để app nội bộ chạy như root /.
- */
 export function parseDtrProxyPath(pathname) {
   if (isListPath(pathname)) return null;
   const match = pathname.match(/^\/dtr\/sortmachine\/([^/]+)(\/.*)?$/);
@@ -49,32 +47,88 @@ function publicPrefix(machineId) {
   return `/dtr/sortmachine/${encodeURIComponent(machineId)}`;
 }
 
-/**
- * Vite/React thường dùng path tuyệt đối /assets, /manifest, /@vite...
- * Khi proxy dưới subpath, rewrite về /dtr/sortmachine/<id>/...
- */
-export function rewriteAbsolutePaths(content, machineId) {
+/** Script chèn vào HTML: giữ subpath + đổi http://host:apiPort → HTTPS cùng origin. */
+export function buildClientShim(machineId, apiPort) {
+  const prefix = publicPrefix(machineId);
+  const apiPortJson = apiPort == null ? 'null' : String(Number(apiPort));
+  return `<script data-dtr-shim="1">(function(){
+var PREFIX=${JSON.stringify(prefix)};
+var API_PORT=${apiPortJson};
+function keepPrefix(url){
+  try{
+    if(typeof url!=="string") return url;
+    if(url.startsWith("http://")||url.startsWith("https://")||url.startsWith("//")) return url;
+    if(url.startsWith(PREFIX)) return url;
+    if(url.startsWith("/")) return PREFIX+url;
+    return url;
+  }catch(e){return url;}
+}
+function rewriteApi(url){
+  try{
+    if(API_PORT==null) return url;
+    var u=new URL(url, location.href);
+    var hostOk=u.hostname===location.hostname;
+    var portOk=String(u.port||"")===String(API_PORT) || (u.protocol==="http:" && String(API_PORT)==="80");
+    if(hostOk && portOk){
+      return location.origin+PREFIX+(u.pathname||"/")+(u.search||"")+(u.hash||"");
+    }
+    return url;
+  }catch(e){return url;}
+}
+function rewrite(url){ return rewriteApi(keepPrefix(String(url||""))); }
+var _fetch=window.fetch;
+window.fetch=function(input, init){
+  if(typeof input==="string") input=rewrite(input);
+  else if(input && typeof input.url==="string") input=new Request(rewrite(input.url), input);
+  return _fetch.call(this, input, init);
+};
+var XO=XMLHttpRequest.prototype.open;
+XMLHttpRequest.prototype.open=function(method, url){
+  var args=Array.prototype.slice.call(arguments);
+  if(typeof args[1]==="string") args[1]=rewrite(args[1]);
+  return XO.apply(this, args);
+};
+function wrapHistory(fn){
+  return function(state, title, url){
+    if(typeof url==="string") url=keepPrefix(url);
+    return fn.call(this, state, title, url);
+  };
+}
+history.pushState=wrapHistory(history.pushState.bind(history));
+history.replaceState=wrapHistory(history.replaceState.bind(history));
+document.addEventListener("click", function(e){
+  var a=e.target && e.target.closest ? e.target.closest("a[href]") : null;
+  if(!a) return;
+  var href=a.getAttribute("href");
+  if(!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+  if(href.startsWith("http://")||href.startsWith("https://")||href.startsWith("//")) return;
+  if(href.startsWith(PREFIX) || !href.startsWith("/")) return;
+  e.preventDefault();
+  history.pushState(null, "", PREFIX+href);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}, true);
+})();</script>`;
+}
+
+export function rewriteAbsolutePaths(content, machineId, apiPort = null) {
   const prefix = publicPrefix(machineId);
   let out = content;
 
-  // href="/x" src="/x" action="/x" content="/x" (không đụng //cdn)
   out = out.replace(
     /((?:href|src|action|content)=["'])\/(?!\/)/gi,
     `$1${prefix}/`,
   );
-
-  // url(/x) trong CSS inline
   out = out.replace(/url\(\s*['"]?\/(?!\/)/gi, (m) => m.replace('/', `${prefix}/`));
-
-  // import "/x" hoặc from "/x"
   out = out.replace(/((?:from|import)\s+["'])\/(?!\/)/g, `$1${prefix}/`);
-
-  // Vite classic: "/@vite/client", "/src/..."
   out = out.replace(/(["'`])\/(@vite|@react-refresh|src\/|assets\/|node_modules\/)/g, `$1${prefix}/$2`);
 
-  // Chèn <base> nếu là HTML và chưa có
-  if (/<head[\s>]/i.test(out) && !/<base\s/i.test(out)) {
-    out = out.replace(/<head([^>]*)>/i, `<head$1><base href="${prefix}/">`);
+  if (/<head[\s>]/i.test(out)) {
+    if (!/<base\s/i.test(out)) {
+      out = out.replace(/<head([^>]*)>/i, `<head$1><base href="${prefix}/">`);
+    }
+    if (!/data-dtr-shim=/i.test(out)) {
+      out = out.replace(/<head([^>]*)>/i, `<head$1>${buildClientShim(machineId, apiPort)}`);
+    }
   }
 
   return out;
@@ -111,6 +165,7 @@ function decompress(buf, encoding) {
 
 proxy.on('proxyRes', (proxyRes, req, res) => {
   const machineId = req.dtrMachineId;
+  const apiPort = req.dtrApiPort;
   const chunks = [];
 
   proxyRes.on('data', (chunk) => chunks.push(chunk));
@@ -124,17 +179,15 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
       if (machineId && shouldRewrite(contentType) && raw.length > 0) {
         const decoded = await decompress(raw, encoding);
         const text = decoded.toString('utf8');
-        const rewritten = rewriteAbsolutePaths(text, machineId);
+        const rewritten = rewriteAbsolutePaths(text, machineId, apiPort);
         body = Buffer.from(rewritten, 'utf8');
 
-        // Đã giải nén + rewrite → bỏ content-encoding/length gốc
         const headers = { ...proxyRes.headers };
         delete headers['content-encoding'];
         delete headers['content-length'];
         delete headers['transfer-encoding'];
         headers['content-length'] = String(body.length);
 
-        // Sửa Location tuyệt đối nếu redirect
         if (headers.location && String(headers.location).startsWith('/')) {
           headers.location = `${publicPrefix(machineId)}${headers.location}`;
         }
@@ -144,7 +197,6 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
         return;
       }
 
-      // Không rewrite: stream nguyên headers (trừ hop-by-hop)
       const headers = { ...proxyRes.headers };
       if (headers.location && machineId && String(headers.location).startsWith('/')) {
         headers.location = `${publicPrefix(machineId)}${headers.location}`;
@@ -161,12 +213,18 @@ proxy.on('proxyRes', (proxyRes, req, res) => {
   });
 });
 
-async function resolveTarget(machineId) {
+async function resolveTarget(machineId, restPath = '/') {
   const machine = await getDtrSortMachineById(machineId);
   if (!machine) return { errorStatus: 404, error: 'Không tìm thấy máy' };
-  const port = Number(machine.port) > 0 ? Number(machine.port) : 5173;
+
+  const frontPort = Number(machine.port) > 0 ? Number(machine.port) : 5173;
+  const apiPort = machine.api_port != null ? Number(machine.api_port) : null;
+  const useApi = apiPort && isDtrApiPath(restPath);
+  const port = useApi ? apiPort : frontPort;
+
   return {
     machine,
+    apiPort,
     target: `http://${machine.tailscale_ip}:${port}`,
   };
 }
@@ -175,7 +233,7 @@ export function dtrSortMachineProxy(req, res, next) {
   const parsed = parseDtrProxyPath(req.path);
   if (!parsed) return next();
 
-  resolveTarget(parsed.machineId)
+  resolveTarget(parsed.machineId, parsed.rest)
     .then((resolved) => {
       if (resolved.errorStatus) {
         res.status(resolved.errorStatus).type('text').send(resolved.error);
@@ -186,6 +244,7 @@ export function dtrSortMachineProxy(req, res, next) {
       const query = queryIdx >= 0 ? req.url.slice(queryIdx) : '';
       req.url = `${parsed.rest}${query}`;
       req.dtrMachineId = parsed.machineId;
+      req.dtrApiPort = resolved.apiPort;
 
       proxy.web(req, res, {
         target: resolved.target,
@@ -199,7 +258,6 @@ export function dtrSortMachineProxy(req, res, next) {
     });
 }
 
-/** Gắn WebSocket upgrade cho cùng path prefix. */
 export function attachDtrSortMachineWsProxy(server) {
   server.on('upgrade', async (req, socket, head) => {
     try {
@@ -208,13 +266,12 @@ export function attachDtrSortMachineWsProxy(server) {
       const parsed = parseDtrProxyPath(url.pathname);
       if (!parsed) return;
 
-      const resolved = await resolveTarget(parsed.machineId);
+      const resolved = await resolveTarget(parsed.machineId, parsed.rest);
       if (resolved.errorStatus) {
         socket.destroy();
         return;
       }
 
-      // WS không dùng selfHandleResponse rewrite
       req.url = `${parsed.rest}${url.search}`;
       const wsProxy = httpProxy.createProxyServer({
         xfwd: true,

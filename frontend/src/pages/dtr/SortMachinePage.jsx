@@ -15,6 +15,7 @@ const emptyForm = {
   name: '',
   tailscale_ip: '',
   port: '5173',
+  api_port: '1411',
   note: '',
 };
 
@@ -69,6 +70,7 @@ export default function SortMachinePage() {
           name: form.name.trim(),
           tailscale_ip: form.tailscale_ip.trim(),
           port: Number(form.port) || 5173,
+          api_port: form.api_port.trim() ? Number(form.api_port) : null,
           note: form.note.trim() || null,
         },
         { headers: authHeaders() },
@@ -166,9 +168,9 @@ export default function SortMachinePage() {
                   placeholder="Tên hiển thị"
                 />
               </div>
-              <div className="col-md-4">
+              <div className="col-md-3">
                 <label className="form-label" htmlFor="dtr-port">
-                  Port
+                  Port frontend
                 </label>
                 <input
                   id="dtr-port"
@@ -178,6 +180,21 @@ export default function SortMachinePage() {
                   max={65535}
                   value={form.port}
                   onChange={onFormChange('port')}
+                />
+              </div>
+              <div className="col-md-3">
+                <label className="form-label" htmlFor="dtr-api-port">
+                  Port API
+                </label>
+                <input
+                  id="dtr-api-port"
+                  className="form-control"
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={form.api_port}
+                  onChange={onFormChange('api_port')}
+                  placeholder="vd. 1411"
                 />
               </div>
               <div className="col-md-6">
@@ -193,7 +210,7 @@ export default function SortMachinePage() {
                   required
                 />
               </div>
-              <div className="col-md-6">
+              <div className="col-md-12">
                 <label className="form-label" htmlFor="dtr-note">
                   Ghi chú
                 </label>
@@ -241,7 +258,8 @@ export default function SortMachinePage() {
                     <th>ID</th>
                     <th>Tên</th>
                     <th>Tailscale</th>
-                    <th>Port</th>
+                    <th>FE</th>
+                    <th>API</th>
                     <th>Đường dẫn</th>
                     <th className="text-end">Thao tác</th>
                   </tr>
@@ -276,6 +294,7 @@ export default function SortMachinePage() {
                           <code>{m.tailscale_ip}</code>
                         </td>
                         <td>{m.port}</td>
+                        <td>{m.api_port ?? '—'}</td>
                         <td>
                           <a href={path} title="Mở qua domain (proxy Tailscale)">
                             {path}
