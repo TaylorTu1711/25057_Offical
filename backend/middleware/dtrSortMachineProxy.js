@@ -124,7 +124,7 @@ function isStaticAssetPath(pathname = '') {
   return STATIC_ASSET_RE.test(pathname.split('?')[0]);
 }
 
-/** Chỉ navigation document mới ra shell/redirect — không được bắt /assets/*.js (Accept: */*). */
+/** Chỉ document navigation mới ra shell/redirect — không bắt asset JS/CSS. */
 function isDocumentNavigation(req) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return false;
   const pathname = req.path || '/';
