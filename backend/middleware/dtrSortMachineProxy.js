@@ -261,21 +261,73 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
     .dtr-tree__status {
       margin: 0.5rem 0.65rem; font-size: 0.75rem; color: var(--dtr-muted);
     }
-    .dtr-main { flex: 1; min-width: 0; min-height: 0; background: #fff; }
-    .dtr-main iframe { border: 0; width: 100%; height: 100%; display: block; background: #fff; }
-    @media (max-width: 820px) {
-      :root { --dtr-side: 196px; }
-      .dtr-tree__name { display: none; }
+    .dtr-main { flex: 1; min-width: 0; min-height: 0; background: var(--dtr-panel); }
+    .dtr-main iframe { border: 0; width: 100%; height: 100%; display: block; background: var(--dtr-panel); }
+    .dtr-side__close {
+      display: none; position: absolute; top: 0.55rem; right: 0.55rem;
+      width: 2rem; height: 2rem; border: 0; border-radius: 999px;
+      background: rgba(148,163,184,0.16); color: var(--dtr-text);
+      font-size: 1.15rem; line-height: 1; cursor: pointer;
+    }
+    .dtr-side__close:hover { background: rgba(148,163,184,0.28); }
+    .dtr-side__backdrop {
+      display: none; position: fixed; inset: 0; z-index: 1040;
+      background: rgba(2, 6, 23, 0.48); border: 0; padding: 0; cursor: pointer;
+    }
+    .dtr-sidebar-pull {
+      display: none; position: fixed; top: 50%; left: 0; z-index: 1045;
+      flex-direction: column; align-items: center; justify-content: center; gap: 0.28rem;
+      width: 1.7rem; height: 4.4rem; padding: 0; margin: 0;
+      border: 1px solid rgba(59,130,246,0.55); border-left: none;
+      border-radius: 0 0.7rem 0.7rem 0;
+      background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+      color: #fff; box-shadow: 2px 0 12px rgba(29,78,216,0.35);
+      transform: translate(-0.35rem, -50%);
+      transition: transform 0.22s ease, box-shadow 0.22s ease, width 0.22s ease;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .dtr-sidebar-pull__grip {
+      width: 0.22rem; height: 1.15rem; border-radius: 999px;
+      background: rgba(255,255,255,0.78);
+      box-shadow: 4px 0 0 rgba(255,255,255,0.35);
+    }
+    .dtr-sidebar-pull__icon { font-size: 0.85rem; line-height: 1; opacity: 0.95; }
+    .dtr-sidebar-pull:active { transform: translate(0, -50%); filter: brightness(0.96); }
+    @media (max-width: 991.98px) {
+      .dtr-shell { display: block; }
+      .dtr-side {
+        position: fixed; top: 0; left: 0; bottom: 0; z-index: 1050;
+        width: min(86vw, 300px); flex: none;
+        transform: translateX(-105%);
+        transition: transform 0.24s ease;
+        box-shadow: 8px 0 28px rgba(2, 6, 23, 0.35);
+      }
+      .dtr-side.is-open { transform: translateX(0); }
+      .dtr-side__head { position: relative; padding-right: 2.6rem; }
+      .dtr-side__close { display: inline-flex; align-items: center; justify-content: center; }
+      .dtr-side__backdrop.is-open { display: block; }
+      .dtr-sidebar-pull { display: flex; }
+      .dtr-main { width: 100%; height: 100%; }
+      body.dtr-drawer-open { overflow: hidden; }
+    }
+    @media (min-width: 992px) and (max-width: 1100px) {
+      :root { --dtr-side: 210px; }
     }
   </style>
 </head>
 <body>
   <div class="dtr-shell">
-    <aside class="dtr-side" aria-label="Danh sách máy">
+    <button type="button" class="dtr-sidebar-pull" id="dtr-sidebar-pull" aria-label="Mở danh sách máy" aria-controls="dtr-side" aria-expanded="false">
+      <span class="dtr-sidebar-pull__grip" aria-hidden="true"></span>
+      <span class="dtr-sidebar-pull__icon" aria-hidden="true">›</span>
+    </button>
+    <button type="button" class="dtr-side__backdrop" id="dtr-side-backdrop" aria-label="Đóng danh sách máy" hidden></button>
+    <aside class="dtr-side" id="dtr-side" aria-label="Danh sách máy">
       <div class="dtr-side__head">
         <p class="dtr-side__eyebrow">DTR Portal</p>
         <h1 class="dtr-side__title">Sort machines</h1>
         <a class="dtr-side__link" href="/dtr/sortmachine">← Quản lý máy</a>
+        <button type="button" class="dtr-side__close" id="dtr-side-close" aria-label="Đóng">×</button>
       </div>
       <div class="dtr-tree" id="dtr-tree">
         <p class="dtr-tree__status" id="dtr-tree-status">Đang tải máy…</p>
@@ -292,7 +344,43 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
     var frame = document.getElementById('dtr-frame');
     var tree = document.getElementById('dtr-tree');
     var statusEl = document.getElementById('dtr-tree-status');
+    var side = document.getElementById('dtr-side');
+    var pullBtn = document.getElementById('dtr-sidebar-pull');
+    var closeBtn = document.getElementById('dtr-side-close');
+    var backdrop = document.getElementById('dtr-side-backdrop');
     var syncing = false;
+    var drawerOpen = false;
+
+    function isMobileDrawer() {
+      return window.matchMedia('(max-width: 991.98px)').matches;
+    }
+
+    function setDrawerOpen(open) {
+      drawerOpen = !!open && isMobileDrawer();
+      if (side) side.classList.toggle('is-open', drawerOpen);
+      if (backdrop) {
+        backdrop.classList.toggle('is-open', drawerOpen);
+        backdrop.hidden = !drawerOpen;
+      }
+      document.body.classList.toggle('dtr-drawer-open', drawerOpen);
+      if (pullBtn) {
+        pullBtn.setAttribute('aria-expanded', drawerOpen ? 'true' : 'false');
+        pullBtn.style.display = drawerOpen ? 'none' : '';
+      }
+    }
+
+    function openDrawer() { setDrawerOpen(true); }
+    function closeDrawer() { setDrawerOpen(false); }
+
+    if (pullBtn) pullBtn.addEventListener('click', openDrawer);
+    if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+    if (backdrop) backdrop.addEventListener('click', closeDrawer);
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeDrawer();
+    });
+    window.addEventListener('resize', function () {
+      if (!isMobileDrawer()) closeDrawer();
+    });
 
     function cleanSearch(search) {
       return String(search || '')
@@ -341,7 +429,11 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
     }
 
     function openMachine(id) {
-      if (!id || id === currentId) return;
+      if (!id) return;
+      if (id === currentId) {
+        closeDrawer();
+        return;
+      }
       window.location.assign('/dtr/sortmachine/' + encodeURIComponent(id) + '/s');
     }
 

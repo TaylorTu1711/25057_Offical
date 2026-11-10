@@ -5,7 +5,6 @@ import { BASE_URL } from '../../config/config';
 import { authHeaders, logout } from '../../utils/auth';
 import {
   buildDtrPublicPath,
-  buildDtrTailscaleUrl,
   openDtrTailscaleMachine,
 } from '../../utils/dtrSortMachine';
 import '../../css/DtrSortMachine.css';
@@ -108,9 +107,6 @@ export default function SortMachinePage() {
         <div>
           <p className="dtr-page__eyebrow">DTR Portal</p>
           <h1 className="dtr-page__title">Sort Machine</h1>
-          <p className="dtr-page__sub">
-            Quản lý máy sort — mở qua domain, không cần Tailscale trên thiết bị.
-          </p>
         </div>
         <div className="dtr-page__header-actions">
           <span className="dtr-page__user">{email || '—'}</span>
@@ -258,14 +254,12 @@ export default function SortMachinePage() {
                     <th>Tailscale</th>
                     <th>FE</th>
                     <th>API</th>
-                    <th>Đường dẫn</th>
                     <th className="text-end">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   {machines.map((m) => {
                     const path = buildDtrPublicPath(m.machine_id);
-                    const tailscaleUrl = buildDtrTailscaleUrl(m);
                     return (
                       <tr key={m.machine_id}>
                         <td>
@@ -293,12 +287,6 @@ export default function SortMachinePage() {
                         </td>
                         <td>{m.port}</td>
                         <td>{m.api_port ?? '—'}</td>
-                        <td>
-                          <a href={path} title="Mở qua domain (proxy Tailscale)">
-                            {path}
-                          </a>
-                          <div className="small text-muted">Upstream: {tailscaleUrl}</div>
-                        </td>
                         <td className="text-end text-nowrap">
                           <button
                             type="button"
