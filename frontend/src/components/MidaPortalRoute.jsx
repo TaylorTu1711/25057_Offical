@@ -1,8 +1,12 @@
+import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { getPortal, getRole, isLoggedIn } from '../utils/auth';
+import { clearDtrMachineCookie, getPortal, getRole, isLoggedIn } from '../utils/auth';
 
 export default function MidaPortalRoute({ children }) {
   const location = useLocation();
+  useEffect(() => {
+    clearDtrMachineCookie();
+  }, []);
   if (!isLoggedIn()) return <Navigate to="/login" state={{ from: location }} replace />;
   const portal = getPortal();
   const role = getRole();
@@ -12,6 +16,10 @@ export default function MidaPortalRoute({ children }) {
 
 export function DefaultPortalRoute({ children }) {
   const location = useLocation();
+  useEffect(() => {
+    // Tránh cookie DTR (nếu Nginx cũ còn cookie-proxy) phá Plenma home
+    clearDtrMachineCookie();
+  }, []);
   if (!isLoggedIn()) return <Navigate to="/login" state={{ from: location }} replace />;
   const portal = getPortal();
   const role = getRole();

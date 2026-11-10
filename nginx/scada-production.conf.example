@@ -1,9 +1,12 @@
 # Mẫu cấu hình nginx trên server (SSL) cho https://scada.plenmaiot.com
 #
-# DTR path-prefix (không dùng URL trần /dashboard):
-#   /dtr/sortmachine/25231/dashboard → Express proxy → Tailscale :5173/dashboard
-#   Cookie + /dashboard → 302 về /dtr/sortmachine/<id>/dashboard
-#   /dtr-p/1007/... → port phụ (PLC/stream)
+# QUAN TRỌNG: KHÔNG dùng cookie dtr_machine để proxy toàn bộ location /
+# (sẽ nuốt Plenma SCADA + MIDA CNC). Chỉ proxy các path DTR bên dưới.
+#
+# DTR:
+#   /dtr/sortmachine           → SPA list (Plenma)
+#   /dtr/sortmachine/25231/... → Express gateway (shell + embed)
+#   /dtr-p/1007/...            → port phụ PLC/stream
 
 # Trong http { }:
 # map $http_upgrade $connection_upgrade {
@@ -39,7 +42,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Trang quản lý DTR (SPA) — xoá ngữ cảnh máy
+    # Trang quản lý DTR (SPA Plenma)
     location = /dtr/sortmachine {
         try_files /index.html =404;
     }
@@ -47,7 +50,7 @@ server {
         try_files /index.html =404;
     }
 
-    # Vào máy theo ID → Express (set cookie + redirect /online|/dashboard|/)
+    # Máy DTR theo ID → Express (shell / embed / assets / socket.io dưới prefix)
     location ~ ^/dtr/sortmachine/[^/]+ {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -61,8 +64,7 @@ server {
         proxy_buffering off;
     }
 
-    # Port phụ trên máy sort (1411 API, 1007 PLC/stream, ...) qua HTTPS/WSS
-    # ws://host:1007/plc/ws → wss://host/dtr-p/1007/plc/ws
+    # Port phụ (1411, 1007, ...)
     location ^~ /dtr-p/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -76,52 +78,8 @@ server {
         proxy_buffering off;
     }
 
-    # Socket.IO / stats luôn vào Express (cookie → máy DTR; không cookie → 404/next)
-    # Tránh WebSocket bị gãy vì if+error_page trên location /
-    location ^~ /socket.io/ {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_read_timeout 3600s;
-        proxy_buffering off;
-    }
-    location ^~ /stats {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_read_timeout 3600s;
-        proxy_buffering off;
-    }
-
-    # Có cookie dtr_machine → toàn bộ path còn lại qua Express gateway
-    location @dtr_cookie_proxy {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_read_timeout 3600s;
-        proxy_buffering off;
-    }
-
+    # Plenma SCADA + MIDA CNC + login — luôn SPA, không phụ thuộc cookie DTR
     location / {
-        error_page 418 = @dtr_cookie_proxy;
-        if ($cookie_dtr_machine != "") {
-            return 418;
-        }
         try_files $uri $uri/ /index.html;
     }
 }
