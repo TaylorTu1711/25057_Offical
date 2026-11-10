@@ -5,11 +5,11 @@
 ```text
 User mở https://scada.plenmaiot.com/dtr/sortmachine/25231/dashboard
   → Express shell (address bar giữ prefix)
-  → iframe /dtr/sortmachine/25231/dashboard?dtr_embed=1
-  → proxy Tailscale :5173/dashboard + shim (RR thấy /dashboard)
-  → /dtr-p/:port cho PLC/stream
+  → iframe /dashboard?dtr_embed=1  (Chrome không patch được location.pathname)
+  → assets rewrite → /dtr/sortmachine/25231/assets/...
+  → /dtr-p/:port PLC/stream; /socket.io|/stats qua Express khi có cookie
 
-Plenma / và /mida/cnc: Nginx try_files ONLY — không cookie-proxy location /
+Plenma / + /mida/cnc: Nginx try_files — không cookie-proxy toàn site
 ```
 
 - Thêm máy trên UI = ghi DB (`machine_id`, `tailscale_ip`, `port`, `api_port`).

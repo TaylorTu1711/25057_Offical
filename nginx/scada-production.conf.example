@@ -1,12 +1,12 @@
-# Mẫu cấu hình nginx trên server (SSL) cho https://scada.plenmaiot.com
+# Mẫu nginx SSL — https://scada.plenmaiot.com
 #
-# QUAN TRỌNG: KHÔNG dùng cookie dtr_machine để proxy toàn bộ location /
-# (sẽ nuốt Plenma SCADA + MIDA CNC). Chỉ proxy các path DTR bên dưới.
-#
+# Plenma + MIDA: location / chỉ try_files (KHÔNG cookie-proxy toàn site).
 # DTR:
-#   /dtr/sortmachine           → SPA list (Plenma)
-#   /dtr/sortmachine/25231/... → Express gateway (shell + embed)
-#   /dtr-p/1007/...            → port phụ PLC/stream
+#   /dtr/sortmachine/:id/... → Express shell (URL có prefix)
+#   iframe load /dashboard|/online → Express (pathname đúng cho React Router)
+#   asset DTR dưới /dtr/sortmachine/:id/assets/...
+#   /dtr-p/:port → PLC/stream
+#   /socket.io /stats → Express (cookie máy)
 
 # Trong http { }:
 # map $http_upgrade $connection_upgrade {
@@ -42,7 +42,6 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Trang quản lý DTR (SPA Plenma)
     location = /dtr/sortmachine {
         try_files /index.html =404;
     }
@@ -50,7 +49,6 @@ server {
         try_files /index.html =404;
     }
 
-    # Máy DTR theo ID → Express (shell / embed / assets / socket.io dưới prefix)
     location ~ ^/dtr/sortmachine/[^/]+ {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -64,7 +62,6 @@ server {
         proxy_buffering off;
     }
 
-    # Port phụ (1411, 1007, ...)
     location ^~ /dtr-p/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
@@ -78,7 +75,47 @@ server {
         proxy_buffering off;
     }
 
-    # Plenma SCADA + MIDA CNC + login — luôn SPA, không phụ thuộc cookie DTR
+    # Iframe DTR — pathname /dashboard|/online (không đụng Plenma /mida)
+    location ~ ^/(dashboard|online)(/|$) {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+    }
+
+    location ^~ /socket.io/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+    }
+
+    location ^~ /stats {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+    }
+
+    # Plenma SCADA + MIDA — không phụ thuộc cookie DTR
     location / {
         try_files $uri $uri/ /index.html;
     }

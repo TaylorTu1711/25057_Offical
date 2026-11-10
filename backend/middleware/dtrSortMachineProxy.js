@@ -7,6 +7,9 @@ import {
 
 export const DTR_MACHINE_COOKIE = 'dtr_machine';
 
+/** Route SPA máy sort (pathname iframe phải đúng — Chrome không cho patch location.pathname). */
+export const DTR_BARE_APP_ROUTES = ['/dashboard', '/online'];
+
 const proxy = httpProxy.createProxyServer({
   xfwd: true,
   changeOrigin: true,
@@ -79,6 +82,12 @@ export function machinePrefix(machineId) {
   return `/dtr/sortmachine/${encodeURIComponent(machineId)}`;
 }
 
+export function isDtrBareAppPath(pathname = '/') {
+  return DTR_BARE_APP_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
 export function isPlenmaReservedPath(pathname) {
   if (isListPath(pathname)) return true;
   if (pathname.startsWith('/dtr/sortmachine/')) return true;
@@ -123,7 +132,6 @@ function isStaticAssetPath(pathname = '') {
   return STATIC_ASSET_RE.test(pathname.split('?')[0]);
 }
 
-/** Chỉ document navigation mới ra shell — không bắt asset JS/CSS. */
 function isDocumentNavigation(req) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return false;
   const pathname = req.path || '/';
@@ -146,9 +154,8 @@ function isEmbedRequest(req) {
 }
 
 /**
- * Shell: address bar = /dtr/sortmachine/:id/dashboard
- * iframe cũng dưới prefix (?dtr_embed=1) — KHÔNG dùng /dashboard trần
- * → Nginx location / chỉ phục vụ Plenma/MIDA (try_files).
+ * Address bar: /dtr/sortmachine/:id/dashboard
+ * iframe: /dashboard?dtr_embed=1 (pathname đúng cho React Router)
  */
 export function buildFrameShell({ machineId, restPath, query = '' }) {
   const prefix = machinePrefix(machineId);
@@ -156,8 +163,8 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
     query.startsWith('?') ? query.slice(1) : query,
   );
   params.set('dtr_embed', '1');
-  const rest = restPath || '/';
-  const iframeSrc = `${prefix}${rest.startsWith('/') ? rest : `/${rest}`}?${params.toString()}`;
+  const rest = restPath && restPath !== '/' ? restPath : '/dashboard';
+  const iframeSrc = `${rest.startsWith('/') ? rest : `/${rest}`}?${params.toString()}`;
   const safePrefix = JSON.stringify(prefix);
   const safeSrc = JSON.stringify(iframeSrc);
   const safeId = String(machineId).replace(/[<>&"]/g, '');
@@ -198,23 +205,23 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
 
     function syncParentFromFrame() {
       if (syncing) return;
-      var next = pathFromFrame();
-      if (!next) return;
+      var inner = pathFromFrame();
+      if (!inner) return;
+      var next = prefix + (inner.charAt(0) === '/' ? inner : '/' + inner);
       if (location.pathname + location.search + location.hash === next) return;
       syncing = true;
       try { history.replaceState(null, '', next); } finally { syncing = false; }
     }
 
-    function navigateFrame(fullPath) {
+    function navigateFrame(parentUrl) {
       syncing = true;
-      var url = fullPath || (prefix + '/');
-      if (url.indexOf(prefix) !== 0) {
-        url = prefix + (url.charAt(0) === '/' ? url : '/' + url);
-      }
-      var join = url.indexOf('?') >= 0 ? '&' : '?';
-      if (url.indexOf('dtr_embed=') < 0) url = url + join + 'dtr_embed=1';
-      try { frame.contentWindow.location.href = url; }
-      catch (e) { frame.src = url; }
+      var rest = parentUrl || '/';
+      if (rest.indexOf(prefix) === 0) rest = rest.slice(prefix.length) || '/';
+      if (rest.charAt(0) !== '/') rest = '/' + rest;
+      var join = rest.indexOf('?') >= 0 ? '&' : '?';
+      if (rest.indexOf('dtr_embed=') < 0) rest = rest + join + 'dtr_embed=1';
+      try { frame.contentWindow.location.href = rest; }
+      catch (e) { frame.src = rest; }
       setTimeout(function () { syncing = false; }, 0);
     }
 
@@ -229,10 +236,10 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
       if (ev.origin !== location.origin) return;
       var data = ev.data;
       if (!data || data.type !== 'dtr-navigate' || typeof data.path !== 'string') return;
-      var path = data.path;
-      if (path.indexOf(prefix) !== 0) path = prefix + (path.charAt(0) === '/' ? path : '/' + path);
-      if (location.pathname + location.search + location.hash !== path) {
-        history.replaceState(null, '', path);
+      var path = data.path.charAt(0) === '/' ? data.path : '/' + data.path;
+      var next = prefix + path;
+      if (location.pathname + location.search + location.hash !== next) {
+        history.replaceState(null, '', next);
       }
     });
   })();
@@ -242,26 +249,21 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
 }
 
 /**
- * Shim trong iframe dưới /dtr/sortmachine/:id/...
- * - pathname getter strip prefix → React Router thấy /dashboard
- * - pushState/fetch/asset thêm prefix
+ * Shim trong iframe pathname trần (/dashboard):
  * - port khác → /dtr-p/:port
+ * - asset absolute → /dtr/sortmachine/:id/... (tránh đụng /assets Plenma)
+ * - KHÔNG đổi pushState path (giữ /online cho RR)
+ * - chặn breakout + báo parent
  */
 export function buildClientShim(prefix) {
   const p = JSON.stringify(prefix || '');
   return `<script data-dtr-shim="1">(function(){
 var PREFIX=${p};
-function stripPath(path){
-  if(!path) return "/";
-  if(path.indexOf(PREFIX)===0) return path.slice(PREFIX.length)||"/";
-  return path;
-}
-function withPrefix(url){
-  if(url==null) return url;
-  var raw=String(url);
-  if(!raw||raw.charAt(0)==="#") return url;
-  if(raw.indexOf("blob:")===0||raw.indexOf("data:")===0||raw.indexOf("mailto:")===0||raw.indexOf("javascript:")===0) return url;
+function rewriteAssetOrPort(url){
   try{
+    var raw=String(url==null?"":url);
+    if(!raw||raw.charAt(0)==="#") return url;
+    if(raw.indexOf("blob:")===0||raw.indexOf("data:")===0||raw.indexOf("mailto:")===0||raw.indexOf("javascript:")===0) return url;
     var u=new URL(raw, location.href);
     if(u.hostname!==location.hostname) return url;
     var port=u.port||(u.protocol==="https:"||u.protocol==="wss:"?"443":"80");
@@ -273,50 +275,33 @@ function withPrefix(url){
       return location.origin+aport;
     }
     var path=u.pathname||"/";
-    if(path.indexOf(PREFIX)!==0 && path.indexOf("/dtr-p/")!==0 && path.indexOf("/dtr/sortmachine")!==0){
-      path=PREFIX+(path.charAt(0)==="/" ? path : "/"+path);
+    var isAsset=path.indexOf("/assets/")===0||/\\.(js|mjs|css|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|map|json|wasm)$/i.test(path);
+    if(isAsset && path.indexOf(PREFIX)!==0 && path.indexOf("/dtr-p/")!==0){
+      path=PREFIX+path;
+      if(u.protocol==="ws:"||u.protocol==="wss:"){
+        return (location.protocol==="https:"?"wss://":"ws://")+location.host+path+(u.search||"")+(u.hash||"");
+      }
+      if(/^https?:/i.test(raw)||raw.indexOf("//")===0) return location.origin+path+(u.search||"")+(u.hash||"");
+      return path+(u.search||"")+(u.hash||"");
     }
-    if(u.protocol==="ws:"||u.protocol==="wss:"){
-      return (location.protocol==="https:"?"wss://":"ws://")+location.host+path+(u.search||"")+(u.hash||"");
-    }
-    if(/^https?:/i.test(raw)||raw.indexOf("//")===0){
-      return location.origin+path+(u.search||"")+(u.hash||"");
-    }
-    return path+(u.search||"")+(u.hash||"");
+    return url;
   }catch(e){return url;}
 }
-try{
-  var locDesc=Object.getOwnPropertyDescriptor(Location.prototype,"pathname");
-  if(locDesc&&locDesc.get){
-    Object.defineProperty(Location.prototype,"pathname",{
-      configurable:true, enumerable:true,
-      get:function(){ return stripPath(locDesc.get.call(this)); }
-    });
-  }
-}catch(e){}
-var _push=history.pushState.bind(history);
-var _replace=history.replaceState.bind(history);
-history.pushState=function(state,title,url){ return _push(state,title,url==null?url:withPrefix(url)); };
-history.replaceState=function(state,title,url){ return _replace(state,title,url==null?url:withPrefix(url)); };
-var _assign=Location.prototype.assign;
-Location.prototype.assign=function(url){ return _assign.call(this, withPrefix(url)); };
-var _replaceLoc=Location.prototype.replace;
-Location.prototype.replace=function(url){ return _replaceLoc.call(this, withPrefix(url)); };
 var _fetch=window.fetch;
 window.fetch=function(input, init){
-  if(typeof input==="string") input=withPrefix(input);
-  else if(input&&typeof input.url==="string") input=new Request(withPrefix(input.url), input);
+  if(typeof input==="string") input=rewriteAssetOrPort(input);
+  else if(input&&typeof input.url==="string") input=new Request(rewriteAssetOrPort(input.url), input);
   return _fetch.call(this, input, init);
 };
 var XO=XMLHttpRequest.prototype.open;
 XMLHttpRequest.prototype.open=function(){
   var args=Array.prototype.slice.call(arguments);
-  if(typeof args[1]==="string") args[1]=withPrefix(args[1]);
+  if(typeof args[1]==="string") args[1]=rewriteAssetOrPort(args[1]);
   return XO.apply(this, args);
 };
 var OrigWS=window.WebSocket;
 function DtrWS(url, protocols){
-  var next=withPrefix(String(url||""));
+  var next=rewriteAssetOrPort(String(url||""));
   try{ return protocols===undefined ? new OrigWS(next) : new OrigWS(next, protocols); }
   catch(err){ console.error("[dtr-shim] WebSocket", next, err); throw err; }
 }
@@ -332,19 +317,18 @@ function hookAttr(proto, attr){
   if(!desc||!desc.set) return;
   Object.defineProperty(proto, attr, {
     configurable:true, enumerable:desc.enumerable, get:desc.get,
-    set:function(v){ return desc.set.call(this, withPrefix(v)); }
+    set:function(v){ return desc.set.call(this, rewriteAssetOrPort(v)); }
   });
 }
 hookAttr(HTMLImageElement&&HTMLImageElement.prototype,"src");
 hookAttr(HTMLScriptElement&&HTMLScriptElement.prototype,"src");
 hookAttr(HTMLSourceElement&&HTMLSourceElement.prototype,"src");
 hookAttr(HTMLMediaElement&&HTMLMediaElement.prototype,"src");
-hookAttr(HTMLIFrameElement&&HTMLIFrameElement.prototype,"src");
 hookAttr(HTMLLinkElement&&HTMLLinkElement.prototype,"href");
 var SA=Element.prototype.setAttribute;
 Element.prototype.setAttribute=function(name, value){
   var n=String(name||"").toLowerCase();
-  if(n==="src"||n==="href"||n==="poster"||n==="data"||n==="action") value=withPrefix(value);
+  if(n==="src"||n==="href"||n==="poster"||n==="data") value=rewriteAssetOrPort(value);
   if(n==="target" && (value==="_top"||value==="_parent")) value="_self";
   return SA.call(this, name, value);
 };
@@ -352,11 +336,6 @@ document.addEventListener("click",function(e){
   var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;
   if(!a) return;
   if(a.target==="_top"||a.target==="_parent") a.target="_self";
-  var href=a.getAttribute("href");
-  if(href){
-    var next=withPrefix(href);
-    if(next!==href) a.setAttribute("href", next);
-  }
 },true);
 if(window.top!==window){
   function notifyParent(){
@@ -365,10 +344,10 @@ if(window.top!==window){
       window.parent.postMessage({type:"dtr-navigate", path:path}, location.origin);
     }catch(e){}
   }
-  var _push2=history.pushState;
-  var _replace2=history.replaceState;
-  history.pushState=function(s,t,u){ var r=_push2.call(history,s,t,u==null?u:withPrefix(u)); notifyParent(); return r; };
-  history.replaceState=function(s,t,u){ var r=_replace2.call(history,s,t,u==null?u:withPrefix(u)); notifyParent(); return r; };
+  var _push=history.pushState.bind(history);
+  var _replace=history.replaceState.bind(history);
+  history.pushState=function(s,t,u){ var r=_push(s,t,u); notifyParent(); return r; };
+  history.replaceState=function(s,t,u){ var r=_replace(s,t,u); notifyParent(); return r; };
   window.addEventListener("popstate", notifyParent);
   setInterval(notifyParent, 500);
 }
@@ -381,8 +360,9 @@ export function rewriteHtml(content, prefix) {
   if (/<head[\s>]/i.test(html) && !/data-dtr-shim=/i.test(html)) {
     html = html.replace(/<head([^>]*)>/i, `<head$1>${buildClientShim(prefix)}`);
   }
+  // Asset tuyệt đối → dưới prefix (Plenma giữ /assets của mình)
   html = html.replace(
-    /\b(src|href|action)=(["'])\/(?!\/|dtr\/sortmachine|dtr-p\/)/gi,
+    /\b(src|href)=(["'])\/(?!\/|dtr\/sortmachine|dtr-p\/|api\/|socket\.io)/gi,
     `$1=$2${prefix}/`,
   );
   return html;
@@ -480,11 +460,23 @@ function proxyWeb(req, res, target, prefix) {
   });
 }
 
+function redirectToMachinePath(res, machineId, pathname, query = '') {
+  const rest = !pathname || pathname === '/' ? '/dashboard' : pathname;
+  const params = new URLSearchParams(
+    query.startsWith('?') ? query.slice(1) : query,
+  );
+  params.delete('dtr_embed');
+  const q = params.toString();
+  res.redirect(302, `${machinePrefix(machineId)}${rest}${q ? `?${q}` : ''}`);
+}
+
 /**
- * Chỉ gateway DTR paths — KHÔNG bắt /, /assets, /mida (để Plenma/MIDA sống).
  * 1) /dtr/sortmachine → clear cookie
- * 2) /dtr/sortmachine/:id/... → shell hoặc embed proxy
- * 3) /dtr-p/:port/... → port phụ (cần cookie)
+ * 2) /dtr/sortmachine/:id/... → shell (HTML) hoặc proxy asset/embed dưới prefix
+ * 3) /dtr-p/:port → port phụ
+ * 4) /dashboard|/online (nginx) → embed proxy hoặc 302 về prefix
+ * 5) /socket.io|/stats (nginx) → proxy nếu có cookie
+ * KHÔNG bắt / hay /assets Plenma trừ khi cookie + nginx gửi tới
  */
 export function dtrSortMachineProxy(req, res, next) {
   const pathname = req.path || '/';
@@ -500,9 +492,8 @@ export function dtrSortMachineProxy(req, res, next) {
   const entry = parseDtrEntryPath(pathname);
   if (entry) {
     const prefix = machinePrefix(entry.machineId);
-    const embed = isEmbedRequest(req);
 
-    if (isDocumentNavigation(req) && !embed) {
+    if (isDocumentNavigation(req) && !isEmbedRequest(req)) {
       getDtrSortMachineById(entry.machineId)
         .then((machine) => {
           if (!machine) {
@@ -519,7 +510,7 @@ export function dtrSortMachineProxy(req, res, next) {
             .send(
               buildFrameShell({
                 machineId: entry.machineId,
-                restPath: entry.rest || '/',
+                restPath: entry.rest || '/dashboard',
                 query,
               }),
             );
@@ -573,7 +564,55 @@ export function dtrSortMachineProxy(req, res, next) {
     return;
   }
 
-  // Mọi path khác (/, /mida, /assets Plenma, ...) → next — không đụng Plenma/MIDA
+  // Bare app routes từ Nginx: /dashboard, /online
+  if (isDtrBareAppPath(pathname)) {
+    if (!machineId) {
+      res.status(401).type('text').send('Thiếu cookie máy DTR — mở lại từ /dtr/sortmachine/<id>/');
+      return;
+    }
+    if (isDocumentNavigation(req) && !isEmbedRequest(req)) {
+      redirectToMachinePath(res, machineId, pathname, query);
+      return;
+    }
+    const params = new URLSearchParams(query.startsWith('?') ? query.slice(1) : '');
+    params.delete('dtr_embed');
+    const cleanQ = params.toString();
+    req.url = `${pathname}${cleanQ ? `?${cleanQ}` : ''}`;
+    resolveMachineTarget(machineId, pathname)
+      .then((resolved) => {
+        if (resolved.errorStatus) {
+          res.status(resolved.errorStatus).type('text').send(resolved.error);
+          return;
+        }
+        proxyWeb(req, res, resolved.target, machinePrefix(machineId));
+      })
+      .catch((err) => {
+        console.error('[dtr-proxy] bare', err.message);
+        res.status(500).type('text').send('DTR bare proxy error');
+      });
+    return;
+  }
+
+  // Chỉ socket.io/stats trần (Nginx) — KHÔNG bắt /api (Plenma)
+  if (
+    machineId &&
+    (pathname.startsWith('/socket.io') || pathname.startsWith('/stats'))
+  ) {
+    resolveMachineTarget(machineId, pathname)
+      .then((resolved) => {
+        if (resolved.errorStatus) {
+          res.status(resolved.errorStatus).type('text').send(resolved.error);
+          return;
+        }
+        proxyWeb(req, res, resolved.target, machinePrefix(machineId));
+      })
+      .catch((err) => {
+        console.error('[dtr-proxy] api', err.message);
+        res.status(500).type('text').send('DTR api proxy error');
+      });
+    return;
+  }
+
   return next();
 }
 
@@ -603,8 +642,7 @@ export function attachDtrSortMachineWsProxy(server) {
 
       const entry = parseDtrEntryPath(url.pathname);
       if (entry) {
-        machineId = entry.machineId;
-        const resolved = await resolveMachineTarget(machineId, entry.rest);
+        const resolved = await resolveMachineTarget(entry.machineId, entry.rest);
         if (resolved.errorStatus) {
           socket.destroy();
           return;
@@ -614,7 +652,19 @@ export function attachDtrSortMachineWsProxy(server) {
         return;
       }
 
-      // Không bắt WS của Plenma/MIDA
+      if (!machineId) return;
+      if (
+        isDtrBareAppPath(url.pathname) ||
+        url.pathname.startsWith('/socket.io') ||
+        url.pathname.startsWith('/stats')
+      ) {
+        const resolved = await resolveMachineTarget(machineId, url.pathname);
+        if (resolved.errorStatus) {
+          socket.destroy();
+          return;
+        }
+        wsProxy.ws(req, socket, head, { target: resolved.target });
+      }
     } catch (err) {
       console.error('[dtr-proxy] ws', err.message);
       socket.destroy();
