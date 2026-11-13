@@ -535,7 +535,7 @@ function emptyCounts() {
 }
 
 /**
- * Gắn snapshot cuối mỗi bucket → delta so với snapshot trước
+ * Theo giờ: gắn snapshot cuối mỗi bucket → delta so với snapshot trước
  * (máy dừng / counts không đổi → cột = 0, không lặp số lũy kế).
  */
 function snapshotsToDeltaBuckets(bucketDefs, snapshotByStartTs, baselineCounts) {
@@ -558,6 +558,62 @@ function snapshotsToDeltaBuckets(bucketDefs, snapshotByStartTs, baselineCounts) 
       counts: delta,
     };
   });
+}
+
+/**
+ * Ngày / tuần / tháng / quý / năm: mỗi cột độc lập
+ * = snapshot cuối cùng trong kỳ − snapshot đầu tiên trong kỳ.
+ * firstByTs / lastByTs: map key trunc (ngày/tháng/…) → counts.
+ */
+function snapshotsToPeriodFirstLastBuckets(bucketDefs, firstByTs, lastByTs) {
+  const firstEntries = [...firstByTs.entries()].sort((a, b) => a[0] - b[0]);
+  const lastEntries = [...lastByTs.entries()].sort((a, b) => a[0] - b[0]);
+
+  return bucketDefs.map((b) => {
+    const startTs = b.start instanceof Date ? b.start.getTime() : new Date(b.start).getTime();
+    const endTs = b.end instanceof Date ? b.end.getTime() : new Date(b.end).getTime();
+    const startIso = b.start instanceof Date ? b.start.toISOString() : b.start;
+
+    let firstSnap = null;
+    for (const [ts, counts] of firstEntries) {
+      if (ts >= startTs && ts < endTs) {
+        firstSnap = counts;
+        break;
+      }
+    }
+
+    let lastSnap = null;
+    for (const [ts, counts] of lastEntries) {
+      if (ts >= startTs && ts < endTs) lastSnap = counts;
+    }
+
+    if (!firstSnap || !lastSnap) {
+      return { start: startIso, label: b.label, counts: emptyCounts() };
+    }
+    return {
+      start: startIso,
+      label: b.label,
+      counts: diffCounts(firstSnap, lastSnap),
+    };
+  });
+}
+
+function bucketKeyFromRow(rowBucket, trunc) {
+  return trunc === 'hour'
+    ? floorToHour(rowBucket).getTime()
+    : new Date(rowBucket).getTime();
+}
+
+function mapTruncSnapshots(rows, trunc, extraKeys) {
+  const map = new Map();
+  for (const row of rows) {
+    const counts = normalizeCountsObject(row.counts);
+    map.set(bucketKeyFromRow(row.bucket, trunc), counts);
+    for (const key of Object.keys(counts)) {
+      if (!DTR_COUNT_KEYS.includes(key)) extraKeys.add(key);
+    }
+  }
+  return map;
 }
 
 function buildCountBuckets(mode, { year, month, day } = {}) {
@@ -612,8 +668,8 @@ function buildCountBuckets(mode, { year, month, day } = {}) {
         label: `T${w + 1}`,
       });
     }
-    // gom theo ngày rồi map vào tuần tháng
-    return { trunc: 'day', rangeStart, rangeEnd, buckets, foldDaysIntoWeeks: true };
+    // trunc day: mỗi tuần = snapshot cuối tuần − snapshot đầu tuần
+    return { trunc: 'day', rangeStart, rangeEnd, buckets };
   }
 
   if (mode === 'month') {
@@ -662,8 +718,8 @@ function buildCountBuckets(mode, { year, month, day } = {}) {
 
 /**
  * Thống kê số chai theo mode: hour | day | week | month | quarter | year.
- * counts PLC là lũy kế → mỗi cột = delta so với mốc trước
- * (máy dừng / counts không đổi → 0, không lặp số giờ trước).
+ * - hour: delta xích giữa các giờ (snapshot cuối giờ − giờ trước)
+ * - day/week/month/quarter/year: mỗi cột = snapshot cuối kỳ − snapshot đầu tiên trong kỳ
  */
 export async function getDtrCountsSeries(
   db,
@@ -679,6 +735,7 @@ export async function getDtrCountsSeries(
   const table = dtrTelemetryTableRef(registryId);
 
   const viewMode = COUNT_VIEW_MODES.has(String(mode)) ? String(mode) : 'hour';
+  const usePeriodFirstLast = viewMode !== 'hour';
 
   let plan;
   // Giữ tương thích cũ: không truyền year/month → 24h gần nhất
@@ -711,7 +768,48 @@ export async function getDtrCountsSeries(
     plan = buildCountBuckets(viewMode, { year, month, day });
   }
 
-  // Baseline: snapshot ngay trước khoảng xem (để giờ/ngày đầu tính delta đúng)
+  const extraKeys = new Set();
+
+  if (usePeriodFirstLast) {
+    const [firstRes, lastRes] = await Promise.all([
+      db.query(
+        `SELECT DISTINCT ON (date_trunc($3::text, timestamp))
+           date_trunc($3::text, timestamp) AS bucket,
+           counts
+         FROM ${table}
+         WHERE timestamp >= $1 AND timestamp < $2
+         ORDER BY date_trunc($3::text, timestamp), timestamp ASC, id ASC`,
+        [plan.rangeStart, plan.rangeEnd, plan.trunc],
+      ),
+      db.query(
+        `SELECT DISTINCT ON (date_trunc($3::text, timestamp))
+           date_trunc($3::text, timestamp) AS bucket,
+           counts
+         FROM ${table}
+         WHERE timestamp >= $1 AND timestamp < $2
+         ORDER BY date_trunc($3::text, timestamp), timestamp DESC, id DESC`,
+        [plan.rangeStart, plan.rangeEnd, plan.trunc],
+      ),
+    ]);
+
+    const firstByTs = mapTruncSnapshots(firstRes.rows, plan.trunc, extraKeys);
+    const lastByTs = mapTruncSnapshots(lastRes.rows, plan.trunc, extraKeys);
+    const outBuckets = snapshotsToPeriodFirstLastBuckets(
+      plan.buckets,
+      firstByTs,
+      lastByTs,
+    );
+
+    return {
+      registryId,
+      mode: viewMode,
+      buckets: outBuckets,
+      hours: outBuckets,
+      keys: [...DTR_COUNT_KEYS, ...[...extraKeys].sort()],
+    };
+  }
+
+  // hour: baseline trước khoảng + delta xích theo giờ
   const baselineRes = await db.query(
     `SELECT counts
      FROM ${table}
@@ -732,37 +830,8 @@ export async function getDtrCountsSeries(
     [plan.rangeStart, plan.rangeEnd, plan.trunc],
   );
 
-  const byBucket = new Map();
-  const extraKeys = new Set();
-  for (const row of rows) {
-    const counts = normalizeCountsObject(row.counts);
-    const t = plan.trunc === 'hour'
-      ? floorToHour(row.bucket).getTime()
-      : new Date(row.bucket).getTime();
-    byBucket.set(t, counts);
-    for (const key of Object.keys(counts)) {
-      if (!DTR_COUNT_KEYS.includes(key)) extraKeys.add(key);
-    }
-  }
-
-  // week: gom snapshot ngày → snapshot cuối tuần rồi mới diff theo tuần
-  let snapshotByStart = byBucket;
-  if (plan.foldDaysIntoWeeks) {
-    snapshotByStart = new Map();
-    for (const b of plan.buckets) {
-      let bestTs = -1;
-      let bestCounts = null;
-      for (const [ts, c] of byBucket.entries()) {
-        if (ts >= b.start.getTime() && ts < b.end.getTime() && ts >= bestTs) {
-          bestTs = ts;
-          bestCounts = c;
-        }
-      }
-      if (bestCounts) snapshotByStart.set(b.start.getTime(), bestCounts);
-    }
-  }
-
-  const outBuckets = snapshotsToDeltaBuckets(plan.buckets, snapshotByStart, baselineCounts);
+  const byBucket = mapTruncSnapshots(rows, plan.trunc, extraKeys);
+  const outBuckets = snapshotsToDeltaBuckets(plan.buckets, byBucket, baselineCounts);
 
   return {
     registryId,

@@ -7,8 +7,8 @@ import MidaChartExpand from '../mida/MidaChartExpand';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-/** Nhóm chai chính: B1_KN, B5_KN, B4_KN, HU_KN */
-const PRIMARY_KEYS = new Set(['b1_kn', 'b5_kn', 'b4_kn', 'hu_kn']);
+/** Nhóm chai không nhãn: B1_KN, B4_KN, B5_KN (không gồm HU_KN) */
+const PRIMARY_KEYS = new Set(['b1_kn', 'b4_kn', 'b5_kn']);
 
 const COLORS = {
   primary: '#3498db',
@@ -28,8 +28,8 @@ function normKey(key) {
 
 /**
  * Biểu đồ quạt 2 phần:
- * - Tổng B1_KN + B5_KN + B4_KN + HU_KN
- * - Tổng các loại chai còn lại
+ * - Tổng B1_KN + B4_KN + B5_KN
+ * - Tổng các loại chai còn lại (gồm HU_KN)
  */
 export default function DtrBottleGroupPieChart({
   keys = [],
@@ -54,7 +54,7 @@ export default function DtrBottleGroupPieChart({
     const list = [
       {
         key: 'primary',
-        label: 'B1+B5+B4+HU',
+        label: 'B1+B4+B5',
         total: primary,
         color: COLORS.primary,
       },

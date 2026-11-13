@@ -776,6 +776,7 @@ export default function SortMachineDetailPage() {
                   title="TỈ LỆ LOẠI CHAI"
                   keys={countsChartKeys}
                   series={countsChartSeries}
+                  bottleGlossary={dtrMachine?.bottle_glossary}
                 />
                 <DtrBottleGroupPieChart
                   title="TỈ LỆ CHAI KHÔNG NHÃN"

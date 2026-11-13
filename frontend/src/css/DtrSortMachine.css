@@ -359,6 +359,104 @@ body:has(.dtr-monitor-page),
   color: #14532d;
 }
 
+/* Phóng to TỈ LỆ LOẠI CHAI: pie + chú thích màu */
+.dtr-pie-card__body--with-legend {
+  flex-wrap: nowrap;
+  gap: 1rem 1.25rem;
+  justify-content: center;
+  align-items: center;
+  padding: 0.75rem 1rem;
+}
+
+.dtr-pie-card--with-legend .dtr-pie-card__chart {
+  width: min(52%, max(160px, 42cqi, 55cqb));
+  flex: 0 1 auto;
+}
+
+.dtr-pie-card__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  max-height: min(70vh, 480px);
+  overflow: auto;
+  min-width: min(260px, 100%);
+  max-width: 340px;
+}
+
+.dtr-pie-card__legend-item {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  color: #334155;
+}
+
+.dtr-pie-card__legend-item i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: block;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.dtr-pie-card__legend-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.dtr-pie-card__legend-label {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dtr-pie-card__legend-meaning {
+  font-weight: 500;
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.25;
+}
+
+.dtr-pie-card__legend-meta {
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.1rem;
+}
+
+[data-theme='dark'] .dtr-pie-card__legend-item {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .dtr-pie-card__legend-meaning,
+[data-theme='dark'] .dtr-pie-card__legend-meta {
+  color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+  .dtr-pie-card__body--with-legend {
+    flex-direction: column;
+  }
+
+  .dtr-pie-card__legend {
+    max-height: 40vh;
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
 [data-theme='dark'] .dtr-pie-card__center-label {
   color: #86efac !important;
 }
