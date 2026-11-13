@@ -269,8 +269,9 @@ export async function getDtrTelemetryYears(db, machineId) {
 }
 
 /**
- * Live KPI: time_running / (thời gian từ lúc đưa máy vào → hiện tại).
- * "Đưa máy vào" = created_at trong dtr.machines.
+ * Live KPI: HIỆU SUẤT SỬ DỤNG
+ * = time_running / thời gian mở máy kể từ bản ghi telemetry đầu tiên.
+ * Ưu tiên mẫu số = time_on (PLC); nếu time_on = 0 thì dùng (now − first_telemetry).
  */
 export async function getDtrUtilizationSummary(db, machineId) {
   const registryId = await resolveDtrRegistryMachineId(db, machineId);
@@ -289,28 +290,47 @@ export async function getDtrUtilizationSummary(db, machineId) {
 
   await ensureDtrTelemetryTable(db, registryId);
   const table = dtrTelemetryTableRef(registryId);
-  const latestRes = await db.query(
-    `SELECT time_running, time_on, status, timestamp, counts
-     FROM ${table}
-     ORDER BY timestamp DESC NULLS LAST, id DESC
-     LIMIT 1`,
-  );
+  const [latestRes, firstRes] = await Promise.all([
+    db.query(
+      `SELECT time_running, time_on, status, timestamp, counts
+       FROM ${table}
+       ORDER BY timestamp DESC NULLS LAST, id DESC
+       LIMIT 1`,
+    ),
+    db.query(
+      `SELECT timestamp, time_running, time_on
+       FROM ${table}
+       WHERE timestamp IS NOT NULL
+       ORDER BY timestamp ASC, id ASC
+       LIMIT 1`,
+    ),
+  ]);
   const latest = latestRes.rows[0] || null;
+  const first = firstRes.rows[0] || null;
+  const firstTsRaw = first?.timestamp ?? null;
 
   const timeRunning = Number(latest?.time_running) || 0;
   const timeOn = Number(latest?.time_on) || 0;
+  const firstRunning = Number(first?.time_running) || 0;
+  const firstOn = Number(first?.time_on) || 0;
+  // Delta kể từ bản ghi đầu tiên (tránh cộng dồn trước khi có telemetry portal)
+  const runSinceFirst = Math.max(0, timeRunning - firstRunning);
+  const onSinceFirst = Math.max(0, timeOn - firstOn);
+
   const counts = normalizeCountsObject(latest?.counts);
   const totalCounts = Object.values(counts).reduce((sum, n) => sum + (Number(n) || 0), 0);
-  const createdAt = machine.created_at ? new Date(machine.created_at) : null;
+  const firstAt = firstTsRaw ? new Date(firstTsRaw) : null;
   const now = new Date();
   const elapsedSeconds =
-    createdAt && !Number.isNaN(createdAt.getTime())
-      ? Math.max(0, Math.floor((now.getTime() - createdAt.getTime()) / 1000))
+    firstAt && !Number.isNaN(firstAt.getTime())
+      ? Math.max(0, Math.floor((now.getTime() - firstAt.getTime()) / 1000))
       : 0;
 
   let utilizationPct = 0;
-  if (elapsedSeconds > 0) {
-    utilizationPct = (timeRunning / elapsedSeconds) * 100;
+  const denom = onSinceFirst > 0 ? onSinceFirst : elapsedSeconds;
+  const numer = onSinceFirst > 0 ? runSinceFirst : timeRunning;
+  if (denom > 0) {
+    utilizationPct = (numer / denom) * 100;
   }
   if (!Number.isFinite(utilizationPct) || utilizationPct < 0) utilizationPct = 0;
   // Không cắt trần 100% — nếu PLC lệch có thể >100; UI doughnut vẫn hiển thị số
@@ -319,16 +339,19 @@ export async function getDtrUtilizationSummary(db, machineId) {
   return {
     machine_id: registryId,
     created_at: machine.created_at,
+    first_telemetry_at: firstTsRaw,
     elapsed_seconds: elapsedSeconds,
     time_running: timeRunning,
     time_on: timeOn,
+    time_running_since_first: runSinceFirst,
+    time_on_since_first: onSinceFirst,
     counts,
     /** SẢN LƯỢNG LŨY KẾ = tổng mọi loại chai trong counts */
     total_counts: totalCounts,
     status: latest?.status ?? machine.status ?? null,
     last_telemetry_at: latest?.timestamp ?? null,
     last_updated: machine.last_updated,
-    /** HIỆU SUẤT SỬ DỤNG = time_running / (now - created_at) * 100 */
+    /** HIỆU SUẤT SỬ DỤNG = Δtime_running / Δtime_on (từ bản ghi đầu) */
     utilization_pct: utilizationPct,
     available_years: await getDtrTelemetryYears(db, registryId),
   };

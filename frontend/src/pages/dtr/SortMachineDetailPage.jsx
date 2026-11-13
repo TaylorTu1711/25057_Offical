@@ -18,7 +18,6 @@ import DtrBottleCountsWithTotal from '../../components/dtr/DtrBottleCountsWithTo
 import DtrBottleGroupPieChart from '../../components/dtr/DtrBottleGroupPieChart';
 import DtrBottleTotalsPieChart from '../../components/dtr/DtrBottleTotalsPieChart';
 import DtrBottleTypeMonthTable from '../../components/dtr/DtrBottleTypeMonthTable';
-import DtrUtilizationPieChart from '../../components/dtr/DtrUtilizationPieChart';
 import MachineTreeSidebar from '../../components/MachineTreeSidebar';
 import MachineTreeSidebarMobile from '../../components/MachineTreeSidebarMobile';
 import CumulativeRuntimeDisplay from '../../components/machine/CumulativeRuntimeDisplay';
@@ -378,13 +377,12 @@ export default function SortMachineDetailPage() {
     </div>
   );
 
-  /** Pie hiệu suất theo khung giờ/ngày/tháng/quý/năm đã chọn */
-  const periodUtilizationPct = useMemo(() => {
-    const raw = liveStats.period_utilization_pct;
-    const v = raw != null ? Number(raw) : Number(liveStats.utilization_pct) || 0;
+  /** HIỆU SUẤT SỬ DỤNG = time_running / time_on kể từ dữ liệu đầu tiên */
+  const lifetimeUtilizationPct = useMemo(() => {
+    const v = Number(liveStats.utilization_pct) || 0;
     if (!Number.isFinite(v) || v < 0) return 0;
     return Math.min(100, v);
-  }, [liveStats.period_utilization_pct, liveStats.utilization_pct]);
+  }, [liveStats.utilization_pct]);
 
   // DTR: status 0 = dừng, 1 = chạy
   const statusLastSeen =
@@ -631,14 +629,18 @@ export default function SortMachineDetailPage() {
                       <div className="row g-1 machine-top-panel__stat-pair-inner">
                         <div className="col-6">
                           <div
-                            className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box machine-top-panel__stat-box--util-pie"
-                            title={`Hiệu suất: ${Number(periodUtilizationPct || 0).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`}
+                            className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box"
+                            title="time_running / time_on kể từ bản ghi telemetry đầu tiên"
                           >
-                            <DtrUtilizationPieChart
-                              title="HIỆU SUẤT SỬ DỤNG"
-                              utilizationPct={periodUtilizationPct}
-                              compact
-                            />
+                            <p className="fw-semibold mb-0 text-brand">HIỆU SUẤT SỬ DỤNG</p>
+                            <div className="flex-grow-1 d-flex align-items-center justify-content-center">
+                              <h5 className="m-0 text-dark machine-top-panel__stat-value">
+                                {Number(lifetimeUtilizationPct || 0).toLocaleString('vi-VN', {
+                                  maximumFractionDigits: 2,
+                                })}
+                                <span className="machine-top-panel__stat-unit">%</span>
+                              </h5>
+                            </div>
                           </div>
                         </div>
                         <div className="col-6">
@@ -813,6 +815,7 @@ export default function SortMachineDetailPage() {
                         keys={bottleChartKeys}
                         series={countsChartSeries}
                         bottleGlossary={dtrMachine?.bottle_glossary}
+                        mode={chartViewMode}
                       />
                     ) : (
                       <DtrBottleTypeMonthTable

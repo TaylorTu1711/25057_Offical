@@ -56,6 +56,7 @@ export default function DtrBottleCountsWithTotal({
   series = {},
   title = 'BIỂU ĐỒ THỐNG KÊ SỐ CHAI',
   bottleGlossary = null,
+  mode = 'hour',
 }) {
   const { theme } = useTheme();
   const glossaryItems = useMemo(
@@ -181,6 +182,7 @@ export default function DtrBottleCountsWithTotal({
       labels={labels}
       keys={keys}
       series={series}
+      mode={mode}
       hideLegend
       hiddenKeys={hiddenKeys}
       onToggleKey={toggleKey}
@@ -258,6 +260,7 @@ export default function DtrBottleCountsWithTotal({
                   labels={labels}
                   keys={keys}
                   series={series}
+                  mode={mode}
                   hiddenKeys={hiddenKeys}
                   onToggleKey={toggleKey}
                 />

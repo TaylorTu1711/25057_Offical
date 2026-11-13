@@ -135,12 +135,12 @@ body:has(.dtr-monitor-page),
   --dtr-card-glow: #163820;
   --dtr-chip-bg: rgba(158, 240, 106, 0.12);
   --dtr-chip-active: #9ef06a;
-  --dtr-text: #b8f28a;
-  --dtr-text-muted: #86efac;
+  --dtr-text: #ffffff;
+  --dtr-text-muted: rgba(255, 255, 255, 0.72);
   --navbar-bg: rgba(15, 36, 22, 0.96);
   --nav-hover-bg: rgba(158, 240, 106, 0.18);
   --app-border: rgba(158, 240, 106, 0.28);
-  --brand-color: #9ef06a;
+  --brand-color: #ffffff;
   --app-surface: #0f2416;
   --app-surface-muted: #0a1a10;
   color: var(--dtr-text);
@@ -458,11 +458,11 @@ body:has(.dtr-monitor-page),
 }
 
 [data-theme='dark'] .dtr-pie-card__center-label {
-  color: #86efac !important;
+  color: rgba(255, 255, 255, 0.78) !important;
 }
 
 [data-theme='dark'] .dtr-pie-card__center-value {
-  color: #b8f28a !important;
+  color: #ffffff !important;
 }
 
 [data-theme='dark'] .dtr-monitor-page .dtr-pie-card__ring {
@@ -483,7 +483,72 @@ body:has(.dtr-monitor-page),
 [data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-box > p.fw-semibold,
 [data-theme='dark'] .dtr-monitor-page .dtr-status-card__title,
 [data-theme='dark'] .dtr-monitor-page .dtr-pie-card__title {
-  color: #b8f28a !important;
+  color: #ffffff !important;
+}
+
+/* Dark: mọi chữ trong thẻ → trắng (đè Machine.css cyan/green) */
+[data-theme='dark'] .dtr-monitor-page .card,
+[data-theme='dark'] .dtr-monitor-page .bg-white,
+[data-theme='dark'] .dtr-monitor-page .machine-chart-card,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__name,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-box,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__alarms,
+[data-theme='dark'] .dtr-monitor-page .dtr-status-card,
+[data-theme='dark'] .dtr-monitor-page .dtr-pie-card,
+[data-theme='dark'] .dtr-monitor-page .dtr-bottle-total-wrap,
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-panel {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .text-brand,
+[data-theme='dark'] .dtr-monitor-page .text-dark,
+[data-theme='dark'] .dtr-monitor-page .text-muted,
+[data-theme='dark'] .dtr-monitor-page .text-secondary,
+[data-theme='dark'] .dtr-monitor-page .chart-title-brand,
+[data-theme='dark'] .dtr-monitor-page .machine-chart-head,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-value,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-unit,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-box .fw-semibold,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-box p,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-box h5,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__name,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__name .text-brand,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__name .auto-fit-machine-name__text,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__handover-date,
+[data-theme='dark'] .dtr-monitor-page .machine-runtime-display__value,
+[data-theme='dark'] .dtr-monitor-page .machine-runtime-display__label,
+[data-theme='dark'] .dtr-monitor-page .machine-runtime-display__sep,
+[data-theme='dark'] .dtr-monitor-page .machine-runtime-display__days-value,
+[data-theme='dark'] .dtr-monitor-page .machine-runtime-display__days-unit,
+[data-theme='dark'] .dtr-monitor-page .auto-fit-machine-name__text,
+[data-theme='dark'] .dtr-monitor-page .dtr-status-card__title,
+[data-theme='dark'] .dtr-monitor-page .dtr-pie-card__title,
+[data-theme='dark'] .dtr-monitor-page .dtr-pie-card__center-label,
+[data-theme='dark'] .dtr-monitor-page .dtr-pie-card__center-value,
+[data-theme='dark'] .dtr-monitor-page .dtr-pie-card__empty,
+[data-theme='dark'] .dtr-monitor-page .dtr-bottle-total__title,
+[data-theme='dark'] .dtr-monitor-page .dtr-bottle-total__sum,
+[data-theme='dark'] .dtr-monitor-page .dtr-bottle-total-head__main,
+[data-theme='dark'] .dtr-monitor-page .dtr-bottle-chart__legend-item,
+[data-theme='dark'] .dtr-monitor-page .dtr-bottles-panel-tabs__btn,
+[data-theme='dark'] .dtr-monitor-page .dtr-bottle-glossary__btn,
+[data-theme='dark'] .dtr-monitor-page .machine-tree-sidebar__title,
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-picker__caption,
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-date-input,
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-segment__btn:not(.machine-view-mode-segment__btn--active),
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-chip:not(.machine-view-mode-chip--active),
+[data-theme='dark'] .dtr-monitor-page .mida-status-range__btn:not(.is-active):not(.active) {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .dtr-pie-card__center-label,
+[data-theme='dark'] .dtr-monitor-page .machine-runtime-display__label,
+[data-theme='dark'] .dtr-monitor-page .text-muted,
+[data-theme='dark'] .dtr-monitor-page .text-secondary,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__handover-date,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-unit {
+  color: rgba(255, 255, 255, 0.78) !important;
 }
 
 /* Pie hiệu suất — style giống Mida (quạt đặc + badge % + legend) */
@@ -1437,7 +1502,7 @@ body:has(.dtr-monitor-page),
 [data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-chart__legend-item,
 [data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .text-brand,
 [data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .text-dark {
-  color: #b8f28a !important;
+  color: #ffffff !important;
 }
 
 [data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-total {
@@ -1527,13 +1592,13 @@ body:has(.dtr-monitor-page),
 
 [data-theme='dark'] .dtr-monitor-page .mida-status-range__btn {
   border-color: rgba(158, 240, 106, 0.35);
-  color: #b8f28a !important;
+  color: #ffffff !important;
   background: rgba(15, 36, 22, 0.55);
 }
 
 [data-theme='dark'] .dtr-monitor-page .mida-status-range__btn:hover {
   border-color: #9ef06a;
-  color: #dcfce7 !important;
+  color: #ffffff !important;
   background: rgba(158, 240, 106, 0.14);
 }
 
@@ -1544,7 +1609,7 @@ body:has(.dtr-monitor-page),
 
 [data-theme='dark'] .dtr-monitor-page .machine-view-mode-chip:not(.machine-view-mode-chip--active),
 [data-theme='dark'] .dtr-monitor-page .machine-view-mode-segment__btn:not(.machine-view-mode-segment__btn--active) {
-  color: #b8f28a !important;
+  color: #ffffff !important;
   background: rgba(15, 36, 22, 0.65) !important;
   border-color: rgba(158, 240, 106, 0.28) !important;
 }
@@ -1552,11 +1617,11 @@ body:has(.dtr-monitor-page),
 [data-theme='dark'] .dtr-monitor-page .machine-view-mode-date-input {
   background: rgba(15, 36, 22, 0.85) !important;
   border-color: rgba(158, 240, 106, 0.32) !important;
-  color: #dcfce7 !important;
+  color: #ffffff !important;
 }
 
 [data-theme='dark'] .dtr-monitor-page .machine-view-mode-picker__caption {
-  color: #86efac !important;
+  color: rgba(255, 255, 255, 0.78) !important;
 }
 
 [data-theme='dark'] .dtr-monitor-page .machine-view-mode-segment__btn--active,
@@ -1952,6 +2017,27 @@ body:has(.dtr-monitor-page),
   padding: 0;
 }
 
+.dtr-monitor-page .dtr-util-panel__body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.5rem 0.65rem;
+  position: relative;
+}
+
+.dtr-monitor-page .dtr-util-panel__body > .dtr-util-pie {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.dtr-monitor-page .dtr-util-panel__body .dtr-pie-card__body {
+  min-height: 0;
+}
+
 html:has(.dtr-page),
 body:has(.dtr-page),
 #root:has(.dtr-page) {
@@ -2218,7 +2304,7 @@ body:has(.dtr-page),
 }
 
 [data-theme='dark'] .dtr-monitor-page .dtr-bottle-chart__legend-item {
-  color: #b8f28a !important;
+  color: #ffffff !important;
 }
 
 .dtr-bottle-chart__plot {

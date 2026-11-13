@@ -148,9 +148,34 @@ function colorForKey(key, index) {
   return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
 }
 
+/** Tiêu đề tooltip theo mode xem (tránh luôn hiện «Giờ …»). */
+export function formatBottleBucketTooltipTitle(label, mode = 'hour') {
+  const raw = String(label || '').trim();
+  if (!raw) return '';
+  switch (String(mode || '').toLowerCase()) {
+    case 'day':
+      return `Ngày ${raw}`;
+    case 'week':
+      return raw.toUpperCase().startsWith('T')
+        ? `Tuần ${raw.replace(/^t/i, '')}`
+        : `Tuần ${raw}`;
+    case 'month':
+      return `Tháng ${raw}`;
+    case 'quarter':
+      return raw.toUpperCase().startsWith('Q')
+        ? `Quý ${raw.replace(/^q/i, '')}`
+        : `Quý ${raw}`;
+    case 'year':
+      return `Năm ${raw}`;
+    case 'hour':
+    default:
+      return raw.toLowerCase().endsWith('h') ? `Giờ ${raw}` : `Giờ ${raw}`;
+  }
+}
+
 /**
- * Stacked bar: số lượng từng loại chai theo giờ (24h).
- * @param {{ labels: string[], keys: string[], series: Record<string, number[]> }} props
+ * Stacked bar: số lượng từng loại chai theo giờ / ngày / …
+ * @param {{ labels: string[], keys: string[], series: Record<string, number[]>, mode?: string }} props
  */
 function normBottleKey(key) {
   return String(key || '').toLowerCase();
@@ -160,6 +185,7 @@ export default function DtrBottleCountsHourlyChart({
   labels = [],
   keys = [],
   series = {},
+  mode = 'hour',
   hideLegend = false,
   hiddenKeys = null,
   onToggleKey = null,
@@ -219,7 +245,7 @@ export default function DtrBottleCountsHourlyChart({
           enabled: false,
           external: externalTooltip,
           callbacks: {
-            title: (items) => (items?.[0]?.label ? `Giờ ${items[0].label}` : ''),
+            title: (items) => formatBottleBucketTooltipTitle(items?.[0]?.label, mode),
           },
         },
         datalabels: { display: false },
@@ -246,8 +272,7 @@ export default function DtrBottleCountsHourlyChart({
           title: {
             display: true,
             text: 'Số lượng',
-            color: theme === 'dark' ? '#94a3b8' : '#64748b',
-            font: { size: 11 },
+            color: theme === 'dark' ? '#94a3b8' : '#64748b',            font: { size: 11 },
           },
           ticks: {
             ...themedScale(theme).ticks,
@@ -256,7 +281,7 @@ export default function DtrBottleCountsHourlyChart({
         },
       },
     }),
-    [theme, zoomPluginOptions, externalTooltip],
+    [theme, zoomPluginOptions, externalTooltip, mode],
   );
 
   useSyncChartTheme(chartRef, theme, options);
