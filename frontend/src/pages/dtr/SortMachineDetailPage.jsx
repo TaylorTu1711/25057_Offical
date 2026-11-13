@@ -53,7 +53,7 @@ const dtrStatusForTree = (status) => {
 
 const DTR_STATUS_TICKS = { 0: 'Dừng', 1: 'Chạy' };
 const DTR_TREE_ROOT_LABEL = 'Danh sách máy Sort DTR';
-/** Ẩn khỏi tab biểu đồ thống kê số chai (bảng vẫn giữ). */
+/** Ẩn khỏi biểu đồ thống kê số chai + 2 pie (bảng loại chai vẫn giữ). */
 const BOTTLE_CHART_EXCLUDED_KEYS = new Set(['zz_cochai', 'zz_nap']);
 
 const STATUS_RANGE_PRESETS = [
@@ -648,7 +648,7 @@ export default function SortMachineDetailPage() {
                             <p className="fw-semibold mb-0 text-brand">SẢN LƯỢNG LŨY KẾ</p>
                             <div
                               className="flex-grow-1 d-flex align-items-center justify-content-center"
-                              title="Tổng tất cả loại chai trong counts"
+                              title="Tổng sản lượng mọi ngày (không gồm zz_cochai, zz_nap)"
                             >
                               <h5 className="m-0 text-dark machine-top-panel__stat-value">
                                 {Number(liveStats.total_counts || 0).toLocaleString('vi-VN')}
@@ -776,13 +776,13 @@ export default function SortMachineDetailPage() {
               <div className="dtr-monitor-page__pies" ref={piesColRef}>
                 <DtrBottleTotalsPieChart
                   title="TỈ LỆ LOẠI CHAI"
-                  keys={countsChartKeys}
+                  keys={bottleChartKeys}
                   series={countsChartSeries}
                   bottleGlossary={dtrMachine?.bottle_glossary}
                 />
                 <DtrBottleGroupPieChart
                   title="TỈ LỆ CHAI KHÔNG NHÃN"
-                  keys={countsChartKeys}
+                  keys={bottleChartKeys}
                   series={countsChartSeries}
                 />
               </div>

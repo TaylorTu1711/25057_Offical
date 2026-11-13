@@ -268,6 +268,56 @@ export async function getDtrTelemetryYears(db, machineId) {
     .filter((y) => Number.isFinite(y));
 }
 
+/** Match bottle chart UI - exclude from cumulative production. */
+const DTR_PRODUCTION_EXCLUDED_KEYS = new Set(['zz_cochai', 'zz_nap']);
+
+/**
+ * SẢN LƯỢNG LŨY KẾ = tổng sản lượng mọi ngày (không gồm zz_cochai, zz_nap).
+ * Mỗi ngày = (snapshot cuối ngày − snapshot đầu ngày) theo từng loại chai (delta ≥ 0).
+ */
+async function getDtrLifetimeDailyProductionTotal(db, table) {
+  const [firstRes, lastRes] = await Promise.all([
+    db.query(
+      `SELECT DISTINCT ON (date_trunc('day', timestamp))
+         date_trunc('day', timestamp) AS bucket,
+         counts
+       FROM ${table}
+       WHERE timestamp IS NOT NULL
+       ORDER BY date_trunc('day', timestamp), timestamp ASC, id ASC`,
+    ),
+    db.query(
+      `SELECT DISTINCT ON (date_trunc('day', timestamp))
+         date_trunc('day', timestamp) AS bucket,
+         counts
+       FROM ${table}
+       WHERE timestamp IS NOT NULL
+       ORDER BY date_trunc('day', timestamp), timestamp DESC, id DESC`,
+    ),
+  ]);
+
+  const firstByDay = new Map();
+  for (const row of firstRes.rows) {
+    const ts = new Date(row.bucket).getTime();
+    if (!Number.isFinite(ts)) continue;
+    firstByDay.set(ts, normalizeCountsObject(row.counts));
+  }
+
+  let total = 0;
+  for (const row of lastRes.rows) {
+    const ts = new Date(row.bucket).getTime();
+    if (!Number.isFinite(ts)) continue;
+    const firstSnap = firstByDay.get(ts);
+    if (!firstSnap) continue;
+    const lastSnap = normalizeCountsObject(row.counts);
+    const delta = diffCounts(firstSnap, lastSnap);
+    for (const [key, value] of Object.entries(delta)) {
+      if (DTR_PRODUCTION_EXCLUDED_KEYS.has(String(key).toLowerCase())) continue;
+      total += Number(value) || 0;
+    }
+  }
+  return total;
+}
+
 /**
  * Live KPI: HIỆU SUẤT SỬ DỤNG
  * = time_running / thời gian mở máy kể từ bản ghi telemetry đầu tiên.
@@ -290,7 +340,7 @@ export async function getDtrUtilizationSummary(db, machineId) {
 
   await ensureDtrTelemetryTable(db, registryId);
   const table = dtrTelemetryTableRef(registryId);
-  const [latestRes, firstRes] = await Promise.all([
+  const [latestRes, firstRes, totalCounts] = await Promise.all([
     db.query(
       `SELECT time_running, time_on, status, timestamp, counts
        FROM ${table}
@@ -304,6 +354,7 @@ export async function getDtrUtilizationSummary(db, machineId) {
        ORDER BY timestamp ASC, id ASC
        LIMIT 1`,
     ),
+    getDtrLifetimeDailyProductionTotal(db, table),
   ]);
   const latest = latestRes.rows[0] || null;
   const first = firstRes.rows[0] || null;
@@ -318,7 +369,6 @@ export async function getDtrUtilizationSummary(db, machineId) {
   const onSinceFirst = Math.max(0, timeOn - firstOn);
 
   const counts = normalizeCountsObject(latest?.counts);
-  const totalCounts = Object.values(counts).reduce((sum, n) => sum + (Number(n) || 0), 0);
   const firstAt = firstTsRaw ? new Date(firstTsRaw) : null;
   const now = new Date();
   const elapsedSeconds =
@@ -346,7 +396,7 @@ export async function getDtrUtilizationSummary(db, machineId) {
     time_running_since_first: runSinceFirst,
     time_on_since_first: onSinceFirst,
     counts,
-    /** SẢN LƯỢNG LŨY KẾ = tổng mọi loại chai trong counts */
+    /** SẢN LƯỢNG LŨY KẾ = Σ (cuối ngày − đầu ngày) mọi ngày */
     total_counts: totalCounts,
     status: latest?.status ?? machine.status ?? null,
     last_telemetry_at: latest?.timestamp ?? null,
@@ -584,40 +634,34 @@ function snapshotsToDeltaBuckets(bucketDefs, snapshotByStartTs, baselineCounts) 
 }
 
 /**
- * Ngày / tuần / tháng / quý / năm: mỗi cột độc lập
- * = snapshot cuối cùng trong kỳ − snapshot đầu tiên trong kỳ.
- * firstByTs / lastByTs: map key trunc (ngày/tháng/…) → counts.
+ * Ngày / tuần / tháng / quý / năm:
+ * mỗi cột = Σ (snapshot cuối − đầu) của từng đơn vị trunc nằm trong kỳ.
+ * (Tránh lấy cuối kỳ − đầu kỳ cả khối: PLC reset giữa kỳ → cột tháng = 0
+ * trong khi tổng các ngày vẫn > 0.)
  */
-function snapshotsToPeriodFirstLastBuckets(bucketDefs, firstByTs, lastByTs) {
-  const firstEntries = [...firstByTs.entries()].sort((a, b) => a[0] - b[0]);
-  const lastEntries = [...lastByTs.entries()].sort((a, b) => a[0] - b[0]);
+function snapshotsToPeriodSumOfUnitDeltas(bucketDefs, firstByTs, lastByTs) {
+  const unitKeys = [
+    ...new Set([...firstByTs.keys(), ...lastByTs.keys()]),
+  ].sort((a, b) => a - b);
 
   return bucketDefs.map((b) => {
     const startTs = b.start instanceof Date ? b.start.getTime() : new Date(b.start).getTime();
     const endTs = b.end instanceof Date ? b.end.getTime() : new Date(b.end).getTime();
     const startIso = b.start instanceof Date ? b.start.toISOString() : b.start;
+    const totals = emptyCounts();
 
-    let firstSnap = null;
-    for (const [ts, counts] of firstEntries) {
-      if (ts >= startTs && ts < endTs) {
-        firstSnap = counts;
-        break;
+    for (const ts of unitKeys) {
+      if (ts < startTs || ts >= endTs) continue;
+      const firstSnap = firstByTs.get(ts);
+      const lastSnap = lastByTs.get(ts);
+      if (!firstSnap || !lastSnap) continue;
+      const delta = diffCounts(firstSnap, lastSnap);
+      for (const [key, value] of Object.entries(delta)) {
+        totals[key] = (Number(totals[key]) || 0) + (Number(value) || 0);
       }
     }
 
-    let lastSnap = null;
-    for (const [ts, counts] of lastEntries) {
-      if (ts >= startTs && ts < endTs) lastSnap = counts;
-    }
-
-    if (!firstSnap || !lastSnap) {
-      return { start: startIso, label: b.label, counts: emptyCounts() };
-    }
-    return {
-      start: startIso,
-      label: b.label,
-      counts: diffCounts(firstSnap, lastSnap),
-    };
+    return { start: startIso, label: b.label, counts: totals };
   });
 }
 
@@ -706,7 +750,8 @@ function buildCountBuckets(mode, { year, month, day } = {}) {
         label: String(mo + 1).padStart(2, '0'),
       });
     }
-    return { trunc: 'month', rangeStart, rangeEnd, buckets };
+    // trunc day → cột tháng = tổng delta các ngày trong tháng
+    return { trunc: 'day', rangeStart, rangeEnd, buckets };
   }
 
   if (mode === 'quarter') {
@@ -720,7 +765,7 @@ function buildCountBuckets(mode, { year, month, day } = {}) {
         label: `Q${q + 1}`,
       });
     }
-    return { trunc: 'quarter', rangeStart, rangeEnd, buckets };
+    return { trunc: 'day', rangeStart, rangeEnd, buckets };
   }
 
   // year: 5 năm gần nhất (tính theo year chọn hoặc năm hiện tại)
@@ -736,13 +781,14 @@ function buildCountBuckets(mode, { year, month, day } = {}) {
       label: String(yr),
     });
   }
-  return { trunc: 'year', rangeStart, rangeEnd, buckets };
+  return { trunc: 'day', rangeStart, rangeEnd, buckets };
 }
 
 /**
  * Thống kê số chai theo mode: hour | day | week | month | quarter | year.
  * - hour: delta xích giữa các giờ (snapshot cuối giờ − giờ trước)
- * - day/week/month/quarter/year: mỗi cột = snapshot cuối kỳ − snapshot đầu tiên trong kỳ
+ * - day: mỗi cột = cuối ngày − đầu ngày
+ * - week/month/quarter/year: mỗi cột = tổng delta các ngày trong kỳ
  */
 export async function getDtrCountsSeries(
   db,
@@ -817,7 +863,7 @@ export async function getDtrCountsSeries(
 
     const firstByTs = mapTruncSnapshots(firstRes.rows, plan.trunc, extraKeys);
     const lastByTs = mapTruncSnapshots(lastRes.rows, plan.trunc, extraKeys);
-    const outBuckets = snapshotsToPeriodFirstLastBuckets(
+    const outBuckets = snapshotsToPeriodSumOfUnitDeltas(
       plan.buckets,
       firstByTs,
       lastByTs,
