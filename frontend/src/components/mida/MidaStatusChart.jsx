@@ -15,6 +15,7 @@ import {
 } from 'chart.js';
 import useTheme from '../../hooks/useTheme';
 import useSyncChartTheme from '../../hooks/useSyncChartTheme';
+import useTouchUi from '../../hooks/useTouchUi';
 import {
   themedScale,
   themedXScale,
@@ -99,6 +100,7 @@ export default function MidaStatusChart({
   const yMin = tickValues[0];
   const yMax = tickValues[tickValues.length - 1];
   const chartRef = useRef(null);
+  const touchUi = useTouchUi();
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const latestPropsRef = useRef({ timestamps, statusValues });
@@ -213,7 +215,7 @@ export default function MidaStatusChart({
         zoom: {
           limits: { x: { minRange: 10_000 } },
           pan: {
-            enabled: true,
+            enabled: !touchUi,
             mode: 'x',
             onPanStart: () => {
               pauseLive();
@@ -226,7 +228,7 @@ export default function MidaStatusChart({
             wheel: { enabled: true, speed: 0.1 },
             pinch: { enabled: true },
             drag: {
-              enabled: true,
+              enabled: !touchUi,
               backgroundColor: 'rgba(220, 38, 38, 0.12)',
               borderColor: 'rgba(220, 38, 38, 0.45)',
               borderWidth: 1,
@@ -278,7 +280,7 @@ export default function MidaStatusChart({
         ),
       },
     }),
-    [theme, pauseLive, xMin, xMax, ticks, yMin, yMax, hasFixedRange, enableAnimation],
+    [theme, pauseLive, xMin, xMax, ticks, yMin, yMax, hasFixedRange, enableAnimation, touchUi],
   );
 
   useSyncChartTheme(chartRef, theme, options);

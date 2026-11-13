@@ -4131,6 +4131,24 @@
   width: 100%;
 }
 
+/* Điện thoại: vuốt chart vẫn scroll trang (pan/drag/pinch cảm ứng đã tắt ở JS) */
+@media (hover: none), (pointer: coarse) {
+  .mida-page--detail .machine-chart-plot,
+  .mida-page--detail .machine-chart-plot-inner,
+  .mida-page--detail .machine-chart-plot canvas,
+  .mida-page--detail .machine-chart-card canvas,
+  .mida-page--detail .mida-charts-cell canvas,
+  .mida-page--detail .mida-power-chart,
+  .mida-page--detail .mida-power-chart canvas,
+  .mida-page--detail .mida-chart-fs canvas,
+  .mida-page--detail .mida-run-stop-wrap,
+  .mida-page--detail .mida-run-stop-wrap canvas,
+  .mida-page--detail .mida-run-stop-stacked,
+  .mida-page--detail canvas.mida-run-stop-stacked {
+    touch-action: pan-y !important;
+  }
+}
+
 .mida-power-chart__resume {
   position: absolute;
   z-index: 5;

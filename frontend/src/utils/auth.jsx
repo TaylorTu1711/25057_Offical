@@ -31,9 +31,10 @@ export const saveUserSession = ({ role, portal, redirectPath, locations }) => {
 };
 
 /** Đường dẫn sau login theo portal (ưu tiên hơn redirectPath cũ/sai). */
-export const getPostLoginPath = (portal, role = 'factory') => {
+export const getPostLoginPath = (portal, _role = 'factory') => {
   if (portal === 'dtr_sortmachine') return '/dtr/sortmachine';
-  if (portal === 'mida_cnc' && role !== 'admin') return '/mida/cnc';
+  // Admin + user portal CNC đều vào /mida/cnc (khớp backend getPostLoginPath)
+  if (portal === 'mida_cnc') return '/mida/cnc';
   return '/';
 };
 

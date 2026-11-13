@@ -117,8 +117,13 @@ server {
         try_files /index.html =404;
     }
 
-    # DTR — từng máy → Express → Tailscale
-    location ~ ^/dtr/sortmachine/[^/]+ {
+    # DTR Offline — /dtr/sortmachine/:id (không path con) → SPA Plenma
+    location ~ ^/dtr/sortmachine/[^/]+/?$ {
+        try_files /index.html =404;
+    }
+
+    # DTR Online — /dtr/sortmachine/:id/s|/assets|… → Express → Tailscale
+    location ~ ^/dtr/sortmachine/[^/]+/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

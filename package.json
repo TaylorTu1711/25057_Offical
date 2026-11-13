@@ -4,8 +4,9 @@
   "main": "backend/server.js",
   "scripts": {
     "dev": "nodemon backend/server.js",
-    "build": "npm install && npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend && npm run seed:mida-admin",
+    "build": "npm install && npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend && npm run seed:mida-admin && npm run seed:mida-user",
     "seed:mida-admin": "node backend/scripts/create-mida-admin.js",
+    "seed:mida-user": "node backend/scripts/create-mida-user.js",
     "seed:mida-maintenance": "node backend/scripts/create-mida-maintenance.js",
     "seed:dtr-sortmachine": "node backend/scripts/create-dtr-sortmachine-user.js",
     "seed:dtr-sortmachine-admin": "node backend/scripts/create-dtr-sortmachine-admin.js",

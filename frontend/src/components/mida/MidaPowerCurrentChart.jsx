@@ -15,6 +15,7 @@ import {
 } from 'chart.js';
 import useTheme from '../../hooks/useTheme';
 import useSyncChartTheme from '../../hooks/useSyncChartTheme';
+import useTouchUi from '../../hooks/useTouchUi';
 import {
   themedScale,
   themedXScale,
@@ -102,6 +103,7 @@ export default function MidaPowerCurrentChart({
   const { theme } = useTheme();
   const isDark = isDarkChartTheme(theme);
   const chartRef = useRef(null);
+  const touchUi = useTouchUi();
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const latestPropsRef = useRef({ timestamps, powerValues });
@@ -211,7 +213,7 @@ export default function MidaPowerCurrentChart({
         zoom: {
           limits: { x: { minRange: 10_000 } },
           pan: {
-            enabled: true,
+            enabled: !touchUi,
             mode: 'x',
             onPanStart: () => {
               pauseLive();
@@ -224,7 +226,7 @@ export default function MidaPowerCurrentChart({
             wheel: { enabled: true, speed: 0.1 },
             pinch: { enabled: true },
             drag: {
-              enabled: true,
+              enabled: !touchUi,
               backgroundColor: 'rgba(220, 38, 38, 0.12)',
               borderColor: 'rgba(220, 38, 38, 0.45)',
               borderWidth: 1,
@@ -279,7 +281,7 @@ export default function MidaPowerCurrentChart({
         ),
       },
     }),
-    [theme, isDark, yBounds, pauseLive],
+    [theme, isDark, yBounds, pauseLive, touchUi],
   );
 
   useSyncChartTheme(chartRef, theme, options);

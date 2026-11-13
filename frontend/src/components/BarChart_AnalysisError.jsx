@@ -4,6 +4,7 @@ import zoomPlugin from 'chartjs-plugin-zoom';
 import useTheme from '../hooks/useTheme';
 import useSyncChartTheme from '../hooks/useSyncChartTheme';
 import useChartZoomPreserve from '../hooks/useChartZoomPreserve';
+import useTouchUi from '../hooks/useTouchUi';
 import {
   getChartThemeColors,
   themedScale,
@@ -331,10 +332,11 @@ function BarChart_ErrorEmbedded(props) {
     setYCategoryWindow({ min: scale.min, max: scale.max });
   }, []);
 
+  const touchUi = useTouchUi();
   const zoomPluginOptions = useMemo(
     () => ({
       pan: {
-        enabled: true,
+        enabled: !touchUi,
         mode: 'y',
         onPanComplete: ({ chart }) => syncYWindowFromChart(chart),
       },
@@ -345,7 +347,7 @@ function BarChart_ErrorEmbedded(props) {
         onZoomComplete: ({ chart }) => syncYWindowFromChart(chart),
       },
     }),
-    [syncYWindowFromChart],
+    [syncYWindowFromChart, touchUi],
   );
 
   return (

@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import httpProxy from 'http-proxy';
 import zlib from 'zlib';
 import {
@@ -6,6 +9,27 @@ import {
 } from '../utils/dtrSortMachines.js';
 
 export const DTR_MACHINE_COOKIE = 'dtr_machine';
+
+const __dtrProxyDir = path.dirname(fileURLToPath(import.meta.url));
+/** Plenma SPA — trang Offline /dtr/sortmachine/:id (khi Nginx vẫn proxy về Express). */
+const DTR_SPA_INDEX = path.resolve(__dtrProxyDir, '../../frontend/dist/index.html');
+
+function trySendDtrSpa(res) {
+  if (!fs.existsSync(DTR_SPA_INDEX)) return false;
+  res
+    .status(200)
+    .set({
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store',
+    })
+    .sendFile(DTR_SPA_INDEX);
+  return true;
+}
+
+/** Exact /dtr/sortmachine/:id → SPA Offline; có path con (/s, /assets, …) → Online proxy. */
+export function isDtrSpaDetailRest(rest) {
+  return !rest || rest === '/';
+}
 
 /**
  * Route SPA máy sort — iframe phải load đúng pathname này.
@@ -801,6 +825,15 @@ export function dtrSortMachineProxy(req, res, next) {
   const entry = parseDtrEntryPath(pathname);
   if (entry) {
     const prefix = machinePrefix(entry.machineId);
+
+    // Offline: /dtr/sortmachine/:id → SPA Plenma (không mở shell /s)
+    if (isDtrSpaDetailRest(entry.rest)) {
+      clearMachineCookie(req, res);
+      if (isDocumentNavigation(req) && !isEmbedRequest(req)) {
+        if (trySendDtrSpa(res)) return;
+      }
+      return next();
+    }
 
     if (isDocumentNavigation(req) && !isEmbedRequest(req)) {
       getDtrSortMachineById(entry.machineId)

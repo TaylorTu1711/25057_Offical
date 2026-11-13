@@ -1407,6 +1407,18 @@
   padding: 2px 4px;
 }
 
+/* Điện thoại: vuốt trên biểu đồ vẫn scroll trang (không bị zoom-plugin nuốt touch) */
+@media (hover: none), (pointer: coarse) {
+  .machine-chart-plot,
+  .machine-chart-plot-inner,
+  .machine-chart-plot canvas,
+  .machine-chart-card canvas,
+  .mida-power-chart,
+  .mida-power-chart canvas {
+    touch-action: pan-y !important;
+  }
+}
+
 .machine-chart-half {
   overflow: hidden;
 }

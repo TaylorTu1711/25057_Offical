@@ -1,10 +1,23 @@
 /**
  * Tạo user giám sát CNC nhà máy MIDA.
- * cd backend && node scripts/create-mida-user.js
+ * Được gọi từ `npm run build` / `npm run seed:mida-user` hoặc:
+ *   cd backend && node scripts/create-mida-user.js
+ *
+ * Env:
+ *   MIDA_USER_EMAIL (default: mida.cnc@plenma.com)
+ *   MIDA_USER_PASSWORD (default: Mida@2026)
+ *   MIDA_LOCATION (default: MIDA)
  */
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import bcrypt from 'bcrypt';
 import pool from '../db.js';
 import { migrateUserAccessSchema } from '../utils/dbMigrate.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const email = process.env.MIDA_USER_EMAIL || 'mida.cnc@plenma.com';
 const password = process.env.MIDA_USER_PASSWORD || 'Mida@2026';

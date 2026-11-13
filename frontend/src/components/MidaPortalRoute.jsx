@@ -27,6 +27,6 @@ export function DefaultPortalRoute({ children }) {
   if (portal === 'dtr_sortmachine') {
     return <Navigate to="/dtr/sortmachine" replace />;
   }
-  if (portal === 'mida_cnc' && role !== 'admin') return <Navigate to="/mida/cnc" replace />;
+  if (portal === 'mida_cnc') return <Navigate to="/mida/cnc" replace />;
   return children;
 }

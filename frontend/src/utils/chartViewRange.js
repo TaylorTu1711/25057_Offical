@@ -610,6 +610,32 @@ export function buildProductivitySeries(rawData, viewMode, selection = {}) {
     };
   }
 
+  if (viewMode === CHART_VIEW_MODES.week) {
+    const weeks = resolveWeekSlots(selection);
+    const from = weeks[0]?.from || new Date();
+    const to = weeks[weeks.length - 1]?.to || new Date();
+    const filtered = filterInRange(rawData, from, to);
+    const outputMap = {};
+    const inputMap = {};
+
+    filtered.forEach((row) => {
+      const key = toLocalDateKey(row.timestamp);
+      outputMap[key] = row.product ?? 0;
+      inputMap[key] = row.input_material ?? 0;
+    });
+
+    return {
+      labels: weeks.map((w) => w.label),
+      tooltipLabels: weeks.map((w) => w.tooltipLabel || w.label),
+      output: weeks.map((w) =>
+        w.days.reduce((sum, d) => sum + (outputMap[toLocalDateKey(d)] ?? 0), 0),
+      ),
+      input: weeks.map((w) =>
+        w.days.reduce((sum, d) => sum + (inputMap[toLocalDateKey(d)] ?? 0), 0),
+      ),
+    };
+  }
+
   if (viewMode === CHART_VIEW_MODES.month) {
     const { from, to, year } = getSelectionRange(viewMode, selection);
     const filtered = filterInRange(rawData, from, to);
@@ -628,6 +654,28 @@ export function buildProductivitySeries(rawData, viewMode, selection = {}) {
       labels: monthKeys.map(formatMonthLabel),
       output: monthKeys.map((key) => outputMap[key] ?? 0),
       input: monthKeys.map((key) => inputMap[key] ?? 0),
+    };
+  }
+
+  if (viewMode === CHART_VIEW_MODES.quarter) {
+    const { from, to, year } = getSelectionRange(viewMode, selection);
+    const filtered = filterInRange(rawData, from, to);
+    const quarters = getQuartersInYear(year);
+    const outputMap = {};
+    const inputMap = {};
+
+    filtered.forEach((row) => {
+      const ts = new Date(row.timestamp);
+      const q = Math.floor(ts.getMonth() / 3) + 1;
+      const key = `${ts.getFullYear()}-Q${q}`;
+      outputMap[key] = (outputMap[key] || 0) + (row.product ?? 0);
+      inputMap[key] = (inputMap[key] || 0) + (row.input_material ?? 0);
+    });
+
+    return {
+      labels: quarters.map((q) => q.label),
+      output: quarters.map((q) => outputMap[q.key] ?? 0),
+      input: quarters.map((q) => inputMap[q.key] ?? 0),
     };
   }
 
@@ -1169,6 +1217,27 @@ export function buildErrorSeries(allErrors, viewMode, selection = {}) {
     };
   }
 
+  if (viewMode === CHART_VIEW_MODES.week) {
+    const weeks = resolveWeekSlots(selection);
+    const from = weeks[0]?.from || new Date();
+    const to = weeks[weeks.length - 1]?.to || new Date();
+    const filtered = filterInRange(allErrors || [], from, to);
+    const countMap = {};
+
+    filtered.forEach((row) => {
+      const key = toLocalDateKey(row.timestamp);
+      countMap[key] = (countMap[key] || 0) + 1;
+    });
+
+    return {
+      labels: weeks.map((w) => w.label),
+      tooltipLabels: weeks.map((w) => w.tooltipLabel || w.label),
+      values: weeks.map((w) =>
+        w.days.reduce((sum, d) => sum + (countMap[toLocalDateKey(d)] ?? 0), 0),
+      ),
+    };
+  }
+
   if (viewMode === CHART_VIEW_MODES.month) {
     const { from, to, year } = getSelectionRange(viewMode, selection);
     const filtered = filterInRange(allErrors || [], from, to);
@@ -1184,6 +1253,25 @@ export function buildErrorSeries(allErrors, viewMode, selection = {}) {
     return {
       labels: monthKeys.map(formatMonthLabel),
       values: monthKeys.map((key) => countMap[key] ?? 0),
+    };
+  }
+
+  if (viewMode === CHART_VIEW_MODES.quarter) {
+    const { from, to, year } = getSelectionRange(viewMode, selection);
+    const filtered = filterInRange(allErrors || [], from, to);
+    const quarters = getQuartersInYear(year);
+    const countMap = {};
+
+    filtered.forEach((row) => {
+      const ts = new Date(row.timestamp);
+      const q = Math.floor(ts.getMonth() / 3) + 1;
+      const key = `${ts.getFullYear()}-Q${q}`;
+      countMap[key] = (countMap[key] || 0) + 1;
+    });
+
+    return {
+      labels: quarters.map((q) => q.label),
+      values: quarters.map((q) => countMap[q.key] ?? 0),
     };
   }
 

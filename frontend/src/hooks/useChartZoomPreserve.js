@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import { Chart as ChartJS } from 'chart.js';
+import useTouchUi from './useTouchUi';
 
 function getCategoryMaxIndex(chart) {
   return Math.max(0, (chart.data?.labels?.length ?? 0) - 1);
@@ -50,6 +51,9 @@ export default function useChartZoomPreserve(restoreDeps, mode = 'x', { getDefau
   const [xZoom, setXZoom] = useState(null);
   const xZoomRef = useRef(null);
   xZoomRef.current = xZoom;
+  const touchUi = useTouchUi();
+  const touchUiRef = useRef(touchUi);
+  touchUiRef.current = touchUi;
 
   const commitXZoom = useCallback((next) => {
     const cur = xZoomRef.current;
@@ -69,8 +73,21 @@ export default function useChartZoomPreserve(restoreDeps, mode = 'x', { getDefau
 
   useEffect(() => {
     const pluginId = `zoomPreserve_${Math.random().toString(36).slice(2, 10)}`;
+    const applyCanvasTouchAction = (chart) => {
+      const canvas = chart?.canvas;
+      if (!canvas) return;
+      if (touchUiRef.current) {
+        canvas.style.setProperty('touch-action', 'pan-y', 'important');
+      } else {
+        canvas.style.removeProperty('touch-action');
+      }
+    };
     const plugin = {
       id: pluginId,
+      afterInit(chart) {
+        if (chart !== chartRef.current) return;
+        applyCanvasTouchAction(chart);
+      },
       beforeUpdate(chart) {
         if (chart !== chartRef.current) return;
         const saved = xZoomRef.current;
@@ -85,6 +102,7 @@ export default function useChartZoomPreserve(restoreDeps, mode = 'x', { getDefau
       },
       afterUpdate(chart) {
         if (chart !== chartRef.current) return;
+        applyCanvasTouchAction(chart);
         const saved = xZoomRef.current;
         if (!saved || suppressRef.current) return;
 
@@ -173,21 +191,38 @@ export default function useChartZoomPreserve(restoreDeps, mode = 'x', { getDefau
     return () => cancelAnimationFrame(id);
   }, [depsKey, commitXZoom]);
 
+  // Zoom plugin hay gán touch-action:none — ép lại pan-y để scroll trang trên điện thoại
+  useEffect(() => {
+    const applyTouchAction = () => {
+      const canvas = chartRef.current?.canvas;
+      if (!canvas) return;
+      if (touchUiRef.current) {
+        canvas.style.setProperty('touch-action', 'pan-y', 'important');
+      } else {
+        canvas.style.removeProperty('touch-action');
+      }
+    };
+    applyTouchAction();
+    const id = requestAnimationFrame(applyTouchAction);
+    return () => cancelAnimationFrame(id);
+  }, [touchUi, depsKey]);
+
   const zoomPluginOptions = useMemo(
     () => ({
+      // Cảm ứng: tắt pan + pinch (tránh nuốt vuốt scroll); desktop giữ wheel/pan
       pan: {
-        enabled: true,
+        enabled: !touchUi,
         mode,
         onPanComplete: markUserZoom,
       },
       zoom: {
         wheel: { enabled: true },
-        pinch: { enabled: true },
+        pinch: { enabled: !touchUi },
         mode,
         onZoomComplete: markUserZoom,
       },
     }),
-    [markUserZoom, mode],
+    [markUserZoom, mode, touchUi],
   );
 
   const zoomedScaleProps = useMemo(() => {

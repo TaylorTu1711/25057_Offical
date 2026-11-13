@@ -47,6 +47,7 @@ import {
   toErrorChartTickMode,
   getChartCategoryPrefix,
   getYearKeysFromData,
+  toLocalDateKey,
 } from '../utils/chartViewRange';
 import { parseStandardProductivity, parseHandoverDate } from '../utils/parseStandardProductivity';
 import { hasInputProductInfo, hasOutputProductInfo } from '../utils/machineProductInfo';
@@ -119,12 +120,6 @@ const ERROR_CHART_VIEW_LABELS = {
 
 const ERROR_DETAIL_TOP_N = 5;
 
-/** Khóa ngày theo giờ local — tránh lệch UTC khi ghép dữ liệu biểu đồ */
-const toLocalDateKey = (input) => {
-  const d = input instanceof Date ? input : new Date(input);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
 const getRollingFromDate = (minutesAgo, to = new Date()) => {
   const d = new Date(to);
   d.setMinutes(d.getMinutes() - minutesAgo);
@@ -147,7 +142,6 @@ function Machine() {
     rawMachineData,
     rawData,
     statusMachine,
-    errorsMachine,
     allErrorsMachine,
     machineInfo,
     totalTimeOnSeconds,
@@ -197,7 +191,7 @@ function Machine() {
   const [showStatusRangeModal, setShowStatusRangeModal] = useState(false);
   const [tempStatusFrom, setTempStatusFrom] = useState(null);
   const [tempStatusTo, setTempStatusTo] = useState(null);
-  const [selectedDay, setSelectedDay] = useState('');
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
   const [selectedMachineData, setSelectedMachineData] = useState([]);
   const [modals, setModals] = useState({
     machineInfo: false,
@@ -274,6 +268,7 @@ function Machine() {
     setChartViewMode(CHART_VIEW_MODES.day);
     setSelectedMonth(ref.getMonth() + 1);
     setSelectedYear(ref.getFullYear());
+    setSelectedDay(ref.getDate());
     const defaultRange = getDefaultRangeDates(ref);
     setRangeFrom(defaultRange.from);
     setRangeTo(defaultRange.to);
@@ -290,13 +285,29 @@ function Machine() {
     () => ({
       year: selectedYear,
       month: selectedMonth,
+      day: selectedDay,
       availableYears: availableChartYears,
       dateFrom: rangeFrom,
       dateTo: rangeTo,
       rangeDisplay,
     }),
-    [selectedYear, selectedMonth, availableChartYears, rangeFrom, rangeTo, rangeDisplay],
+    [selectedYear, selectedMonth, selectedDay, availableChartYears, rangeFrom, rangeTo, rangeDisplay],
   );
+
+  const filteredAlarms = useMemo(() => {
+    const rows = filterRowsByChartSelection(
+      allErrorsMachine,
+      chartViewMode,
+      chartSelection,
+    );
+    const sorted = [...rows].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
+    );
+    return sorted.filter(
+      (error, index, self) =>
+        index === self.findIndex((e) => e.timestamp === error.timestamp),
+    );
+  }, [allErrorsMachine, chartViewMode, chartSelection]);
 
   const chartXTickMode = toErrorChartTickMode(chartViewMode, chartSelection);
   const chartCategoryPrefix = getChartCategoryPrefix(chartViewMode, chartSelection);
@@ -327,19 +338,20 @@ function Machine() {
   }, []);
 
   useEffect(() => {
-    if (!selectedDay || !rawData.length) return;
-
-    // Lọc dữ liệu trong ngày được chọn
+    if (!rawData.length) return;
+    const dayKey = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
     const dataInDay = rawData.filter(
-      (d) => new Date(d.timestamp).toISOString().slice(0, 10) === selectedDay
+      (d) => toLocalDateKey(d.timestamp) === dayKey,
     );
-
-    // Tìm dữ liệu mới nhất trong ngày đó (timestamp lớn nhất)
+    if (!dataInDay.length) {
+      setSelectedMachineData(rawData[rawData.length - 1] || []);
+      return;
+    }
     const latestData = dataInDay.reduce((latest, current) =>
       new Date(current.timestamp) > new Date(latest.timestamp) ? current : latest
-    , dataInDay[0]); // giá trị khởi đầu
+    , dataInDay[0]);
     setSelectedMachineData(latestData);
-  }, [selectedDay, rawData]);
+  }, [selectedDay, selectedMonth, selectedYear, rawData]);
 
   useEffect(() => {
     const productivity = buildProductivitySeries(rawData, chartViewMode, chartSelection);
@@ -682,9 +694,9 @@ function Machine() {
                         </tr>
                       </thead>
                       <tbody>
-                        {errorsMachine?.length > 0 ? (
-                          errorsMachine.map((err) => (
-                            <tr key={err.id}>
+                        {filteredAlarms.length > 0 ? (
+                          filteredAlarms.map((err) => (
+                            <tr key={err.id ?? `${err.alarm_id}-${err.timestamp}`}>
                               <td title={String(err.alarm_id)}>
                                 {err.alarm_id}
                               </td>
@@ -720,8 +732,21 @@ function Machine() {
                   onMonthChange={setSelectedMonth}
                   selectedYear={selectedYear}
                   onYearChange={setSelectedYear}
+                  selectedDay={selectedDay}
+                  onDayChange={setSelectedDay}
+                  onDateChange={({ year, month, day }) => {
+                    setSelectedYear(year);
+                    setSelectedMonth(month);
+                    setSelectedDay(day);
+                  }}
                   availableYears={availableChartYears}
                   pickerYear={selectedYear}
+                  modes={[
+                    CHART_VIEW_MODES.hour,
+                    CHART_VIEW_MODES.day,
+                    CHART_VIEW_MODES.month,
+                    CHART_VIEW_MODES.year,
+                  ]}
                 />
               </div>
             </div>

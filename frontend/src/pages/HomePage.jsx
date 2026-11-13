@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Offcanvas } from 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import AppNavbar from '../components/Navbar';
 import "../css/Home.css"
 import "../index.css"
@@ -21,6 +22,9 @@ import {
   saveHomePageFilters,
 } from '../utils/homePageState';
 import '../css/MachineTree.css';
+import 'bootstrap-icons/font/bootstrap-icons.css';
+
+const HOME_TREE_MOBILE_BP = 1200;
 
 const HOME_MACHINE_TABLE_COLUMN_ORDER = ['name', 'machineId', 'status', 'actions'];
 
@@ -79,6 +83,13 @@ function HomePage() {
   });
 
   const role = localStorage.getItem('role');
+  const [width, setWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : HOME_TREE_MOBILE_BP + 1,
+  );
+  const [treeOpen, setTreeOpen] = useState(false);
+  const offcanvasRef = useRef(null);
+  const [offcanvasInstance, setOffcanvasInstance] = useState(null);
+  const showTreeToggle = width < HOME_TREE_MOBILE_BP;
 
   const handleEditMachineFormChange = (e) => {
     const { name, value } = e.target;
@@ -211,6 +222,37 @@ function HomePage() {
   const handleLocationSelect = (location, isDuyTanGroup) => {
     setIsDuyTanGroupSelected(Boolean(isDuyTanGroup));
     setSelectedLocation(location);
+    offcanvasInstance?.hide();
+  };
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    if (!showTreeToggle || !offcanvasRef.current) {
+      setOffcanvasInstance(null);
+      setTreeOpen(false);
+      return undefined;
+    }
+    const el = offcanvasRef.current;
+    const instance = Offcanvas.getOrCreateInstance(el);
+    setOffcanvasInstance(instance);
+    const handleShown = () => setTreeOpen(true);
+    const handleHidden = () => setTreeOpen(false);
+    el.addEventListener('shown.bs.offcanvas', handleShown);
+    el.addEventListener('hidden.bs.offcanvas', handleHidden);
+    return () => {
+      el.removeEventListener('shown.bs.offcanvas', handleShown);
+      el.removeEventListener('hidden.bs.offcanvas', handleHidden);
+    };
+  }, [showTreeToggle]);
+
+  const toggleAreaTree = () => {
+    if (!offcanvasRef.current) return;
+    Offcanvas.getOrCreateInstance(offcanvasRef.current).toggle();
   };
 
   const fetchMachinesForLocation = useCallback(async () => {
@@ -331,8 +373,23 @@ function HomePage() {
   usePolling(fetchMachinesForLocation, POLL_INTERVALS.status, Boolean(selectedLocation));
 
   return (
-    <div className="app-page-bg" style={{ minHeight: '100vh', overflow: 'hidden' }}>
+    <div className="app-page-bg home-page" style={{ minHeight: '100vh', overflow: 'hidden' }}>
       <AppNavbar />
+
+      {showTreeToggle && !treeOpen ? (
+        <button
+          type="button"
+          className="home-sidebar-pull"
+          onClick={toggleAreaTree}
+          aria-label="Mở khu vực nhà máy"
+          aria-controls="offcanvasHomeAreaTree"
+          title="Khu vực nhà máy"
+        >
+          <span className="home-sidebar-pull__grip" aria-hidden="true" />
+          <i className="bi bi-chevron-right home-sidebar-pull__icon" aria-hidden="true" />
+        </button>
+      ) : null}
+
       <div className="container-fluid py-2 g-0" style={{ height: '100%' }}>
         <div className="home-layout d-flex g-2 gap-2">
           <div
@@ -791,6 +848,52 @@ function HomePage() {
           </div>
         </div>
       )}
+
+      {showTreeToggle ? (
+        <div
+          className="offcanvas offcanvas-start home-area-offcanvas"
+          tabIndex="-1"
+          id="offcanvasHomeAreaTree"
+          ref={offcanvasRef}
+          aria-labelledby="offcanvasHomeAreaTreeLabel"
+        >
+          <div className="offcanvas-header home-area-offcanvas__header">
+            <h5 className="mb-0 text-brand" id="offcanvasHomeAreaTreeLabel">
+              Khu vực nhà máy
+            </h5>
+            <div className="d-flex align-items-center gap-2">
+              {role === 'admin' ? (
+                <button
+                  type="button"
+                  className="btn btn-sm home-area-add-btn"
+                  title="Thêm máy mới"
+                  onClick={() => {
+                    offcanvasInstance?.hide();
+                    setIsCreateMachineModalOpen(true);
+                  }}
+                >
+                  ➕
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="offcanvas"
+                aria-label="Đóng"
+              />
+            </div>
+          </div>
+          <div className="offcanvas-body home-area-offcanvas__body">
+            <HomeLocationTree
+              duyTanLocations={duyTanLocations}
+              otherLocations={otherLocations}
+              selectedLocation={selectedLocation}
+              isDuyTanGroupSelected={isDuyTanGroupSelected}
+              onSelectLocation={handleLocationSelect}
+            />
+          </div>
+        </div>
+      ) : null}
 
     </div>
   );
