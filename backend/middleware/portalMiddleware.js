@@ -25,6 +25,13 @@ export function requirePortal(...allowedPortals) {
   };
 }
 
+/** Admin thuộc portal DTR Sort — được thêm / sửa / xóa máy. */
+export function requireDtrSortAdmin(req, res, next) {
+  const { role, portal } = req.userScope || {};
+  if (role === 'admin' && portal === PORTALS.DTR_SORTMACHINE) return next();
+  return res.status(403).json({ error: 'Chỉ admin Sort DTR mới được thêm/sửa/xóa máy' });
+}
+
 export function getPostLoginPath(portal, role) {
   if (portal === PORTALS.DTR_SORTMACHINE) {
     return '/dtr/sortmachine';

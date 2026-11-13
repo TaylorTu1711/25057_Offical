@@ -448,24 +448,82 @@ export const chartDoughnutAnimationOptions = {
   animation: {
     animateRotate: true,
     animateScale: true,
-    duration: 700,
+    duration: 900,
     easing: CHART_EASING,
   },
   animations: {
     numbers: {
       type: 'number',
-      duration: 700,
+      duration: 900,
       easing: CHART_EASING,
     },
     colors: {
       type: 'color',
-      duration: 450,
+      duration: 520,
       easing: CHART_EASING,
     },
   },
   transitions: {
-    active: { animation: { duration: 200 } },
+    active: { animation: { duration: 220 } },
     resize: { animation: { duration: 0 } },
+  },
+};
+
+/**
+ * Cột stacked (BIỂU ĐỒ THỐNG KÊ SỐ CHAI) — mọc từ đáy, nhanh và dứt khoát.
+ */
+export const chartStackedBarAnimationOptions = {
+  animation: {
+    duration: 380,
+    easing: 'easeOutCubic',
+    delay: (ctx) => {
+      if (ctx.type !== 'data') return 0;
+      const di = Number(ctx.datasetIndex) || 0;
+      // Stagger rất ngắn theo stack — không kéo dài theo cột
+      return Math.min(90, di * 12);
+    },
+  },
+  animations: {
+    y: {
+      from: (ctx) => {
+        const chart = ctx?.chart;
+        const y = chart?.scales?.y;
+        if (!y) return undefined;
+        return y.getPixelForValue(0);
+      },
+      type: 'number',
+      duration: 380,
+      easing: 'easeOutCubic',
+    },
+    numbers: {
+      type: 'number',
+      duration: 380,
+      easing: 'easeOutCubic',
+    },
+    colors: {
+      type: 'color',
+      duration: 220,
+      easing: 'easeOutCubic',
+    },
+  },
+  transitions: {
+    active: {
+      animation: { duration: 120, easing: 'easeOutCubic' },
+    },
+    resize: {
+      animation: { duration: 0 },
+    },
+    show: {
+      animations: {
+        y: { from: 0, duration: 360, easing: 'easeOutCubic' },
+        colors: { duration: 180, easing: 'easeOutCubic' },
+      },
+    },
+    hide: {
+      animations: {
+        colors: { duration: 140, easing: 'easeOutCubic' },
+      },
+    },
   },
 };
 
@@ -496,7 +554,10 @@ export function formatChartTooltipValue(value, maxFractionDigits = 3) {
   });
 }
 
-/** Nhãn số giữa cột — xoay dọc theo cột, cỡ chữ tự co theo bề rộng/cao cột. */
+/**
+ * Nhãn số giữa cột — xoay dọc theo cột.
+ * Cỡ chữ theo mức zoom X (số category đang hiện / độ rộng slot), không theo chiều cao giá trị.
+ */
 export function getBarColumnDataLabelOptions(labelColor, maxFractionDigits = 1) {
   return {
     display: (ctx) => {
@@ -518,14 +579,17 @@ export function getBarColumnDataLabelOptions(labelColor, maxFractionDigits = 1) 
     },
     color: labelColor,
     font: (ctx) => {
-      const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex];
-      const w = Math.max(8, bar?.width ?? 24);
-      const h = Math.max(
-        8,
-        Math.abs((bar?.base ?? 0) - (bar?.y ?? 0)) || Math.abs(bar?.height ?? 24),
-      );
-      // Chữ dọc: bề ngang chữ ≤ rộng cột; dài chữ ≤ cao cột
-      const size = Math.min(14, Math.max(8, Math.round(Math.min(w * 0.55, h * 0.14))));
+      const chart = ctx.chart;
+      const xScale = chart.scales?.x;
+      const labelCount = Math.max(1, chart.data?.labels?.length ?? 1);
+      let visible = labelCount;
+      if (xScale && Number.isFinite(xScale.min) && Number.isFinite(xScale.max)) {
+        visible = Math.max(1, Number(xScale.max) - Number(xScale.min) + 1);
+      }
+      const areaW = chart.chartArea?.width || 0;
+      const slotW = areaW > 0 ? areaW / visible : 24;
+      // Zoom to (ít cột) → slot rộng → chữ to; zoom nhỏ → chữ nhỏ. Đồng đều mọi cột.
+      const size = Math.max(8, Math.min(22, Math.round(slotW * 0.42)));
       return { size, weight: '600' };
     },
   };

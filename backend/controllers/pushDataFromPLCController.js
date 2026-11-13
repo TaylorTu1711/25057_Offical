@@ -1,8 +1,10 @@
 import pool from '../db.js';
 import { isCncElectricalRow, saveCncTelemetryRow } from '../utils/cncTelemetry.js';
+import { isDtrCountsRow, saveDtrTelemetryRow } from '../utils/dtrTelemetry.js';
 import { saveProductionRow } from '../utils/productionPersistence.js';
 import {
   alarmTableRef,
+  DTR_MACHINES_TABLE,
   findMachinesRegistryTable,
   isCncMachine,
   telemetryTableRef,
@@ -24,6 +26,39 @@ export const pushDataFromPLC = async (req, res) => {
 
       if (!machine_id) {
         console.warn('Thiếu machine_id trong bản ghi:', row);
+        continue;
+      }
+
+      // DTR Sort: payload có counts (machine_id có thể là 25231_100_70_140_122)
+      if (isDtrCountsRow(row)) {
+        const result = await saveDtrTelemetryRow(pool, machine_id, row);
+        if (result.reason === 'machine_not_found') {
+          console.warn('Không tìm thấy máy DTR:', machine_id);
+          continue;
+        }
+        if (result.reason === 'invalid_timestamp') {
+          console.warn('timestamp không hợp lệ, bỏ qua bản ghi DTR:', row);
+          continue;
+        }
+
+        if (result.registryId) {
+          const { timestamp } = row;
+          const statusNum = row.status == null || row.status === ''
+            ? null
+            : Number(row.status);
+          await pool.query(
+            `UPDATE ${DTR_MACHINES_TABLE}
+             SET last_updated = COALESCE($1::timestamptz, CURRENT_TIMESTAMP),
+                 status = COALESCE($2::integer, status),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE machine_id = $3`,
+            [
+              timestamp || null,
+              Number.isFinite(statusNum) ? Math.trunc(statusNum) : null,
+              result.registryId,
+            ],
+          );
+        }
         continue;
       }
 

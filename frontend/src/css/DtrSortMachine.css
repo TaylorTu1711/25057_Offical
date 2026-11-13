@@ -1,51 +1,1878 @@
+/* Khóa scroll toàn trang khi đang xem giám sát DTR */
+html:has(.dtr-monitor-page),
+body:has(.dtr-monitor-page),
+#root:has(.dtr-monitor-page) {
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* Trang giám sát máy Sort DTR — vừa 1 màn hình, không scroll trang */
+/* Token DTR dùng chung list + monitor (navbar neon) */
+.dtr-page,
+.dtr-monitor-page {
+  --dtr-monitor-bg: #e8f8dc;
+  --dtr-card-bg: #f3ffe9;
+  --dtr-card-bg-deep: #e2ffcf;
+  --dtr-card-border: #b6ef8f;
+  --dtr-card-glow: #f8fff2;
+  --dtr-chip-bg: #d9ffc2;
+  --dtr-chip-active: #9ef06a;
+  --dtr-text: #14532d;
+  --dtr-text-muted: #166534;
+  --dtr-nav-h: 56px;
+  /* Ghi đè brand xanh dương → xanh lá đậm toàn trang DTR */
+  --brand-color: #14532d;
+  --navbar-bg: rgba(248, 255, 242, 0.96);
+  --nav-hover-bg: rgba(158, 240, 106, 0.28);
+  --app-border: #b6ef8f;
+  color: var(--dtr-text);
+}
+
+.dtr-monitor-page {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--dtr-monitor-bg);
+}
+
+.dtr-monitor-page .machine-top-panel__stat-unit {
+  font-size: 0.62em;
+  font-weight: 700;
+  margin-left: 0.15em;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.dtr-monitor-page .text-brand,
+.dtr-monitor-page .text-dark,
+.dtr-monitor-page .chart-title-brand,
+.dtr-monitor-page .machine-chart-head,
+.dtr-monitor-page .machine-top-panel__stat-value,
+.dtr-monitor-page .machine-runtime-display__value,
+.dtr-monitor-page .machine-runtime-display__label,
+.dtr-monitor-page .machine-runtime-display__sep,
+.dtr-monitor-page .machine-runtime-display__days-value,
+.dtr-monitor-page .machine-runtime-display__days-unit,
+.dtr-monitor-page .auto-fit-machine-name__text,
+.dtr-monitor-page .dtr-status-card__title,
+.dtr-monitor-page .dtr-pie-card__title,
+.dtr-monitor-page .dtr-bottle-total__title,
+.dtr-monitor-page .dtr-bottle-total__sum,
+.dtr-monitor-page .dtr-bottle-total-head__main,
+.dtr-monitor-page .machine-tree-sidebar__title,
+.dtr-monitor-page .machine-view-mode-segment__btn:not(.machine-view-mode-segment__btn--active),
+.dtr-monitor-page .machine-view-mode-chip:not(.machine-view-mode-chip--active),
+.dtr-monitor-page .mida-status-range__btn:not(.is-active):not(.active) {
+  color: var(--dtr-text) !important;
+}
+
+.dtr-monitor-page .machine-runtime-display__label,
+.dtr-monitor-page .dtr-pie-card__center-label,
+.dtr-monitor-page .dtr-pie-card__empty,
+.dtr-monitor-page .dtr-util-mida__empty,
+.dtr-monitor-page .dtr-util-mida__legend-item {
+  color: var(--dtr-text-muted, #166534) !important;
+}
+
+.dtr-monitor-page .dtr-pie-card__center-value {
+  color: var(--dtr-text) !important;
+}
+
+/* Navbar — xanh lá neon DTR (list + monitor) */
+.dtr-page .navbar-app,
+.dtr-monitor-page .navbar-app,
+[data-theme='light'] .dtr-page .navbar-app,
+[data-theme='light'] .dtr-monitor-page .navbar-app {
+  background:
+    radial-gradient(ellipse 70% 120% at 100% 100%, rgba(158, 240, 106, 0.28) 0%, transparent 55%),
+    linear-gradient(135deg, #f8fff2 0%, #f3ffe9 48%, #e2ffcf 100%) !important;
+  border-bottom: 1px solid #9ef06a !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.85),
+    0 4px 18px rgba(76, 175, 80, 0.14) !important;
+}
+
+.dtr-page .navbar-brand-text,
+.dtr-page .navbar-title,
+.dtr-page .nav-action-btn,
+.dtr-monitor-page .navbar-brand-text,
+.dtr-monitor-page .navbar-title,
+.dtr-monitor-page .nav-action-btn {
+  color: #14532d !important;
+}
+
+.dtr-page .nav-action-btn,
+.dtr-monitor-page .nav-action-btn,
+[data-theme='light'] .dtr-page .nav-action-btn,
+[data-theme='light'] .dtr-monitor-page .nav-action-btn {
+  background: linear-gradient(165deg, #f8fff2 0%, #e2ffcf 100%) !important;
+  border-color: #b6ef8f !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.dtr-page .nav-action-btn:hover,
+.dtr-monitor-page .nav-action-btn:hover,
+[data-theme='light'] .dtr-page .nav-action-btn:hover,
+[data-theme='light'] .dtr-monitor-page .nav-action-btn:hover {
+  background: rgba(158, 240, 106, 0.35) !important;
+  border-color: #7ed957 !important;
+  box-shadow:
+    0 0 10px rgba(126, 217, 87, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+}
+
+[data-theme='dark'] .dtr-page,
+[data-theme='dark'] .dtr-monitor-page {
+  --dtr-monitor-bg: #07140c;
+  --dtr-card-bg: #122c1a;
+  --dtr-card-bg-deep: #0c1f13;
+  --dtr-card-border: rgba(158, 240, 106, 0.32);
+  --dtr-card-glow: #163820;
+  --dtr-chip-bg: rgba(158, 240, 106, 0.12);
+  --dtr-chip-active: #9ef06a;
+  --dtr-text: #b8f28a;
+  --dtr-text-muted: #86efac;
+  --navbar-bg: rgba(15, 36, 22, 0.96);
+  --nav-hover-bg: rgba(158, 240, 106, 0.18);
+  --app-border: rgba(158, 240, 106, 0.28);
+  --brand-color: #9ef06a;
+  --app-surface: #0f2416;
+  --app-surface-muted: #0a1a10;
+  color: var(--dtr-text);
+}
+
+[data-theme='dark'] .dtr-page .navbar-app,
+[data-theme='dark'] .dtr-monitor-page .navbar-app {
+  background:
+    radial-gradient(ellipse 70% 120% at 100% 100%, rgba(158, 240, 106, 0.16) 0%, transparent 55%),
+    linear-gradient(135deg, #163820 0%, #0f2416 55%, #0a1a10 100%) !important;
+  border-bottom-color: #9ef06a !important;
+  box-shadow:
+    0 1px 0 rgba(158, 240, 106, 0.12),
+    0 4px 24px rgba(74, 222, 128, 0.16) !important;
+}
+
+[data-theme='dark'] .dtr-page .navbar-brand-text,
+[data-theme='dark'] .dtr-page .navbar-title,
+[data-theme='dark'] .dtr-page .nav-action-btn,
+[data-theme='dark'] .dtr-monitor-page .navbar-brand-text,
+[data-theme='dark'] .dtr-monitor-page .navbar-title,
+[data-theme='dark'] .dtr-monitor-page .nav-action-btn {
+  color: #9ef06a !important;
+}
+
+[data-theme='dark'] .dtr-page .nav-action-btn,
+[data-theme='dark'] .dtr-monitor-page .nav-action-btn {
+  background: linear-gradient(165deg, #163820 0%, #0f2416 100%) !important;
+  border-color: rgba(158, 240, 106, 0.35) !important;
+  box-shadow: inset 0 1px 0 rgba(158, 240, 106, 0.12);
+}
+
+[data-theme='dark'] .dtr-page .nav-action-btn:hover,
+[data-theme='dark'] .dtr-monitor-page .nav-action-btn:hover {
+  background: rgba(158, 240, 106, 0.18) !important;
+  border-color: #9ef06a !important;
+  box-shadow:
+    0 0 12px rgba(158, 240, 106, 0.22),
+    inset 0 1px 0 rgba(158, 240, 106, 0.12) !important;
+}
+
+.dtr-monitor-page__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background-color: var(--dtr-monitor-bg);
+}
+
+.dtr-monitor-page__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto; /* luôn cuộn được khi zoom / nội dung cao */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 2px 4px;
+}
+
+.dtr-monitor-page__main > .machine-top-panel {
+  flex: 0 0 auto;
+}
+
+.dtr-monitor-page__charts {
+  flex: 1 1 auto;
+  min-height: 280px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dtr-monitor-page__charts-row {
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Desktop: 2 pie trái + biểu đồ số chai phải (sibling trực tiếp) */
+.dtr-monitor-page__charts-row--bottles {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  min-height: 280px;
+  height: 100%;
+  overflow: hidden;
+}
+
+/*
+ * Cột pie thẳng hàng dọc với thẻ tên máy.
+ * max-width 40% để luôn còn chỗ cho BIỂU ĐỒ THỐNG KÊ SỐ CHAI.
+ */
+.dtr-monitor-page__pies {
+  --dtr-g: 0.25rem;
+  --dtr-pies-ml: var(--dtr-g);
+  --dtr-pies-w: calc((2 / 3) * ((2 / 3) * (50% - var(--dtr-g)) - (2 * var(--dtr-g))));
+  flex: 0 1 var(--dtr-pies-w);
+  width: var(--dtr-pies-w);
+  max-width: 40%;
+  margin-left: var(--dtr-pies-ml);
+  min-width: 140px;
+  height: 100%;
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.dtr-monitor-page__pies > .dtr-pie-card {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.dtr-monitor-page__bottles-chart {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: 100%;
+  align-self: stretch;
+  display: flex;
+  min-height: 280px;
+}
+
+.dtr-monitor-page__bottles-chart > .machine-chart-card {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100% !important;
+  min-height: 280px !important;
+}
+
+.dtr-pie-card {
+  margin: 0;
+  padding: 0.35rem 0.45rem 0.45rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.dtr-pie-card__head {
+  flex: 0 0 auto;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 0;
+  padding: 0 2px;
+  min-height: 1.2rem;
+}
+
+.dtr-pie-card__title {
+  font-size: clamp(11px, 1.5vw, 13px) !important;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dtr-pie-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 2px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+/* Hình tròn pie scale theo khoảng trống thẻ (zoom nhỏ → thẻ to → pie to) */
+.dtr-pie-card__chart {
+  position: relative;
+  /* max(..., 96px) tránh cqi/cqb = 0 làm mất pie khi container chưa có size */
+  width: min(100%, max(96px, 100cqi, 100cqb));
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
+}
+
+.dtr-pie-card__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  line-height: 1.1;
+}
+
+.dtr-pie-card__center-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.dtr-pie-card__center-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #14532d;
+}
+
+[data-theme='dark'] .dtr-pie-card__center-label {
+  color: #86efac !important;
+}
+
+[data-theme='dark'] .dtr-pie-card__center-value {
+  color: #b8f28a !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .dtr-pie-card__ring {
+  border-color: rgba(158, 240, 106, 0.4);
+  background: rgba(15, 36, 22, 0.65);
+  box-shadow: inset 0 0 0 1px rgba(158, 240, 106, 0.18);
+}
+
+[data-theme='dark'] .dtr-monitor-page .dtr-bottle-total {
+  border-left-color: rgba(158, 240, 106, 0.28);
+}
+
+[data-theme='dark'] .dtr-monitor-page .dtr-bottle-total__track {
+  background: rgba(158, 240, 106, 0.1);
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-box > .fw-semibold,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-box > p.fw-semibold,
+[data-theme='dark'] .dtr-monitor-page .dtr-status-card__title,
+[data-theme='dark'] .dtr-monitor-page .dtr-pie-card__title {
+  color: #b8f28a !important;
+}
+
+/* Pie hiệu suất — style giống Mida (quạt đặc + badge % + legend) */
+.dtr-util-pie {
+  position: relative;
+}
+
+.dtr-util-pie__expand {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+}
+
+/* Pie Chạy/Dừng trong thẻ KPI — vừa ô, không chữ tiêu đề */
+.dtr-monitor-page .machine-top-panel__stat-box--util-pie {
+  padding: 2px !important;
+  overflow: hidden;
+}
+
+.dtr-monitor-page .machine-top-panel__stat-box--util-pie > .dtr-util-pie--compact,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-box--util-pie > .dtr-util-pie--compact,
+[data-theme='light'] .dtr-monitor-page .machine-top-panel__stat-box--util-pie > .dtr-util-pie--compact {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.dtr-util-pie--compact .dtr-util-pie__expand {
+  top: 1px;
+  right: 1px;
+}
+
+.dtr-util-pie--compact .dtr-util-pie__expand .mida-chart-expand-btn {
+  width: 22px;
+  height: 22px;
+  font-size: 0.65rem;
+}
+
+.dtr-util-pie--compact .dtr-pie-card__body {
+  padding: 0 !important;
+}
+
+.dtr-util-pie--compact .dtr-util-mida {
+  gap: 1px;
+}
+
+.dtr-util-pie--compact .dtr-util-mida__chart {
+  width: min(100%, max(52px, 100cqi, calc(100cqb - 14px)));
+  max-height: calc(100% - 14px);
+}
+
+.dtr-util-pie--compact .dtr-util-mida__legend {
+  gap: 6px;
+  transform: scale(0.88);
+  transform-origin: center top;
+}
+
+.dtr-util-pie--compact .dtr-util-mida__legend-item {
+  font-size: 0.58rem !important;
+}
+
+.dtr-util-pie--compact .dtr-util-mida__legend-item i {
+  width: 7px;
+  height: 7px;
+}
+
+.dtr-util-pie--compact .dtr-util-mida__empty {
+  font-size: 0.58rem;
+}
+
+/* Cột pie chỉ còn TỈ LỆ LOẠI CHAI */
+.dtr-monitor-page__pies--single {
+  grid-template-columns: 1fr !important;
+  grid-template-rows: 1fr !important;
+}
+
+.dtr-util-mida {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 4px;
+  container-type: size;
+}
+
+.dtr-util-mida__chart {
+  flex: 0 0 auto;
+  min-height: 0;
+  /* chừa chỗ legend ~22px; max(...,96px) tránh mất pie khi cq* = 0 */
+  width: min(100%, max(96px, 100cqi, calc(100cqb - 22px)));
+  max-width: 100%;
+  max-height: calc(100% - 22px);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dtr-util-mida__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+@keyframes dtr-util-pie-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes dtr-util-badge-in {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes dtr-util-legend-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dtr-util-mida__svg--anim {
+  transform-origin: 50% 50%;
+  transform-box: fill-box;
+  animation: dtr-util-pie-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dtr-util-mida__svg--anim > g:last-of-type {
+  animation: dtr-util-badge-in 0.45s ease-out 0.35s both;
+}
+
+.dtr-util-mida__legend {
+  animation: dtr-util-legend-in 0.4s ease-out 0.45s both;
+}
+
+.dtr-util-mida__empty {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-align: center;
+}
+
+.dtr-util-mida__legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.dtr-util-mida__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dtr-util-mida__legend-item i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dtr-util-mida__legend-item--run i {
+  background: #22c55e;
+}
+
+.dtr-util-mida__legend-item--stop i {
+  background: #ef4444;
+}
+
+[data-theme='dark'] .dtr-util-mida__legend-item {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .dtr-util-mida__empty {
+  color: #94a3b8;
+}
+
+.dtr-pie-card__ring {
+  width: min(100%, max(96px, 100cqi, 100cqb));
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 12px solid #d9ffc2;
+  background: var(--dtr-card-bg, #f3ffe9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(61, 139, 64, 0.18);
+}
+
+.dtr-pie-card__empty {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+  text-align: center;
+  max-width: 72%;
+  line-height: 1.2;
+}
+
+[data-theme='dark'] .dtr-pie-card__ring {
+  border-color: rgba(158, 240, 106, 0.35);
+  background: rgba(15, 23, 42, 0.35);
+}
+
+[data-theme='dark'] .dtr-pie-card__empty {
+  color: #94a3b8;
+}
+
+/* =========================
+ * Responsive — Sort DTR
+ * ========================= */
+
+@media (max-height: 820px) {
+  .dtr-monitor-page .machine-top-panel {
+    --machine-top-name-h: 56px;
+    --machine-top-stat-h: 74px;
+  }
+
+  .dtr-monitor-page .dtr-status-card__title {
+    font-size: 0.72rem;
+  }
+
+  .dtr-monitor-page .mida-status-range__btn {
+    font-size: 0.62rem;
+    padding: 0.22rem 0.35rem;
+  }
+}
+
+@media (max-height: 700px) {
+  .dtr-monitor-page .machine-top-panel {
+    --machine-top-name-h: 48px;
+    --machine-top-stat-h: 64px;
+  }
+}
+
+/*
+ * < xl / điện thoại:
+ * - Khóa khung viewport, cuộn trong .dtr-monitor-page__main
+ *   (Safari ổn định hơn document-scroll + overflow lồng nhau)
+ * - Pie trên, BIỂU ĐỒ THỐNG KÊ SỐ CHAI dưới (sibling, flex-column)
+ */
+@media (max-width: 1199.98px) {
+  html:has(.dtr-monitor-page),
+  body:has(.dtr-monitor-page),
+  #root:has(.dtr-monitor-page) {
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .dtr-monitor-page {
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .dtr-monitor-page__body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: hidden !important;
+  }
+
+  .dtr-monitor-page__main {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 24px !important;
+  }
+
+  .dtr-monitor-page .machine-top-panel {
+    --machine-top-name-h: 60px;
+    --machine-top-stat-h: 78px;
+    flex: 0 0 auto;
+  }
+
+  .dtr-monitor-page .machine-top-panel__col-alarms {
+    margin-top: 4px;
+  }
+
+  .dtr-monitor-page .dtr-status-card__plot {
+    min-height: 120px;
+  }
+
+  .dtr-monitor-page .navbar-title {
+    font-size: clamp(0.95rem, 2.2vw, 1.35rem) !important;
+    max-width: min(52vw, 420px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  .dtr-monitor-page__charts {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .dtr-monitor-page__charts-row,
+  .dtr-monitor-page__charts-row--bottles {
+    flex: 0 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Mobile: pie trên, BIỂU ĐỒ THỐNG KÊ SỐ CHAI dưới — luôn cuộn tới được */
+  .dtr-monitor-page__charts-row--bottles {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+    padding-bottom: 12px !important;
+  }
+
+  .dtr-monitor-page__pies {
+    --dtr-pies-w: 100% !important;
+    --dtr-pies-ml: 0px !important;
+    order: 1 !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    height: 220px !important;
+    min-height: 220px !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .dtr-monitor-page__pies > .dtr-pie-card {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .dtr-monitor-page__bottles-chart {
+    order: 2 !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    height: 400px !important;
+    min-height: 400px !important;
+    min-width: 0 !important;
+  }
+
+  .dtr-monitor-page__bottles-chart > .machine-chart-card {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 400px !important;
+    min-height: 400px !important;
+  }
+
+  .dtr-monitor-page__bottles-chart .dtr-bottle-total-wrap {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .dtr-monitor-page__bottles-chart .dtr-bottle-total-wrap__body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  /* Plot chiếm hết phần còn lại — tránh khoảng trống dưới trục hoành */
+  .dtr-monitor-page__bottles-chart .dtr-bottle-total-wrap__plot,
+  .dtr-monitor-page__bottles-chart .machine-chart-plot {
+    position: relative !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .dtr-monitor-page__bottles-chart .machine-chart-plot-inner {
+    position: absolute !important;
+    inset: 0 !important;
+    padding: 2px 4px 0 !important;
+  }
+
+  .dtr-monitor-page__bottles-chart .dtr-bottle-chart,
+  .dtr-monitor-page__bottles-chart .dtr-bottle-chart__plot {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .dtr-monitor-page__bottles-chart > .machine-chart-card.p-2,
+  .dtr-monitor-page__bottles-chart > .card.p-2 {
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0.2rem !important;
+  }
+
+  .dtr-monitor-page__bottles-chart .dtr-bottle-total {
+    padding-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .dtr-monitor-page__charts-row--bottles {
+    flex-direction: column !important;
+  }
+
+  .dtr-monitor-page__pies {
+    height: 200px !important;
+    min-height: 200px !important;
+  }
+
+  .dtr-monitor-page__bottles-chart,
+  .dtr-monitor-page__bottles-chart > .machine-chart-card {
+    height: 380px !important;
+    min-height: 380px !important;
+  }
+
+  .dtr-monitor-page__bottles-chart .dtr-bottle-total-wrap__plot,
+  .dtr-monitor-page__bottles-chart .machine-chart-plot {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+  }
+}
+
+/* Ảnh máy xuống dòng riêng (không cạnh tên máy / KPI) khi < lg hoặc zoom nhỏ */
+@media (max-width: 991.98px) {
+  .dtr-monitor-page .machine-top-panel__main-row {
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .dtr-monitor-page .machine-top-panel__stats-col,
+  .dtr-monitor-page .machine-top-panel__image-col {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .dtr-monitor-page .machine-top-panel__stats-col {
+    order: 1 !important;
+  }
+
+  .dtr-monitor-page .machine-top-panel__image-col {
+    order: 2 !important;
+    display: flex !important;
+    margin-top: 4px;
+  }
+
+  .dtr-monitor-page .machine-top-panel__image-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    aspect-ratio: 16 / 9;
+  }
+
+  .dtr-monitor-page .machine-top-panel__image-wrap img {
+    object-fit: cover;
+  }
+}
+
+/* < sm: phone */
+@media (max-width: 575.98px) {
+  .dtr-monitor-page__main {
+    padding: 2px;
+    gap: 6px;
+  }
+
+  .dtr-monitor-page .machine-top-panel {
+    --machine-top-name-h: 52px;
+    --machine-top-stat-h: 70px;
+  }
+
+  .dtr-monitor-page .machine-top-panel__stat-box > .fw-semibold,
+  .dtr-monitor-page .machine-top-panel__stat-box > p.fw-semibold {
+    font-size: 0.72rem !important;
+    white-space: normal !important;
+    -webkit-line-clamp: 2;
+  }
+
+  .dtr-monitor-page .dtr-status-card__head {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+
+  /* Thẻ chọn giờ/ngày/tháng/quý/năm nằm trên biểu đồ trạng thái */
+  .dtr-monitor-page .machine-top-panel__alarms-row {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+  }
+
+  .dtr-monitor-page .machine-top-panel__alarms-row > .order-1 {
+    order: 1;
+    margin-bottom: 4px;
+  }
+
+  .dtr-monitor-page .machine-top-panel__alarms-row > .order-2 {
+    order: 2;
+  }
+
+  .dtr-monitor-page .dtr-status-card.machine-top-panel__alarms {
+    height: auto !important;
+    min-height: 180px !important;
+    max-height: none !important;
+  }
+
+  /*
+   * Mobile: bỏ height cố định + overflow:hidden của thẻ thời gian
+   * (nếu không, lưới tháng/năm và input ngày bị co về 0 / bị cắt).
+   */
+  .dtr-monitor-page .machine-top-panel__alarms--time {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    width: 100%;
+    padding: 0.45rem 0.5rem !important;
+  }
+
+  .dtr-monitor-page .machine-time-range-panel {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: 100%;
+    gap: 0.45rem;
+  }
+
+  .dtr-monitor-page .machine-view-mode-body {
+    flex: 0 0 auto !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-picker {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-picker__grid {
+    flex: 0 0 auto !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    gap: 0.28rem !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-picker__grid--months {
+    grid-template-rows: repeat(3, minmax(2rem, auto)) !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-picker__grid--years {
+    grid-auto-rows: minmax(2rem, auto) !important;
+    align-content: start !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-chip {
+    min-height: 2rem;
+    font-size: 0.78rem !important;
+    padding: 0.28rem 0.2rem !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-picker__caption {
+    font-size: 0.72rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-date-input {
+    min-height: 2.5rem !important;
+    font-size: 1rem !important;
+    padding: 0.5rem 0.65rem !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-picker--date {
+    padding: 0.35rem 0.1rem 0.5rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .dtr-monitor-page__charts-row--bottles {
+    flex-direction: column !important;
+  }
+
+  /* Điện thoại: 2 pie nằm ngang */
+  .dtr-monitor-page__pies {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 1fr !important;
+    height: 200px !important;
+    min-height: 200px !important;
+    gap: 4px !important;
+  }
+
+  .dtr-monitor-page__pies > .dtr-pie-card {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+  }
+
+  .dtr-monitor-page__pies .dtr-pie-card__title {
+    font-size: clamp(9px, 2.6vw, 12px) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dtr-monitor-page__bottles-chart,
+  .dtr-monitor-page__bottles-chart > .machine-chart-card {
+    height: 340px !important;
+    min-height: 340px !important;
+  }
+
+  .dtr-monitor-page__bottles-chart .dtr-bottle-total-wrap {
+    --dtr-side-col-gap: 4px;
+    --dtr-side-col-w: calc(44px + var(--dtr-side-col-gap));
+  }
+
+  .dtr-monitor-page__bottles-chart .dtr-bottle-total-wrap__plot,
+  .dtr-monitor-page__bottles-chart .machine-chart-plot {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  .dtr-monitor-page__bottles-chart .machine-chart-plot-inner {
+    padding-bottom: 0 !important;
+  }
+
+  .dtr-monitor-page__bottles-chart > .machine-chart-card.p-2,
+  .dtr-monitor-page__bottles-chart > .card.p-2 {
+    padding-top: 0 !important;
+    padding-bottom: 0.1rem !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .dtr-monitor-page__bottles-chart .dtr-bottles-panel-tabs__body {
+    padding: 0.35rem 0.35rem 0;
+  }
+
+  /* Đảm bảo rule sau media không kéo min-height card về 280px che mất layout */
+  .dtr-monitor-page__bottles-chart .machine-chart-card {
+    min-height: 340px !important;
+    height: 340px !important;
+  }
+
+  .dtr-bottle-total__title,
+  .dtr-bottle-total-head__main {
+    font-size: 0.68rem !important;
+  }
+
+  .dtr-monitor-page .navbar-app {
+    padding-left: 0.6rem !important;
+    padding-right: 0.6rem !important;
+  }
+
+  .dtr-monitor-page .navbar-brand img {
+    width: 120px !important;
+    height: auto !important;
+  }
+}
+
+
+/* Điện thoại lớn / landscape: cột thời gian hẹp vẫn hiện đủ tháng–năm */
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .dtr-monitor-page .machine-view-mode-picker__grid--months {
+    grid-template-rows: repeat(3, minmax(1.5rem, 1fr)) !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-picker__grid--years {
+    grid-auto-rows: minmax(1.5rem, auto) !important;
+  }
+
+  .dtr-monitor-page .machine-view-mode-date-input {
+    min-height: 2.1rem !important;
+    font-size: 0.85rem !important;
+  }
+}
+
+/* Tránh chữ KPI / legend tràn khi cột hẹp */
+.dtr-monitor-page .machine-top-panel__stat-box,
+.dtr-monitor-page .machine-top-panel__name,
+.dtr-monitor-page .dtr-status-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dtr-monitor-page .machine-top-panel__handover-date {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: var(--dtr-text-muted, #166534);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__handover-date {
+  color: var(--dtr-text-muted, #86efac);
+}
+
+.dtr-monitor-page .dtr-bottle-chart__legend {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Legend của thẻ số chai: chỉ nằm trên vùng plot, không đè cột TỔNG */
+.dtr-bottle-total-wrap > .dtr-bottle-chart__legend--with-total {
+  box-sizing: border-box;
+  width: calc(100% - var(--dtr-side-col-w));
+  max-width: calc(100% - var(--dtr-side-col-w));
+  align-self: flex-start;
+  overflow: hidden;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.dtr-monitor-page .dtr-bottle-total-wrap__titles {
+  min-width: 0;
+}
+
+.dtr-monitor-page__charts-row > [class*='col-'] {
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.dtr-monitor-page__charts-row .machine-chart-card {
+  flex: 1 1 auto;
+  height: 100%;
+  margin-bottom: 0;
+}
+
+.dtr-monitor-page__bottles-chart .machine-chart-card {
+  min-height: 280px !important;
+}
+
+/* Mobile: giữ chiều cao thẻ chai (đè rule min-height 280 ở trên) */
+@media (max-width: 1199.98px) {
+  .dtr-monitor-page__bottles-chart,
+  .dtr-monitor-page__bottles-chart > .machine-chart-card,
+  .dtr-monitor-page__bottles-chart .machine-chart-card {
+    height: 400px !important;
+    min-height: 400px !important;
+    max-height: none !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .dtr-monitor-page__bottles-chart,
+  .dtr-monitor-page__bottles-chart > .machine-chart-card,
+  .dtr-monitor-page__bottles-chart .machine-chart-card {
+    height: 380px !important;
+    min-height: 380px !important;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .dtr-monitor-page__bottles-chart,
+  .dtr-monitor-page__bottles-chart > .machine-chart-card,
+  .dtr-monitor-page__bottles-chart .machine-chart-card {
+    height: 340px !important;
+    min-height: 340px !important;
+  }
+}
+
+.dtr-monitor-page__charts-row .machine-chart-plot,
+.dtr-monitor-page__charts-row .machine-chart-plot-inner {
+  flex: 1 1 auto;
+}
+
+.dtr-monitor-page__bottles-chart .dtr-bottle-total-wrap {
+  height: 100%;
+  min-height: 0;
+}
+
+.dtr-monitor-page__bottles-chart .dtr-bottle-total-wrap__body {
+  flex: 1 1 auto;
+  min-height: 180px;
+}
+
+.dtr-monitor-page__bottles-chart .dtr-bottle-total-wrap__plot,
+.dtr-monitor-page__bottles-chart .dtr-bottle-chart,
+.dtr-monitor-page__bottles-chart .dtr-bottle-chart__plot,
+.dtr-monitor-page__bottles-chart .machine-chart-plot {
+  min-height: 180px !important;
+  position: relative;
+}
+
+/* Light: thẻ xanh neon sáng */
+.dtr-monitor-page .bg-white,
+.dtr-monitor-page .card,
+.dtr-monitor-page .machine-chart-card,
+.dtr-monitor-page .machine-top-panel__name,
+.dtr-monitor-page .machine-top-panel__stat-box,
+.dtr-monitor-page .machine-top-panel__image-wrap,
+.dtr-monitor-page .machine-top-panel__alarms,
+.dtr-monitor-page .machine-top-panel__alarms--list,
+.dtr-monitor-page .machine-top-panel__alarms--time,
+.dtr-monitor-page .dtr-status-card,
+.dtr-monitor-page .dtr-pie-card,
+[data-theme='light'] .dtr-monitor-page .bg-white,
+[data-theme='light'] .dtr-monitor-page .card,
+[data-theme='light'] .dtr-monitor-page .machine-chart-card,
+[data-theme='light'] .dtr-monitor-page .machine-top-panel__name,
+[data-theme='light'] .dtr-monitor-page .machine-top-panel__stat-box,
+[data-theme='light'] .dtr-monitor-page .machine-top-panel__image-wrap,
+[data-theme='light'] .dtr-monitor-page .machine-top-panel__alarms,
+[data-theme='light'] .dtr-monitor-page .dtr-status-card,
+[data-theme='light'] .dtr-monitor-page .dtr-pie-card {
+  background: linear-gradient(
+    135deg,
+    var(--dtr-card-glow) 0%,
+    var(--dtr-card-bg) 48%,
+    var(--dtr-card-bg-deep) 100%
+  ) !important;
+  border-color: var(--dtr-card-border) !important;
+  box-shadow:
+    0 1px 2px rgba(46, 125, 50, 0.08),
+    0 4px 12px rgba(76, 175, 80, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75) !important;
+}
+
+/* Dark: toàn bộ thẻ — nền xanh đậm + viền neon */
+[data-theme='dark'] .dtr-monitor-page .bg-white,
+[data-theme='dark'] .dtr-monitor-page .card,
+[data-theme='dark'] .dtr-monitor-page .machine-chart-card,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__name,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__stat-box,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__image-wrap,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__alarms,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__alarms--list,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__alarms--time,
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__status-icon,
+[data-theme='dark'] .dtr-monitor-page .dtr-status-card,
+[data-theme='dark'] .dtr-monitor-page .dtr-pie-card,
+[data-theme='dark'] .dtr-monitor-page .dtr-util-pie {
+  background:
+    radial-gradient(ellipse 70% 55% at 100% 100%, rgba(158, 240, 106, 0.12) 0%, transparent 58%),
+    linear-gradient(145deg, #163820 0%, #122c1a 48%, #0c1f13 100%) !important;
+  border-color: rgba(158, 240, 106, 0.32) !important;
+  color: var(--dtr-text) !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.28),
+    0 0 14px rgba(158, 240, 106, 0.08),
+    inset 0 1px 0 rgba(158, 240, 106, 0.1) !important;
+}
+
+/* Thẻ BIỂU ĐỒ THỐNG KÊ SỐ CHAI — light */
+.dtr-monitor-page .dtr-monitor-page__bottles-chart > .machine-chart-card,
+.dtr-monitor-page .dtr-monitor-page__bottles-chart > .card,
+[data-theme='light'] .dtr-monitor-page .dtr-monitor-page__bottles-chart > .machine-chart-card,
+[data-theme='light'] .dtr-monitor-page .dtr-monitor-page__bottles-chart > .card {
+  background:
+    radial-gradient(ellipse 65% 50% at 100% 100%, rgba(158, 240, 106, 0.28) 0%, transparent 60%),
+    linear-gradient(135deg, #f8fff2 0%, #f3ffe9 42%, #eaffd6 72%, #d9ffc2 100%) !important;
+  border: 1px solid #9ef06a !important;
+  box-shadow:
+    0 1px 2px rgba(46, 125, 50, 0.1),
+    0 6px 18px rgba(126, 217, 87, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+}
+
+.dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-total-head__main,
+.dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-total__title,
+.dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-total__sum,
+.dtr-monitor-page .dtr-monitor-page__bottles-chart .chart-title-brand,
+.dtr-monitor-page .dtr-monitor-page__bottles-chart .machine-chart-head {
+  color: #14532d !important;
+}
+
+/* Dark: thẻ số chai cùng tông các thẻ còn lại */
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart > .machine-chart-card,
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart > .card {
+  background:
+    radial-gradient(ellipse 70% 55% at 100% 100%, rgba(158, 240, 106, 0.14) 0%, transparent 58%),
+    linear-gradient(145deg, #163820 0%, #122c1a 48%, #0c1f13 100%) !important;
+  border: 1px solid rgba(158, 240, 106, 0.32) !important;
+  color: var(--dtr-text) !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.28),
+    0 0 14px rgba(158, 240, 106, 0.08),
+    inset 0 1px 0 rgba(158, 240, 106, 0.1) !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-total-head__main,
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-total__title,
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-total__sum,
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .chart-title-brand,
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .machine-chart-head,
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-chart__legend-item,
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .text-brand,
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .text-dark {
+  color: #b8f28a !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-total {
+  border-left-color: rgba(158, 240, 106, 0.28) !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .dtr-bottle-total__track {
+  background: rgba(158, 240, 106, 0.1) !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .dtr-monitor-page__bottles-chart .mida-chart-expand-btn--plenma {
+  color: #9ef06a !important;
+  border-color: rgba(158, 240, 106, 0.35) !important;
+  background: rgba(15, 36, 22, 0.85) !important;
+}
+
+.dtr-bottle-expand-surface {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.dtr-bottle-expand-surface .dtr-bottle-chart,
+.dtr-bottle-expand-surface .dtr-bottle-chart__plot {
+  height: 100%;
+  min-height: 0;
+}
+
+.dtr-monitor-page .machine-top-panel__status-icon--stopped {
+  background: linear-gradient(
+    135deg,
+    var(--dtr-card-glow) 0%,
+    var(--dtr-card-bg) 48%,
+    var(--dtr-card-bg-deep) 100%
+  ) !important;
+  border-color: var(--dtr-card-border) !important;
+}
+
+.dtr-monitor-page .machine-top-panel__status-icon--running {
+  background-color: #c8ff9e !important;
+  border-color: #7ed957 !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-top-panel__status-icon--running {
+  background:
+    radial-gradient(ellipse 60% 60% at 50% 40%, rgba(158, 240, 106, 0.28) 0%, transparent 70%),
+    linear-gradient(160deg, #1a3d24 0%, #0f2416 100%) !important;
+  border-color: #9ef06a !important;
+  box-shadow: 0 0 14px rgba(158, 240, 106, 0.22) !important;
+}
+
+.dtr-monitor-page .machine-view-mode-segment {
+  background: var(--dtr-chip-bg) !important;
+  border-color: var(--dtr-card-border) !important;
+}
+
+.dtr-monitor-page .mida-status-range {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  padding: 0;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+.dtr-monitor-page .mida-status-range__btn {
+  border: 1px solid var(--dtr-card-border);
+  background: transparent;
+  color: #334155;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.28rem 0.45rem;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dtr-monitor-page .mida-status-range__btn:hover {
+  border-color: #78d94f;
+  color: #3d8b40;
+}
+
+[data-theme='dark'] .dtr-monitor-page .mida-status-range__btn {
+  border-color: rgba(158, 240, 106, 0.35);
+  color: #b8f28a !important;
+  background: rgba(15, 36, 22, 0.55);
+}
+
+[data-theme='dark'] .dtr-monitor-page .mida-status-range__btn:hover {
+  border-color: #9ef06a;
+  color: #dcfce7 !important;
+  background: rgba(158, 240, 106, 0.14);
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-segment {
+  background: rgba(158, 240, 106, 0.1) !important;
+  border-color: rgba(158, 240, 106, 0.28) !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-chip:not(.machine-view-mode-chip--active),
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-segment__btn:not(.machine-view-mode-segment__btn--active) {
+  color: #b8f28a !important;
+  background: rgba(15, 36, 22, 0.65) !important;
+  border-color: rgba(158, 240, 106, 0.28) !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-date-input {
+  background: rgba(15, 36, 22, 0.85) !important;
+  border-color: rgba(158, 240, 106, 0.32) !important;
+  color: #dcfce7 !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-picker__caption {
+  color: #86efac !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-segment__btn--active,
+[data-theme='dark'] .dtr-monitor-page .machine-view-mode-chip--active,
+[data-theme='dark'] .dtr-monitor-page .mida-status-range__btn.is-active,
+[data-theme='dark'] .dtr-monitor-page .mida-status-range__btn.active {
+  background: #166534 !important;
+  border-color: #9ef06a !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(158, 240, 106, 0.2);
+}
+
+.dtr-monitor-page .mida-status-range__btn--custom {
+  min-width: 4.2rem;
+}
+
+.dtr-monitor-page .machine-view-mode-segment__btn--active,
+.dtr-monitor-page .machine-view-mode-segment__btn.is-active,
+.dtr-monitor-page .machine-view-mode-segment__btn.active,
+.dtr-monitor-page .machine-view-mode-chip--active,
+.dtr-monitor-page .machine-view-mode-chip.is-active,
+.dtr-monitor-page .machine-view-mode-chip.active,
+.dtr-monitor-page .mida-status-range__btn.is-active,
+.dtr-monitor-page .mida-status-range__btn.active,
+.dtr-monitor-page .mida-status-range__btn.is-active:hover {
+  background: #166534 !important;
+  border-color: #14532d !important;
+  color: #ffffff !important;
+}
+
+/* Online / Offline trên navbar trang giám sát */
+.dtr-online-toggle {
+  display: inline-flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+  border: 1px solid var(--dtr-card-border, #b6ef8f);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--dtr-chip-bg, #d9ffc2);
+}
+
+.dtr-online-toggle__btn {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--dtr-text, #14532d);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dtr-online-toggle__btn + .dtr-online-toggle__btn {
+  border-left: 1px solid var(--dtr-card-border, #b6ef8f);
+}
+
+.dtr-online-toggle__btn.is-active {
+  background: var(--dtr-chip-active, #9ef06a);
+  color: #0b1f12;
+}
+
+.dtr-online-toggle__btn:not(.is-active):hover {
+  background: rgba(158, 240, 106, 0.28);
+}
+
+[data-theme='dark'] .dtr-online-toggle {
+  border-color: rgba(158, 240, 106, 0.35);
+  background: rgba(158, 240, 106, 0.1);
+}
+
+[data-theme='dark'] .dtr-online-toggle__btn {
+  color: var(--dtr-text, #b8f28a);
+}
+
+[data-theme='dark'] .dtr-online-toggle__btn + .dtr-online-toggle__btn {
+  border-left-color: rgba(158, 240, 106, 0.35);
+}
+
+[data-theme='dark'] .dtr-online-toggle__btn.is-active {
+  color: #0b1f12;
+}
+
+@media (max-width: 575.98px) {
+  .dtr-online-toggle__btn {
+    padding: 0.26rem 0.55rem;
+    font-size: 0.66rem;
+  }
+}
+
+/* Tab kéo mép trái — mở cây máy trên mobile/tablet (<1200px), giống Mida */
+.dtr-sidebar-pull {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  z-index: 1045;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  width: 1.55rem;
+  height: 4.4rem;
+  padding: 0;
+  margin: 0;
+  border: 1px solid rgba(126, 217, 87, 0.55);
+  border-left: none;
+  border-radius: 0 0.7rem 0.7rem 0;
+  background: linear-gradient(180deg, #9ef06a 0%, #4ade80 55%, #16a34a 100%);
+  color: #0b1f12;
+  box-shadow: 2px 0 12px rgba(74, 222, 128, 0.35);
+  transform: translate(-0.72rem, -50%);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, width 0.22s ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dtr-sidebar-pull__grip {
+  width: 0.22rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: rgba(11, 31, 18, 0.55);
+  box-shadow: 4px 0 0 rgba(11, 31, 18, 0.22);
+}
+
+.dtr-sidebar-pull__icon {
+  font-size: 0.72rem;
+  line-height: 1;
+  opacity: 0.95;
+}
+
+.dtr-sidebar-pull:hover,
+.dtr-sidebar-pull:focus-visible {
+  transform: translate(0, -50%);
+  width: 1.85rem;
+  box-shadow: 4px 0 16px rgba(74, 222, 128, 0.45);
+  outline: none;
+}
+
+.dtr-sidebar-pull:active {
+  filter: brightness(0.96);
+}
+
+@media (hover: none) {
+  .dtr-sidebar-pull {
+    transform: translate(-0.35rem, -50%);
+    width: 1.7rem;
+  }
+
+  .dtr-sidebar-pull:active {
+    transform: translate(0, -50%);
+  }
+}
+
+[data-theme='dark'] .dtr-sidebar-pull {
+  border-color: rgba(158, 240, 106, 0.45);
+  background: linear-gradient(180deg, #163820 0%, #122c1a 50%, #0c1f13 100%);
+  color: #9ef06a;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='dark'] .dtr-sidebar-pull__grip {
+  background: rgba(158, 240, 106, 0.75);
+  box-shadow: 4px 0 0 rgba(158, 240, 106, 0.3);
+}
+
+.dtr-machines-offcanvas__header {
+  padding: 0.55rem 0.75rem 0.35rem;
+  margin-bottom: 0;
+}
+
+.dtr-machines-offcanvas__header .machine-tree-sidebar__title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.dtr-machines-offcanvas__body {
+  padding: 0.35rem 0.65rem 0.75rem;
+}
+
+/* Sidebar cây máy — tông xanh lá neon DTR */
+.dtr-monitor-page,
+.dtr-monitor-page .machine-tree-sidebar-wrapper,
+.dtr-monitor-page .machine-tree-sidebar,
+.dtr-monitor-page .offcanvas {
+  --tree-bg: #eefbe6;
+  --tree-text: #3f6212;
+  --tree-text-active: #14532d;
+  --tree-text-level0: #166534;
+  --tree-text-icon-default: #65a30d;
+  --tree-text-icon-level0: #16a34a;
+  --tree-text-icon-level1: #22c55e;
+  --tree-border: rgba(158, 240, 106, 0.55);
+  --tree-line: #4ade80;
+  --tree-divider: rgba(74, 222, 128, 0.28);
+  --tree-active-bg: rgba(158, 240, 106, 0.28);
+  --tree-active-border: #7ed957;
+  --tree-hover-bg: #e2ffcf;
+  --tree-empty-icon: #bbf7d0;
+}
+
+[data-theme='dark'] .dtr-monitor-page,
+[data-theme='dark'] .dtr-monitor-page .machine-tree-sidebar-wrapper,
+[data-theme='dark'] .dtr-monitor-page .machine-tree-sidebar,
+[data-theme='dark'] .dtr-monitor-page .offcanvas {
+  --tree-bg: #0f2416;
+  --tree-text: #dcfce7;
+  --tree-text-active: #ffffff;
+  --tree-text-level0: #9ef06a;
+  --tree-text-icon-default: rgba(158, 240, 106, 0.72);
+  --tree-text-icon-level0: #9ef06a;
+  --tree-text-icon-level1: #4ade80;
+  --tree-border: rgba(158, 240, 106, 0.28);
+  --tree-line: #9ef06a;
+  --tree-divider: rgba(158, 240, 106, 0.18);
+  --tree-active-bg: rgba(158, 240, 106, 0.18);
+  --tree-active-border: #9ef06a;
+  --tree-hover-bg: #163820;
+  --tree-empty-icon: rgba(158, 240, 106, 0.4);
+}
+
+.dtr-monitor-page .machine-tree-sidebar,
+[data-theme='light'] .dtr-monitor-page .machine-tree-sidebar {
+  background:
+    radial-gradient(ellipse 90% 40% at 0% 0%, rgba(158, 240, 106, 0.35) 0%, transparent 55%),
+    linear-gradient(180deg, #f8fff2 0%, var(--tree-bg) 55%, #e2ffcf 100%);
+  border-left-color: var(--tree-border);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.85),
+    -4px 0 18px rgba(76, 175, 80, 0.12);
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-tree-sidebar {
+  background:
+    radial-gradient(ellipse 90% 40% at 0% 0%, rgba(158, 240, 106, 0.22) 0%, transparent 55%),
+    linear-gradient(180deg, #163820 0%, var(--tree-bg) 55%, #0a1a10 100%) !important;
+  border-left-color: rgba(158, 240, 106, 0.28) !important;
+  box-shadow:
+    inset 1px 0 0 rgba(158, 240, 106, 0.1),
+    -4px 0 24px rgba(74, 222, 128, 0.12) !important;
+}
+
+.dtr-monitor-page .tree-item--active {
+  color: var(--tree-text-active) !important;
+  background: var(--tree-active-bg) !important;
+  border-left-color: var(--tree-active-border) !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-tree-sidebar .tree-item--active {
+  box-shadow:
+    inset 0 0 20px rgba(158, 240, 106, 0.12),
+    0 0 10px rgba(158, 240, 106, 0.16);
+}
+
+.dtr-monitor-page .machine-tree-sidebar__title,
+.dtr-monitor-page .offcanvas .machine-tree-sidebar__title {
+  color: #14532d !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .machine-tree-sidebar__title,
+[data-theme='dark'] .dtr-monitor-page .offcanvas .machine-tree-sidebar__title {
+  color: #9ef06a !important;
+}
+
+[data-theme='dark'] .dtr-monitor-page .offcanvas {
+  background: #0f2416;
+  border-color: rgba(158, 240, 106, 0.28);
+}
+
+[data-theme='dark'] .dtr-monitor-page .offcanvas .machine-tree-sidebar {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.dtr-monitor-page .machine-top-panel {
+  /* Cao hơn chút để biểu đồ trạng thái to hơn */
+  --machine-top-name-h: 72px;
+  --machine-top-stat-h: 92px;
+}
+
+/*
+ * Desktop / tablet (≥ sm): thẻ thời gian và biểu đồ trạng thái
+ * luôn cùng chiều cao (stretch theo hàng), kể cả khi zoom.
+ */
+@media (min-width: 576px) {
+  .dtr-monitor-page .machine-top-panel__alarms-row {
+    display: flex !important;
+    align-items: stretch !important;
+    height: auto !important;
+    min-height: var(--machine-top-stack-h) !important;
+    max-height: none !important;
+  }
+
+  .dtr-monitor-page .machine-top-panel__alarms-row > [class*='col-'] {
+    display: flex !important;
+    align-items: stretch !important;
+    min-height: 0;
+  }
+
+  .dtr-monitor-page .machine-top-panel__alarms-row .machine-top-panel__alarms,
+  .dtr-monitor-page .machine-top-panel__alarms-row .machine-top-panel__alarms--time,
+  .dtr-monitor-page .machine-top-panel__alarms-row .dtr-status-card {
+    flex: 1 1 auto !important;
+    width: 100%;
+    height: 100% !important;
+    min-height: var(--machine-top-stack-h) !important;
+    max-height: none !important;
+    align-self: stretch !important;
+  }
+
+  .dtr-monitor-page .machine-top-panel__alarms-row .machine-time-range-panel {
+    height: 100% !important;
+    min-height: 0 !important;
+    flex: 1 1 auto;
+  }
+
+  .dtr-monitor-page .machine-top-panel__alarms-row .machine-view-mode-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+  }
+
+  .dtr-monitor-page .machine-top-panel__alarms-row .machine-view-mode-picker {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .dtr-monitor-page .machine-top-panel__alarms-row .machine-view-mode-picker__grid {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+  }
+}
+
+.dtr-monitor-page .machine-top-panel__alarms--list {
+  overflow: hidden;
+}
+
+.dtr-monitor-page .machine-top-panel__alarms--list .mida-power-chart {
+  height: 100%;
+  min-height: 0;
+}
+
+/* Siết khoảng cách mép trên → tiêu đề; nhường chỗ cho plot */
+.dtr-monitor-page .dtr-status-card.machine-top-panel__alarms {
+  padding: 0 0.35rem 0.2rem !important;
+}
+
+.dtr-monitor-page .dtr-status-card__head {
+  padding: 2px 4px 0;
+  margin: 0;
+  min-height: 0;
+  line-height: 1.1;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.dtr-monitor-page .dtr-status-card__title {
+  font-size: 0.78rem;
+  line-height: 1.15;
+}
+
+/* KPI titles = cùng cỡ chữ BIỂU ĐỒ TRẠNG THÁI; chữ to → xuống dòng, không tràn */
+.dtr-monitor-page .machine-top-panel__stat-box > .fw-semibold,
+.dtr-monitor-page .machine-top-panel__stat-box > p.fw-semibold {
+  font-size: 0.78rem !important;
+  line-height: 1.2 !important;
+  font-weight: 700 !important;
+  white-space: normal !important;
+  overflow-wrap: break-word;
+  word-break: normal;
+  max-width: 100%;
+  padding: 0 3px;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+}
+
+.dtr-monitor-page .machine-top-panel__stat-box {
+  overflow: hidden;
+}
+
+.dtr-monitor-page .dtr-status-card__plot {
+  margin-top: 0;
+  padding: 0;
+}
+
+html:has(.dtr-page),
+body:has(.dtr-page),
+#root:has(.dtr-page) {
+  background-color: var(--dtr-monitor-bg, #e8f8dc);
+}
+
 .dtr-page {
   min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 0% 0%, rgba(158, 240, 106, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 45% at 100% 100%, rgba(126, 217, 87, 0.18) 0%, transparent 50%),
+    linear-gradient(165deg, #f3ffe9 0%, var(--dtr-monitor-bg, #e8f8dc) 42%, #d9ffc2 100%);
+  color: var(--dtr-text, #14532d);
+}
+
+.dtr-page__body {
   padding: 1.25rem 1.25rem 2.5rem;
   max-width: 1100px;
   margin: 0 auto;
-}
-
-.dtr-page__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.dtr-page__eyebrow {
-  margin: 0 0 0.2rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--brand-color, #20409a);
-}
-
-.dtr-page__title {
-  margin: 0;
-  font-size: clamp(1.4rem, 2.4vw, 1.85rem);
-  font-weight: 800;
-  color: var(--brand-color, #20409a);
-}
-
-.dtr-page__sub {
-  margin: 0.35rem 0 0;
-  color: #64748b;
-  font-size: 0.92rem;
-  max-width: 42rem;
-}
-
-.dtr-page__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.dtr-page__user {
-  font-size: 0.85rem;
-  color: #475569;
 }
 
 .dtr-page__toolbar {
@@ -55,21 +1882,137 @@
   margin-bottom: 1rem;
 }
 
+.dtr-page .btn-primary {
+  background: linear-gradient(180deg, #9ef06a 0%, #4ade80 100%);
+  border-color: #7ed957;
+  color: #0b1f12;
+  font-weight: 700;
+}
+
+.dtr-page .btn-primary:hover,
+.dtr-page .btn-primary:focus {
+  background: linear-gradient(180deg, #b6f58a 0%, #9ef06a 100%);
+  border-color: #9ef06a;
+  color: #0b1f12;
+}
+
+.dtr-page .btn-outline-secondary {
+  border-color: var(--dtr-card-border, #b6ef8f);
+  color: var(--dtr-text, #14532d);
+  background: rgba(243, 255, 233, 0.7);
+}
+
+.dtr-page .btn-outline-secondary:hover {
+  background: rgba(158, 240, 106, 0.28);
+  border-color: #9ef06a;
+  color: var(--dtr-text, #14532d);
+}
+
+.dtr-page .btn-outline-primary {
+  border-color: #7ed957;
+  color: #14532d;
+}
+
+.dtr-page .btn-outline-primary:hover {
+  background: rgba(158, 240, 106, 0.35);
+  border-color: #9ef06a;
+  color: #0b1f12;
+}
+
+.dtr-page .card,
+.dtr-page .dtr-form,
+.dtr-page .dtr-table-wrap {
+  background: linear-gradient(
+    135deg,
+    var(--dtr-card-glow) 0%,
+    var(--dtr-card-bg) 48%,
+    var(--dtr-card-bg-deep) 100%
+  ) !important;
+  border: 1px solid var(--dtr-card-border) !important;
+  box-shadow:
+    0 1px 2px rgba(46, 125, 50, 0.08),
+    0 4px 12px rgba(76, 175, 80, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75) !important;
+  color: var(--dtr-text, #14532d);
+}
+
+.dtr-page .form-control,
+.dtr-page .form-select {
+  background-color: rgba(248, 255, 242, 0.92);
+  border-color: var(--dtr-card-border, #b6ef8f);
+  color: var(--dtr-text, #14532d);
+}
+
+.dtr-page .form-control:focus,
+.dtr-page .form-select:focus {
+  border-color: #9ef06a;
+  box-shadow: 0 0 0 0.2rem rgba(158, 240, 106, 0.28);
+}
+
+.dtr-page .form-label {
+  color: var(--dtr-text, #14532d);
+  font-weight: 600;
+}
+
 .dtr-form {
   margin-bottom: 1rem;
+}
+
+.dtr-glossary-edit {
+  margin-top: 0.35rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--dtr-card-border, #b6ef8f);
+  border-radius: 0.45rem;
+  background: rgba(158, 240, 106, 0.08);
+}
+
+.dtr-glossary-edit__title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--dtr-text, #14532d);
+  margin-bottom: 0.15rem;
+}
+
+.dtr-glossary-edit__hint {
+  font-size: 0.75rem;
+  color: var(--dtr-text-muted, #166534);
+  opacity: 0.9;
+}
+
+.dtr-glossary-edit .form-label code {
+  font-weight: 700;
 }
 
 .dtr-table th {
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #64748b;
-  background: #f8fafc;
+  color: var(--dtr-text-muted, #166534);
+  background: rgba(158, 240, 106, 0.16);
   border-bottom-width: 1px;
+  border-color: rgba(126, 217, 87, 0.35);
 }
 
 .dtr-table td {
   font-size: 0.92rem;
+  color: var(--dtr-text, #14532d);
+  border-color: rgba(126, 217, 87, 0.22);
+}
+
+.dtr-page .dtr-table {
+  --bs-table-bg: transparent;
+  --bs-table-hover-bg: rgba(158, 240, 106, 0.14);
+  --bs-table-color: var(--dtr-text, #14532d);
+}
+
+.dtr-page .text-muted {
+  color: var(--dtr-text-muted, #166534) !important;
+}
+
+.dtr-page .alert-danger {
+  background: rgba(220, 53, 69, 0.1);
+  border-color: rgba(220, 53, 69, 0.28);
+  color: #842029;
 }
 
 .dtr-detail dt {
@@ -81,13 +2024,983 @@
   margin-bottom: 0.65rem;
 }
 
-[data-theme='dark'] .dtr-page__sub,
-[data-theme='dark'] .dtr-page__user,
+[data-theme='dark'] .dtr-page {
+  background:
+    radial-gradient(ellipse 75% 45% at 0% 0%, rgba(158, 240, 106, 0.14) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 40% at 100% 100%, rgba(158, 240, 106, 0.1) 0%, transparent 50%),
+    linear-gradient(165deg, #122c1a 0%, #07140c 50%, #0a1a10 100%);
+}
+
+[data-theme='dark'] html:has(.dtr-page),
+[data-theme='dark'] body:has(.dtr-page),
+[data-theme='dark'] #root:has(.dtr-page) {
+  background-color: #07140c;
+}
+
+[data-theme='dark'] .dtr-page .card,
+[data-theme='dark'] .dtr-page .dtr-form,
+[data-theme='dark'] .dtr-page .dtr-table-wrap {
+  background: linear-gradient(
+    145deg,
+    #163820 0%,
+    #122c1a 48%,
+    #0c1f13 100%
+  ) !important;
+  border-color: rgba(158, 240, 106, 0.32) !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(158, 240, 106, 0.1) !important;
+  color: var(--dtr-text, #b8f28a);
+}
+
+[data-theme='dark'] .dtr-page .form-control,
+[data-theme='dark'] .dtr-page .form-select {
+  background-color: rgba(15, 36, 22, 0.9);
+  border-color: rgba(158, 240, 106, 0.32);
+  color: #dcfce7;
+}
+
+[data-theme='dark'] .dtr-page .btn-outline-secondary {
+  background: rgba(15, 36, 22, 0.65);
+  border-color: rgba(158, 240, 106, 0.35);
+  color: #b8f28a;
+}
+
+[data-theme='dark'] .dtr-page .btn-outline-primary {
+  border-color: rgba(158, 240, 106, 0.45);
+  color: #9ef06a;
+}
+
 [data-theme='dark'] .dtr-table th,
 [data-theme='dark'] .dtr-detail dt {
-  color: #94a3b8;
+  color: #86efac;
 }
 
 [data-theme='dark'] .dtr-table th {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(158, 240, 106, 0.1);
+  border-color: rgba(158, 240, 106, 0.22);
+}
+
+[data-theme='dark'] .dtr-table td {
+  color: #dcfce7;
+  border-color: rgba(158, 240, 106, 0.14);
+}
+
+[data-theme='dark'] .dtr-page .dtr-table {
+  --bs-table-hover-bg: rgba(158, 240, 106, 0.1);
+  --bs-table-color: #dcfce7;
+}
+
+/* Legend 2 hàng phía trên biểu đồ số chai */
+.dtr-bottle-chart {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.dtr-bottle-chart__legend {
+  flex: 0 0 auto;
+}
+
+.dtr-monitor-page .dtr-bottle-chart__legend-item {
+  color: #166534 !important;
+}
+
+.dtr-bottle-chart__legend-item.is-hidden {
+  opacity: 0.38;
+  text-decoration: line-through;
+}
+
+.dtr-bottle-chart__legend-item.is-hidden span[aria-hidden='true'] {
+  opacity: 0.45;
+  filter: grayscale(0.35);
+}
+
+[data-theme='dark'] .dtr-monitor-page .dtr-bottle-chart__legend-item {
+  color: #b8f28a !important;
+}
+
+.dtr-bottle-chart__plot {
+  flex: 1 1 auto;
+  min-height: 180px;
+  position: relative;
+  width: 100%;
+}
+
+.dtr-bottle-chart__plot > canvas,
+.dtr-bottle-chart__plot > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 180px !important;
+}
+
+/* Cột TỔNG bên phải — giống Mida time/energy */
+.dtr-bottle-total-wrap {
+  --dtr-side-col-gap: 8px;
+  --dtr-side-col-w: calc(clamp(56px, 6%, 72px) + var(--dtr-side-col-gap));
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.dtr-bottle-total-wrap__titles {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+}
+
+.dtr-bottle-total-wrap__titles .dtr-bottle-total-head {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dtr-bottle-total-wrap__titles .dtr-bottle-total__title-block {
+  flex: 0 0 var(--dtr-side-col-w);
+  width: var(--dtr-side-col-w);
+  box-sizing: border-box;
+  padding-left: var(--dtr-side-col-gap);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.05;
+}
+
+/* Chữ TỔNG + số tổng nằm trên đầu cột stack */
+.dtr-bottle-total__head-block {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1px;
+  line-height: 1.05;
+  padding: 0 0 4px;
+  text-align: center;
+}
+
+.dtr-bottle-total__sum {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  text-align: center;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.dtr-bottle-total-wrap__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+.dtr-bottle-total-wrap__plot {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+
+.dtr-bottle-total-head {
+  display: flex !important;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+  flex-shrink: 0;
+}
+
+.dtr-bottle-total-head__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dtr-bottle-total-head__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  margin-left: 0.35rem;
+}
+
+.dtr-bottle-glossary {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.dtr-bottle-glossary__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  height: 1.7rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--dtr-card-border, #b6ef8f);
+  border-radius: 0.35rem;
+  background: var(--dtr-chip-bg, #d9ffc2);
+  color: var(--dtr-text, #14532d);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dtr-bottle-glossary__btn i {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.dtr-bottle-glossary__btn:hover,
+.dtr-bottle-glossary__btn.is-open {
+  background: var(--dtr-chip-active, #9ef06a);
+  color: #0b1f12;
+}
+
+.dtr-bottle-glossary__panel {
+  position: fixed;
+  z-index: 1080;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.45rem 0.5rem 0.55rem;
+  border: 1px solid var(--dtr-card-border, #b6ef8f);
+  border-radius: 0.45rem;
+  background: var(--dtr-card-bg, #f3ffe9);
+  box-shadow: 0 10px 28px rgba(15, 36, 22, 0.22);
+  color: var(--dtr-text, #14532d);
+  overflow: hidden;
+}
+
+.dtr-bottle-glossary__panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.dtr-bottle-glossary__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 0.15rem;
+}
+
+.dtr-bottle-glossary__close {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.15rem;
+  opacity: 0.75;
+}
+
+.dtr-bottle-glossary__close:hover {
+  opacity: 1;
+}
+
+.dtr-bottle-glossary__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.dtr-bottle-glossary__item {
+  display: grid;
+  grid-template-columns: 0.7rem minmax(5.2rem, auto) 1fr;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.dtr-bottle-glossary__swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.dtr-bottle-glossary__code {
+  font-weight: 800;
+  font-size: 0.68rem;
+  color: inherit;
+}
+
+.dtr-bottle-glossary__meaning {
+  opacity: 0.92;
+}
+
+[data-theme='dark'] .dtr-bottle-glossary__btn {
+  color: var(--dtr-text, #b8f28a);
+  border-color: rgba(158, 240, 106, 0.35);
+  background: rgba(158, 240, 106, 0.12);
+}
+
+[data-theme='dark'] .dtr-bottle-glossary__btn:hover,
+[data-theme='dark'] .dtr-bottle-glossary__btn.is-open {
+  color: #0b1f12;
+  background: var(--dtr-chip-active, #9ef06a);
+}
+
+[data-theme='dark'] .dtr-bottle-glossary__panel {
+  background: var(--dtr-card-bg, #122c1a);
+  border-color: rgba(158, 240, 106, 0.35);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  color: var(--dtr-text, #b8f28a);
+}
+
+.dtr-bottle-total {
+  flex: 0 0 var(--dtr-side-col-w);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: var(--dtr-side-col-w);
+  min-height: 0;
+  padding: 0 2px 0.2rem var(--dtr-side-col-gap);
+  border-left: 1px solid var(--dtr-card-border, rgba(15, 23, 42, 0.14));
+  box-sizing: border-box;
+}
+
+.dtr-bottle-total__title {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.05;
+  font-size: 0.78em !important;
+}
+
+.dtr-bottle-total__bars {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.dtr-bottle-total__col {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  max-width: 28px;
+  height: 100%;
+}
+
+.dtr-bottle-total__track {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 3px 3px 0 0;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+@keyframes dtr-total-stack-grow {
+  from {
+    transform: scaleY(0);
+    opacity: 0.35;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes dtr-legend-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dtr-bottle-total__stack {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  overflow: hidden;
+  border-radius: 3px 3px 0 0;
+  transform-origin: bottom center;
+  transition: height 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: dtr-total-stack-grow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dtr-bottle-total__seg {
+  width: 100%;
+  min-height: 1px;
+  flex-shrink: 1;
+  transition: flex-grow 0.45s ease;
+}
+
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item {
+  animation: dtr-legend-fade-in 0.35s ease-out both;
+}
+
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(1) { animation-delay: 0.02s; }
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(2) { animation-delay: 0.05s; }
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(3) { animation-delay: 0.08s; }
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(4) { animation-delay: 0.11s; }
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(5) { animation-delay: 0.14s; }
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(6) { animation-delay: 0.17s; }
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(7) { animation-delay: 0.2s; }
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(8) { animation-delay: 0.23s; }
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(9) { animation-delay: 0.26s; }
+.dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item:nth-child(n+10) { animation-delay: 0.3s; }
+
+.dtr-monitor-page .dtr-pie-card__chart {
+  animation: dtr-util-pie-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.dtr-monitor-page .dtr-pie-card__center {
+  animation: dtr-util-legend-in 0.4s ease-out 0.35s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtr-util-mida__svg--anim,
+  .dtr-util-mida__svg--anim > g:last-of-type,
+  .dtr-util-mida__legend,
+  .dtr-bottle-total__stack,
+  .dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item,
+  .dtr-monitor-page .dtr-pie-card__chart,
+  .dtr-monitor-page .dtr-pie-card__center {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+[data-theme='dark'] .dtr-bottle-total {
+  border-left-color: rgba(148, 163, 184, 0.28);
+}
+
+[data-theme='dark'] .dtr-bottle-total__track {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+/* Tooltip 2 cột khi hover cột biểu đồ số chai */
+.dtr-bottle-tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10050;
+  min-width: 300px;
+  max-width: min(440px, calc(100vw - 16px));
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+  color: #1e293b;
+  font-size: 11px;
+  line-height: 1.25;
+  transition: opacity 0.12s ease;
+}
+
+.dtr-bottle-tooltip--dark {
+  background: rgba(15, 23, 42, 0.96);
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #e2e8f0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.dtr-bottle-tooltip__title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.dtr-bottle-tooltip__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 14px;
+  row-gap: 3px;
+}
+
+.dtr-bottle-tooltip__item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.dtr-bottle-tooltip__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.dtr-bottle-tooltip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dtr-bottle-tooltip__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.dtr-bottle-tooltip__footer {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+  font-weight: 700;
+}
+
+/* ========== Phóng to 2 pie DTR ========== */
+.mida-chart-fs--plenma .mida-chart-fs__panel {
+  background: linear-gradient(135deg, #f8fff2 0%, #f3ffe9 48%, #e2ffcf 100%);
+  border-color: #b6ef8f;
+}
+
+.mida-chart-fs--plenma .mida-chart-fs__title {
+  color: #14532d;
+}
+
+[data-theme='dark'] .mida-chart-fs--plenma .mida-chart-fs__panel {
+  background: linear-gradient(135deg, #163820 0%, #0f2416 55%, #0a1a10 100%);
+  border-color: rgba(158, 240, 106, 0.28);
+}
+
+[data-theme='dark'] .mida-chart-fs--plenma .mida-chart-fs__title {
+  color: #9ef06a;
+}
+
+.mida-chart-fs__body--pie {
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0.35rem 0.75rem 0.75rem !important;
+  container-type: size;
+}
+
+.mida-chart-fs__body--pie > .dtr-pie-card {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0.25rem !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+/* Modal đã có tiêu đề — ẩn head trùng trong thẻ */
+.mida-chart-fs__body--pie .dtr-pie-card__head,
+.mida-chart-fs__body--pie .dtr-util-pie__expand {
+  display: none !important;
+}
+
+.mida-chart-fs__body--pie .dtr-pie-card__body {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0.5rem !important;
+  container-type: size;
+}
+
+/* Pie to, căn giữa — dùng vmin để không phụ thuộc cq*=0 */
+.mida-chart-fs__body--pie .dtr-pie-card__chart,
+.mida-chart-fs__body--pie .dtr-pie-card__ring {
+  width: min(72vmin, 100cqi, 100cqb, 560px) !important;
+  max-width: 92% !important;
+  max-height: 92% !important;
+  aspect-ratio: 1 / 1 !important;
+}
+
+.mida-chart-fs__body--pie .dtr-pie-card__chart > canvas,
+.mida-chart-fs__body--pie .dtr-pie-card__chart > div {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mida-chart-fs__body--pie .dtr-pie-card__center-label {
+  font-size: clamp(0.85rem, 2.2vmin, 1.15rem) !important;
+}
+
+.mida-chart-fs__body--pie .dtr-pie-card__center-value {
+  font-size: clamp(1.1rem, 3.2vmin, 1.75rem) !important;
+}
+
+.mida-chart-fs__body--pie .dtr-pie-card__empty {
+  font-size: clamp(0.9rem, 2.4vmin, 1.25rem) !important;
+}
+
+.mida-chart-fs__body--pie .dtr-util-mida {
+  width: 100% !important;
+  height: 100% !important;
+  gap: 0.75rem !important;
+  container-type: size;
+}
+
+.mida-chart-fs__body--pie .dtr-util-mida__chart {
+  width: min(68vmin, 100cqi, calc(100cqb - 2.75rem), 520px) !important;
+  max-width: 92% !important;
+  max-height: calc(100% - 2.75rem) !important;
+  aspect-ratio: 1 / 1 !important;
+}
+
+.mida-chart-fs__body--pie .dtr-util-mida__legend {
+  gap: 1.25rem !important;
+}
+
+.mida-chart-fs__body--pie .dtr-util-mida__legend-item {
+  font-size: clamp(0.9rem, 2.2vmin, 1.15rem) !important;
+}
+
+.mida-chart-fs__body--pie .dtr-util-mida__legend-item i {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.mida-chart-fs__body--pie .dtr-util-mida__empty {
+  font-size: clamp(0.95rem, 2.4vmin, 1.25rem) !important;
+}
+
+.mida-chart-expand-btn--plenma {
+  color: #14532d !important;
+  border-color: #b6ef8f !important;
+  background: rgba(243, 255, 233, 0.9) !important;
+}
+
+.mida-chart-expand-btn--plenma:hover {
+  background: rgba(158, 240, 106, 0.35) !important;
+  border-color: #7ed957 !important;
+}
+
+[data-theme='dark'] .mida-chart-expand-btn--plenma {
+  color: #9ef06a !important;
+  border-color: rgba(158, 240, 106, 0.35) !important;
+  background: rgba(15, 36, 22, 0.85) !important;
+}
+
+/* —— Tab Biểu đồ / Bảng loại chai — sát mép thẻ ngoài —— */
+.dtr-monitor-page__bottles-chart > .machine-chart-card.p-2,
+.dtr-monitor-page__bottles-chart > .card.p-2 {
+  padding-top: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-bottom: 0.5rem !important;
+  overflow: hidden;
+}
+
+.dtr-bottles-panel-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 0;
+}
+
+.dtr-bottles-panel-tabs__btn {
+  appearance: none;
+  flex: 1 1 0;
+  width: 50%;
+  min-width: 0;
+  border: none;
+  border-bottom: 1px solid var(--dtr-card-border, #b6ef8f);
+  border-radius: 0;
+  background: var(--dtr-chip-bg, #d9ffc2);
+  color: var(--dtr-text, #14532d);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.5rem;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dtr-bottles-panel-tabs__btn + .dtr-bottles-panel-tabs__btn {
+  border-left: 1px solid var(--dtr-card-border, #b6ef8f);
+}
+
+.dtr-bottles-panel-tabs__btn:hover {
+  filter: brightness(1.05);
+}
+
+.dtr-bottles-panel-tabs__btn.is-active {
+  background: var(--dtr-chip-active, #9ef06a);
+  color: #0b1f12;
+  border-bottom-color: var(--dtr-chip-active, #9ef06a);
+}
+
+[data-theme='dark'] .dtr-bottles-panel-tabs__btn {
+  color: var(--dtr-text, #b8f28a);
+  border-bottom-color: rgba(158, 240, 106, 0.32);
+}
+
+[data-theme='dark'] .dtr-bottles-panel-tabs__btn + .dtr-bottles-panel-tabs__btn {
+  border-left-color: rgba(158, 240, 106, 0.32);
+}
+
+[data-theme='dark'] .dtr-bottles-panel-tabs__btn.is-active {
+  color: #0b1f12;
+  border-bottom-color: var(--dtr-chip-active, #9ef06a);
+}
+
+.dtr-bottles-panel-tabs__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.5rem 0.5rem 0;
+}
+
+.dtr-bottles-panel-tabs__body > .dtr-bottle-total-wrap,
+.dtr-bottles-panel-tabs__body > .dtr-bottle-month-table {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+/* —— Bảng thống kê loại chai theo tháng —— */
+.dtr-bottle-month-table {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  color: var(--dtr-text, #14532d);
+}
+
+.dtr-bottle-month-table__head {
+  flex: 0 0 auto;
+  margin-bottom: 0.35rem;
+}
+
+.dtr-bottle-month-table__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.dtr-bottle-month-table__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: clamp(0.85rem, 1.4vmin, 1.05rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--dtr-text, #14532d);
+  line-height: 1.25;
+}
+
+.mida-chart-fs__body--table {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0.35rem 0.75rem 0.75rem !important;
+  overflow: hidden;
+}
+
+.mida-chart-fs__body--table > .dtr-bottle-month-table {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.mida-chart-fs__body--table .dtr-bottle-month-table__title {
+  font-size: clamp(1rem, 2vmin, 1.25rem);
+}
+
+.mida-chart-fs__body--table .dtr-bottle-month-table__hint {
+  font-size: 0.78rem;
+}
+
+.mida-chart-fs__body--table .dtr-bottle-month-table__table {
+  font-size: 0.82rem;
+  width: max(100%, 1100px);
+}
+
+.dtr-bottle-month-table__hint {
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--dtr-text-muted, #166534);
+  opacity: 0.95;
+}
+
+.dtr-bottle-month-table__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--dtr-card-border, rgba(182, 239, 143, 0.55));
+  border-radius: 0.35rem;
+  background: transparent;
+}
+
+.dtr-bottle-month-table__table {
+  width: max(100%, 920px);
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.68rem;
+}
+
+/* Nhiều cột (theo giờ / theo ngày): cho cuộn ngang đủ rộng */
+.dtr-bottle-month-table__table:has(th:nth-child(20)) {
+  width: max(100%, 1280px);
+}
+
+.dtr-bottle-month-table__table:has(th:nth-child(28)) {
+  width: max(100%, 1600px);
+}
+
+.dtr-bottle-month-table__table th,
+.dtr-bottle-month-table__table td {
+  padding: 0.28rem 0.22rem;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(20, 83, 45, 0.14);
+  white-space: nowrap;
+}
+
+[data-theme='dark'] .dtr-bottle-month-table__table th,
+[data-theme='dark'] .dtr-bottle-month-table__table td {
+  border-bottom-color: rgba(158, 240, 106, 0.18);
+}
+
+.dtr-bottle-month-table__table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-weight: 700;
+  background: var(--dtr-card-bg, #f3ffe9);
+  color: var(--dtr-text, #14532d);
+}
+
+[data-theme='dark'] .dtr-bottle-month-table__table thead th {
+  background: var(--dtr-card-bg, #122c1a);
+}
+
+.dtr-bottle-month-table__sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left !important;
+  padding-left: 0.45rem !important;
+  min-width: 5.5rem;
+  width: 5.5rem;
+  background: var(--dtr-card-bg, #f3ffe9);
+}
+
+.dtr-bottle-month-table__table thead .dtr-bottle-month-table__sticky {
+  z-index: 3;
+}
+
+[data-theme='dark'] .dtr-bottle-month-table__sticky {
+  background: var(--dtr-card-bg, #122c1a);
+}
+
+.dtr-bottle-month-table__type {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.dtr-bottle-month-table__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.05rem;
+  line-height: 1.15;
+}
+
+.dtr-bottle-month-table__count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.dtr-bottle-month-table__pct {
+  font-size: 0.9em;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+.dtr-bottle-month-table__row--break td {
+  border-bottom-width: 2px;
+  border-bottom-color: rgba(20, 83, 45, 0.32);
+}
+
+[data-theme='dark'] .dtr-bottle-month-table__row--break td {
+  border-bottom-color: rgba(158, 240, 106, 0.38);
+}
+
+.dtr-bottle-month-table__total td {
+  font-weight: 800;
+  border-bottom: none;
+  background: rgba(158, 240, 106, 0.12);
+}
+
+.dtr-bottle-month-table__total .dtr-bottle-month-table__sticky {
+  background: rgba(158, 240, 106, 0.12);
+}
+
+[data-theme='dark'] .dtr-bottle-month-table__total td,
+[data-theme='dark'] .dtr-bottle-month-table__total .dtr-bottle-month-table__sticky {
+  background: rgba(158, 240, 106, 0.1);
+}
+
+@media (max-width: 1199.98px) {
+  .dtr-monitor-page__bottles-chart:has(.dtr-bottle-month-table),
+  .dtr-monitor-page__bottles-chart:has(.dtr-bottle-month-table) > .machine-chart-card,
+  .dtr-monitor-page__bottles-chart:has(.dtr-bottle-month-table) .machine-chart-card {
+    height: min(70vh, 520px) !important;
+    min-height: 420px !important;
+  }
 }

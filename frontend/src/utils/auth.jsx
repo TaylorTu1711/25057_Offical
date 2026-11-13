@@ -41,6 +41,9 @@ export const getPortal = () => localStorage.getItem('portal') || 'default';
 export const getRole = () => localStorage.getItem('role') || 'factory';
 export const isMaintenanceRole = () => getRole() === 'maintenance';
 export const isAdminRole = () => getRole() === 'admin';
+/** Admin portal Sort DTR — được thêm / sửa / xóa máy. */
+export const canManageDtrSortMachines = () =>
+  getRole() === 'admin' && getPortal() === 'dtr_sortmachine';
 export const getLocations = () => {
   try {
     const raw = localStorage.getItem('locations');

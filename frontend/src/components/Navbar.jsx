@@ -1,135 +1,29 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import '../css/Navbar.css';
 import logo from '../assets/LOGO-MO.png';
-import { logout } from '../utils/auth';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { getPortal, getPostLoginPath, getRole, logout } from '../utils/auth';
+import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Home, LogOut, Moon, Sun } from 'lucide-react';
-import flagVI from '../assets/flag-vi.png';
-import flagEN from '../assets/flag-en.webp';
 import useTheme from '../hooks/useTheme';
-import {
-  applyGoogleTranslation,
-  getSavedAppLanguage,
-  loadGoogleTranslateScript,
-  resetGoogleTranslateArtifacts,
-  setGoogTransCookie,
-} from '../utils/googleTranslate';
-//import '../css/translate.css'
 
-const Navbar = () => {
+const Navbar = ({ title = 'HỆ SCADA CÁC MÁY PLENMA', extraActions = null }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [lang, setLang] = useState("vi");
-
-  const [langOpenDesktop, setLangOpenDesktop] = useState(false);
-  const [langOpenMobile, setLangOpenMobile] = useState(false);
-
-  const langRefDesktop = useRef(null);
-  const langRefMobile = useRef(null);
-  const lastApplyAtRef = useRef(0);
 
   const navigate = useNavigate();
-  const location = useLocation();
   const { isDark, toggleTheme } = useTheme();
   const toggleSidebar = () => setIsOpen(!isOpen);
+  const homePath = getPostLoginPath(getPortal(), getRole()) || '/';
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const triggerGoogleTranslation = (lng) => {
-    if (lng === 'vi') return false;
-
-    const now = Date.now();
-    if (now - lastApplyAtRef.current < 300) return false;
-    const applied = applyGoogleTranslation(lng);
-    if (applied) {
-      lastApplyAtRef.current = now;
-    }
-    return applied;
+  const goHome = (event) => {
+    if (event) event.preventDefault();
+    setIsOpen(false);
+    navigate(homePath);
   };
-
-  // 👉 Google translate
-  const changeLang = (lng) => {
-    if (lng !== 'vi' && lng !== 'en') return;
-    if (lng === lang) {
-      setLangOpenDesktop(false);
-      setLangOpenMobile(false);
-      return;
-    }
-
-    localStorage.setItem('app_lang', lng);
-
-    // Tiếng Việt gốc: xóa cookie googtrans (không set /auto/vi — sẽ không hoạt động trên HTTPS).
-    if (lng === 'vi') {
-      resetGoogleTranslateArtifacts();
-    } else {
-      setGoogTransCookie(lng);
-    }
-
-    setLang(lng);
-    setLangOpenDesktop(false);
-    setLangOpenMobile(false);
-    window.location.reload();
-  };
-
-  useEffect(() => {
-    const saved = getSavedAppLanguage();
-    setLang(saved);
-
-    if (saved === 'vi') {
-      resetGoogleTranslateArtifacts();
-      return;
-    }
-
-    loadGoogleTranslateScript();
-  }, []);
-
-  // Re-apply translation only when navigating to a machine detail page.
-  useEffect(() => {
-    if (lang !== 'en') return;
-    if (!location.pathname.startsWith('/machines/')) return;
-
-    loadGoogleTranslateScript();
-
-    let attempts = 0;
-    let timerId = null;
-
-    const tryApply = () => {
-      if (triggerGoogleTranslation(lang)) return;
-      attempts += 1;
-      if (attempts < 20) {
-        timerId = window.setTimeout(tryApply, 250);
-      }
-    };
-
-    timerId = window.setTimeout(tryApply, 200);
-    return () => {
-      if (timerId) window.clearTimeout(timerId);
-    };
-  }, [lang, location.pathname]);
-
-  // 👉 Click ngoài để đóng dropdown
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (
-        langRefDesktop.current &&
-        !langRefDesktop.current.contains(e.target)
-      ) {
-        setLangOpenDesktop(false);
-      }
-
-      if (
-        langRefMobile.current &&
-        !langRefMobile.current.contains(e.target)
-      ) {
-        setLangOpenMobile(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   return (
     <>
@@ -137,107 +31,63 @@ const Navbar = () => {
         <div className="container-fluid d-flex justify-content-between align-items-center">
 
           {/* Logo */}
-          <Link className="navbar-brand d-flex align-items-center" to="/">
+          <Link className="navbar-brand d-flex align-items-center" to={homePath}>
             <img src={logo} alt="Logo" width="200" height="200" className="me-3" />
           </Link>
 
           {/* Title */}
           <div className="flex-grow-1 text-center d-none d-lg-block">
             <span className="navbar-title fw-bold fs-4 navbar-brand-text">
-              HỆ SCADA CÁC MÁY PLENMA
+              {title}
             </span>
           </div>
 
-          {/* Desktop menu */}
-          <div className="hidden lg:flex items-center gap-0">
+          {/* Desktop menu — khoảng cách đều giữa các nút */}
+          <div className="navbar-actions hidden lg:flex">
+            {extraActions ? (
+              <div className="navbar-actions__item">{extraActions}</div>
+            ) : null}
 
-            {/* Dark / Light mode */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="nav-action-btn nav-action-btn--icon ml-3"
+              className="nav-action-btn nav-action-btn--icon navbar-actions__item"
               title={isDark ? 'Chế độ sáng' : 'Chế độ tối'}
               aria-label={isDark ? 'Bật chế độ sáng' : 'Bật chế độ tối'}
             >
               {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            {/* 🌐 Language Dropdown */}
-            <div ref={langRefDesktop} className="relative ml-3 px-3">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLangOpenDesktop(!langOpenDesktop);
-                }}
-                className="nav-action-btn px-0 py-0"
-              >
-                <img
-                  src={lang === "vi" ? flagVI : flagEN}
-                  alt="lang"
-                  className="w-6 h-4 object-cover rounded-sm"
-                />
-              </button>
-
-              {langOpenDesktop  && (
-                <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-14 border rounded shadow-md z-50" style={{ backgroundColor: 'var(--app-surface)', borderColor: 'var(--app-border)' }}>
-
-                  <button
-                    onClick={() => changeLang("vi")}
-                    className={`flex justify-center items-center w-full py-2 ${
-                      lang === "vi" ? "bg-gray-200" : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <img src={flagVI} alt="vi" className="w-full h-8 object-cover" />
-                  </button>
-
-                  <button
-                    onClick={() => changeLang("en")}
-                    className={`flex justify-center items-center w-full py-2 ${
-                      lang === "en" ? "bg-gray-200" : "hover:bg-gray-100"
-                    }`}
-                  >
-                    <img src={flagEN} alt="en" className="w-full h-8 object-cover" />
-                  </button>
-
-                </div>
-              )}
-            </div>
-
-            {/* Trang chủ */}
-            <a
-              href="/"
-              className="flex items-center gap-2 px-4 py-2 text-lg font-semibold rounded-lg transition-colors no-underline navbar-brand-text"
-              style={{ backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--nav-hover-bg)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            <Link
+              to={homePath}
+              className="navbar-actions__link navbar-actions__item no-underline navbar-brand-text"
             >
               <Home className="w-5 h-5" />
               Trang chủ
-            </a>
+            </Link>
 
-            {/* Logout */}
             <button
+              type="button"
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-lg font-semibold rounded-lg transition-colors navbar-brand-text"
-              style={{ backgroundColor: 'transparent' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--nav-hover-bg)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              className="navbar-actions__link navbar-actions__item navbar-brand-text"
             >
               <LogOut className="w-5 h-5" />
               Đăng xuất
             </button>
-
           </div>
 
-          {/* Mobile button — chỉ hiện màn hình nhỏ */}
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            className="d-lg-none p-2 rounded-lg nav-action-btn nav-action-btn--icon"
-            aria-label="Mở menu"
-          >
-            <Menu className="w-7 h-7" />
-          </button>
+          {/* Mobile: nút phụ + menu */}
+          <div className="d-lg-none d-flex align-items-center gap-2">
+            {extraActions}
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className="p-2 rounded-lg nav-action-btn nav-action-btn--icon"
+              aria-label="Mở menu"
+            >
+              <Menu className="w-7 h-7" />
+            </button>
+          </div>
 
         </div>
       </nav>
@@ -286,14 +136,15 @@ const Navbar = () => {
             </li>
 
             <li>
-              <a
-                href="/"
-                onClick={toggleSidebar}
-                className="flex items-center gap-3 py-3 pl-2 pr-4 text-lg font-semibold navbar-brand-text no-underline"
+              <button
+                type="button"
+                onClick={goHome}
+                className="flex items-center gap-3 w-full py-3 pl-2 pr-4 text-lg font-semibold navbar-brand-text"
+                style={{ backgroundColor: 'transparent', border: 0 }}
               >
                 <Home className="w-6 h-6 ml-2" />
                 Trang chủ
-              </a>
+              </button>
             </li>
 
             <li>
@@ -309,54 +160,6 @@ const Navbar = () => {
                 Đăng xuất
               </button>
             </li>
-
-            <li className="px-4 py-3 border-t mt-2">
-              <div ref={langRefMobile} className="relative">
-
-                {/* Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setLangOpenMobile(!langOpenMobile)
-                  }}
-                  className="nav-action-btn px-2 py-1"
-                >
-                  <img
-                    src={lang === "vi" ? flagVI : flagEN}
-                    alt="lang"
-                    className="w-6 h-4 object-cover rounded-sm"
-                  />
-                  <span className="text-sm">Ngôn ngữ</span>
-                </button>
-
-                {/* Dropdown */}
-                {langOpenMobile  && (
-                  <div className="absolute left-0 mt-2 w-20 border rounded shadow-md z-50" style={{ backgroundColor: 'var(--app-surface)', borderColor: 'var(--app-border)' }}>
-
-                    <button
-                      onClick={() => changeLang("vi")}
-                      className={`flex justify-center items-center w-full py-2 ${
-                        lang === "vi" ? "bg-gray-200" : "hover:bg-gray-100"
-                      }`}
-                    >
-                      <img src={flagVI} alt="vi" className="w-full h-6 object-cover" />
-                    </button>
-
-                    <button
-                      onClick={() => changeLang("en")}
-                      className={`flex justify-center items-center w-full py-2 ${
-                        lang === "en" ? "bg-gray-200" : "hover:bg-gray-100"
-                      }`}
-                    >
-                      <img src={flagEN} alt="en" className="w-full h-6 object-cover" />
-                    </button>
-
-                  </div>
-                )}
-
-              </div>
-            </li>
-
           </ul>
         </div>
 

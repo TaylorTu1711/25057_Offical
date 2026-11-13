@@ -19,6 +19,7 @@ import {
   themedScale,
   themedXScale,
   chartStableRenderOptions,
+  chartDenseAnimationOptions,
   getChartLegendOptions,
 } from '../../utils/chartTheme';
 import {
@@ -80,9 +81,23 @@ export default function MidaStatusChart({
   timestamps = [],
   statusValues = [],
   statusTicks = DEFAULT_STATUS_CHART_TICKS,
+  /** Cố định cửa sổ X (ms) — 1h / hôm nay / tuỳ chọn. */
+  rangeFrom = null,
+  rangeTo = null,
+  /** Bật animation (DTR); mặc định tắt để polling live CNC mượt. */
+  enableAnimation = false,
 }) {
   const { theme } = useTheme();
   const ticks = statusTicks || DEFAULT_STATUS_CHART_TICKS;
+  const tickValues = useMemo(() => {
+    const vals = Object.keys(ticks)
+      .map(Number)
+      .filter((n) => Number.isFinite(n))
+      .sort((a, b) => a - b);
+    return vals.length ? vals : [1, 2];
+  }, [ticks]);
+  const yMin = tickValues[0];
+  const yMax = tickValues[tickValues.length - 1];
   const chartRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
@@ -146,20 +161,32 @@ export default function MidaStatusChart({
     };
   }, [display.timestamps, display.statusValues]);
 
-  const xMin = display.timestamps.length ? display.timestamps[0] : undefined;
-  const xMax = display.timestamps.length
-    ? display.timestamps[display.timestamps.length - 1]
-    : undefined;
+  const rangeFromMs = rangeFrom != null ? Number(new Date(rangeFrom).getTime()) : NaN;
+  const rangeToMs = rangeTo != null ? Number(new Date(rangeTo).getTime()) : NaN;
+  const hasFixedRange = Number.isFinite(rangeFromMs) && Number.isFinite(rangeToMs) && rangeFromMs < rangeToMs;
+
+  const xMin = hasFixedRange
+    ? rangeFromMs
+    : (display.timestamps.length ? display.timestamps[0] : undefined);
+  const xMax = hasFixedRange
+    ? rangeToMs
+    : (display.timestamps.length
+      ? display.timestamps[display.timestamps.length - 1]
+      : undefined);
 
   const options = useMemo(
     () => ({
-      ...chartStableRenderOptions,
-      animation: false,
-      animations: {},
-      transitions: {
-        active: { animation: { duration: 150 } },
-        resize: { animation: { duration: 0 } },
-      },
+      ...(enableAnimation ? chartDenseAnimationOptions : chartStableRenderOptions),
+      ...(enableAnimation
+        ? {}
+        : {
+            animation: false,
+            animations: {},
+            transitions: {
+              active: { animation: { duration: 150 } },
+              resize: { animation: { duration: 0 } },
+            },
+          }),
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
@@ -229,8 +256,8 @@ export default function MidaStatusChart({
           {
             beginAtZero: false,
             position: 'left',
-            min: 1,
-            max: 2,
+            min: yMin,
+            max: yMax,
             title: {
               display: false,
             },
@@ -251,7 +278,7 @@ export default function MidaStatusChart({
         ),
       },
     }),
-    [theme, pauseLive, xMin, xMax, ticks],
+    [theme, pauseLive, xMin, xMax, ticks, yMin, yMax, hasFixedRange, enableAnimation],
   );
 
   useSyncChartTheme(chartRef, theme, options);

@@ -23,7 +23,8 @@ export function DefaultPortalRoute({ children }) {
   if (!isLoggedIn()) return <Navigate to="/login" state={{ from: location }} replace />;
   const portal = getPortal();
   const role = getRole();
-  if (portal === 'dtr_sortmachine' && role !== 'admin') {
+  // Portal Sort DTR (kể cả admin) không vào trang SCADA Plenma
+  if (portal === 'dtr_sortmachine') {
     return <Navigate to="/dtr/sortmachine" replace />;
   }
   if (portal === 'mida_cnc' && role !== 'admin') return <Navigate to="/mida/cnc" replace />;

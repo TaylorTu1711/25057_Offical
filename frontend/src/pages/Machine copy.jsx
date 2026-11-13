@@ -43,6 +43,7 @@ import {
   buildProductivitySeries,
   buildTimeSeries,
   buildErrorSeries,
+  filterRowsByChartSelection,
   toErrorChartTickMode,
   getChartCategoryPrefix,
   getYearKeysFromData,
@@ -116,7 +117,7 @@ const ERROR_CHART_VIEW_LABELS = {
   [ERROR_CHART_VIEWS.byType]: 'Thống kê cảnh báo theo loại',
 };
 
-const ERROR_DETAIL_TOP_N = 10;
+const ERROR_DETAIL_TOP_N = 5;
 
 /** Khóa ngày theo giờ local — tránh lệch UTC khi ghép dữ liệu biểu đồ */
 const toLocalDateKey = (input) => {
@@ -310,7 +311,12 @@ function Machine() {
     [machineInfo?.information],
   );
 
-  const errorDetailStats = useMemo(() => buildErrorStats(allErrorsMachine), [allErrorsMachine]);
+  const errorDetailStats = useMemo(
+    () => buildErrorStats(
+      filterRowsByChartSelection(allErrorsMachine, chartViewMode, chartSelection),
+    ),
+    [allErrorsMachine, chartViewMode, chartSelection],
+  );
 
   const hasErrorDetailData = errorDetailStats.dataValues.some((v) => Number(v) > 0);
   const showErrorByType = errorChartView === ERROR_CHART_VIEWS.byType;

@@ -1,6 +1,8 @@
 /**
- * Tạo user portal DTR Sort Machine.
+ * Tạo user portal DTR Sort Machine — chỉ xem (không thêm/sửa/xóa máy).
  * cd backend && node scripts/create-dtr-sortmachine-user.js
+ *
+ * Admin quản lý máy: node scripts/create-dtr-sortmachine-admin.js
  */
 import bcrypt from 'bcrypt';
 import pool from '../db.js';
@@ -34,7 +36,7 @@ async function main() {
   }
 
   console.log(`User id: ${userId}`);
-  console.log(`Portal: ${PORTALS.DTR_SORTMACHINE}`);
+  console.log(`Role: factory (chỉ xem) | Portal: ${PORTALS.DTR_SORTMACHINE}`);
   console.log(`Login → /dtr/sortmachine | Password: ${password}`);
   await pool.end();
 }

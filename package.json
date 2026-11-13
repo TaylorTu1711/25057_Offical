@@ -8,6 +8,7 @@
     "seed:mida-admin": "node backend/scripts/create-mida-admin.js",
     "seed:mida-maintenance": "node backend/scripts/create-mida-maintenance.js",
     "seed:dtr-sortmachine": "node backend/scripts/create-dtr-sortmachine-user.js",
+    "seed:dtr-sortmachine-admin": "node backend/scripts/create-dtr-sortmachine-admin.js",
     "seed:plenma-users": "node backend/scripts/create-plenma-users.js",
     "start": "node backend/server.js",
     "migrate:shoot-real": "node backend/scripts/migrate-shoot-to-real.js",

@@ -1,9 +1,13 @@
 import pool from '../db.js';
-import { ensureCncMachinesTable, ensurePublicMachinesTable } from './machineSchema.js';
+import {
+  ensureCncMachinesTable,
+  ensureDtrMachinesTable,
+  ensurePublicMachinesTable,
+} from './machineSchema.js';
 import { ensureAllCncTelemetryColumns } from './cncTelemetry.js';
 import { ensureDailySetupTable } from './cncDailySetup.js';
 import { ensureAllCncDowntimeTables } from './cncDowntime.js';
-import { ensureDtrSortMachinesTable } from './dtrSortMachines.js';
+import { ensureAllDtrTelemetryTables } from './dtrTelemetry.js';
 
 export async function migrateUserAccessSchema() {
   try {
@@ -18,13 +22,15 @@ export async function migrateUserAccessSchema() {
       );
 
       CREATE SCHEMA IF NOT EXISTS cnc;
+      CREATE SCHEMA IF NOT EXISTS dtr;
     `);
     await ensurePublicMachinesTable(pool);
     await ensureCncMachinesTable(pool);
+    await ensureDtrMachinesTable(pool);
+    await ensureAllDtrTelemetryTables(pool);
     await ensureAllCncTelemetryColumns(pool);
     await ensureDailySetupTable(pool);
     await ensureAllCncDowntimeTables(pool);
-    await ensureDtrSortMachinesTable(pool);
     console.log('✅ User access schema migrated');
   } catch (error) {
     console.error('User access migration error:', error.message);

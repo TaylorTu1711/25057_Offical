@@ -1,6 +1,12 @@
 import express from "express";
 import pool from "../db.js";
-import { alarmTableRef, findMachinesRegistryTable, machineIdExists, telemetryTableRef } from "../utils/machineSchema.js";
+import {
+  alarmTableRef,
+  findMachineIdConflict,
+  findMachinesRegistryTable,
+  machineIdConflictMessage,
+  telemetryTableRef,
+} from "../utils/machineSchema.js";
 
 
 
@@ -54,11 +60,12 @@ export const addMachine = async (req, res) => {
   const alarmTable = `alarm${machine_id}`;
 
   try {
-    const existing = await machineIdExists(client, machine_id);
-    if (existing) {
+    const conflict = await findMachineIdConflict(client, machine_id);
+    if (conflict) {
       client.release();
       return res.status(409).json({
-        error: `ID máy "${machine_id}" đã tồn tại. Vui lòng dùng ID khác hoặc xóa máy cũ trước.`,
+        error: machineIdConflictMessage(machine_id, conflict),
+        conflict_schema: conflict.schema,
       });
     }
 

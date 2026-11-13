@@ -62,6 +62,16 @@ function clampYWindow(window, maxIndex) {
   return { min, max };
 }
 
+/** Font trong cột scale theo chiều cao bar (zoom Y → chữ to/nhỏ theo). */
+function fontSizeForBarHeight(barHeight, embedded) {
+  const h = Math.abs(Number(barHeight) || 0);
+  if (h < 10) return 0;
+  const minFs = embedded ? 8 : 9;
+  const maxFs = embedded ? 20 : 24;
+  // ~42% chiều cao cột, kẹp min/max
+  return Math.max(minFs, Math.min(maxFs, Math.round(h * 0.42)));
+}
+
 const inBarCategoryLabelsPlugin = {
   id: 'inBarCategoryLabels',
   afterDatasetsDraw(chart, _args, pluginOptions) {
@@ -73,14 +83,13 @@ const inBarCategoryLabelsPlugin = {
 
     const { top, bottom, left } = chart.chartArea;
     const embedded = Boolean(pluginOptions?.embedded);
-    const fontSize = embedded ? 9 : 11;
     const padX = embedded ? 6 : 8;
     const minBarWidth = embedded ? 22 : 28;
+    const fontFamily = 'system-ui, -apple-system, "Segoe UI", sans-serif';
 
     const ctx = chart.ctx;
     ctx.save();
     ctx.fillStyle = pluginOptions?.labelColor ?? LABEL_COLOR;
-    ctx.font = `${fontSize}px system-ui, -apple-system, "Segoe UI", sans-serif`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
 
@@ -93,6 +102,10 @@ const inBarCategoryLabelsPlugin = {
       const { x, y, base, height } = bar.getProps(['x', 'y', 'base', 'height'], true);
       if (y < top || y > bottom) return;
 
+      const barH = Math.abs(height);
+      const fontSize = fontSizeForBarHeight(barH, embedded);
+      if (!fontSize || barH < fontSize + 2) return;
+
       const barLeft = Math.min(x, base);
       const barRight = Math.max(x, base);
       const barWidth = Math.abs(barRight - barLeft);
@@ -102,6 +115,8 @@ const inBarCategoryLabelsPlugin = {
       const clipLeft = Math.max(barLeft, left);
       const clipWidth = Math.min(barRight, chart.chartArea.right) - clipLeft;
       if (clipWidth <= padX) return;
+
+      ctx.font = `600 ${fontSize}px ${fontFamily}`;
 
       ctx.save();
       ctx.beginPath();
@@ -150,6 +165,16 @@ function BarChart_ErrorCore({
     [yCategoryWindow, maxCategoryIndex],
   );
 
+  /** Ít hàng nhìn thấy → cột dày hơn (mục tiêu top 5). */
+  const visibleCategoryCount = yWindow
+    ? Math.max(1, Math.round(yWindow.max - yWindow.min + 1))
+    : Math.max(1, categoryLabels.length);
+  const maxBarThickness = embedded
+    ? (visibleCategoryCount <= 5 ? 52 : visibleCategoryCount <= 7 ? 36 : 26)
+    : (visibleCategoryCount <= 5 ? 58 : 30);
+  const categoryPercentage = visibleCategoryCount <= 5 ? 0.94 : 0.88;
+  const barPercentage = visibleCategoryCount <= 5 ? 0.9 : 0.82;
+
   const xTickStep = useMemo(() => {
     const maxVal = Math.max(0, ...(dataValues || []).map((v) => Number(v) || 0));
     return getXTickStep(maxVal);
@@ -174,9 +199,9 @@ function BarChart_ErrorCore({
           borderColor: ERROR_BAR_PALETTE.border,
           borderWidth: 1,
           barThickness: 'flex',
-          maxBarThickness: embedded ? 26 : 30,
-          categoryPercentage: 0.88,
-          barPercentage: 0.82,
+          maxBarThickness,
+          categoryPercentage,
+          barPercentage,
           borderRadius: { topRight: 3, bottomRight: 3 },
           borderSkipped: false,
           hoverBackgroundColor: (context) => {
@@ -189,7 +214,7 @@ function BarChart_ErrorCore({
         },
       ],
     }),
-    [embedded, hiddenRowLabels, dataValues],
+    [barPercentage, categoryPercentage, embedded, hiddenRowLabels, dataValues, maxBarThickness],
   );
 
   const options = useMemo(
@@ -295,7 +320,8 @@ function BarChart_ErrorEmbedded(props) {
 
   useEffect(() => {
     if (userAdjustedRef.current || labelCount <= 0) return;
-    setYCategoryWindow((prev) => prev ?? createTopYWindow(initialVisibleCount, labelCount));
+    // Luôn áp cửa sổ top-N khi dữ liệu/lọc đổi (trừ khi user đã pan/zoom).
+    setYCategoryWindow(createTopYWindow(initialVisibleCount, labelCount));
   }, [initialVisibleCount, labelCount]);
 
   const syncYWindowFromChart = useCallback((chart) => {

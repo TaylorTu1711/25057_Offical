@@ -2,32 +2,60 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_URL } from '../../config/config';
-import { authHeaders, logout } from '../../utils/auth';
+import { authHeaders, canManageDtrSortMachines } from '../../utils/auth';
+import AppNavbar from '../../components/Navbar';
 import {
-  buildDtrPublicPath,
-  openDtrTailscaleMachine,
-} from '../../utils/dtrSortMachine';
+  DTR_BOTTLE_GLOSSARY_KEYS,
+  bottleGlossaryToMap,
+  defaultBottleGlossaryMap,
+} from '../../utils/dtrBottleGlossary';
 import '../../css/DtrSortMachine.css';
 
 const emptyForm = {
+  machine_name: '',
   machine_id: '',
-  name: '',
+  location: '',
+  image: null,
   tailscale_ip: '',
   port: '5173',
   api_port: '1411',
   note: '',
+  handover_date: '',
+  glossary: defaultBottleGlossaryMap(),
 };
+
+function toDateInputValue(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateVi(raw) {
+  const iso = toDateInputValue(raw);
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
 
 export default function SortMachinePage() {
   const navigate = useNavigate();
-  const email = typeof localStorage !== 'undefined' ? localStorage.getItem('email') : '';
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
+
+  const canManage = canManageDtrSortMachines();
+  const isEditing = Boolean(editingId);
 
   const loadMachines = useCallback(async () => {
     setLoading(true);
@@ -48,43 +76,112 @@ export default function SortMachinePage() {
     loadMachines();
   }, [loadMachines]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+  const closeForm = () => {
+    setForm({ ...emptyForm, glossary: defaultBottleGlossaryMap() });
+    setEditingId('');
+    setFormOpen(false);
+  };
+
+  const openCreateForm = () => {
+    if (!canManage) return;
+    setEditingId('');
+    setForm({ ...emptyForm, glossary: defaultBottleGlossaryMap() });
+    setFormOpen(true);
+    setError('');
+  };
+
+  const openEditForm = (machine) => {
+    if (!canManage) return;
+    setEditingId(machine.machine_id);
+    setForm({
+      machine_name: machine.machine_name || machine.name || '',
+      machine_id: machine.machine_id || '',
+      location: machine.location || '',
+      image: null,
+      tailscale_ip: machine.tailscale_ip || '',
+      port: String(machine.port ?? 5173),
+      api_port: machine.api_port != null ? String(machine.api_port) : '',
+      note: machine.note || '',
+      handover_date: toDateInputValue(machine.handover_date),
+      glossary: bottleGlossaryToMap(machine.bottle_glossary),
+    });
+    setFormOpen(true);
+    setError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const onFormChange = (key) => (event) => {
-    setForm((prev) => ({ ...prev, [key]: event.target.value }));
+    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleCreate = async (event) => {
+  const onGlossaryChange = (key) => (event) => {
+    const value = event.target.value;
+    setForm((prev) => ({
+      ...prev,
+      glossary: { ...prev.glossary, [key]: value },
+    }));
+  };
+
+  const canSubmit =
+    form.machine_name.trim() &&
+    form.machine_id.trim() &&
+    form.location.trim() &&
+    form.tailscale_ip.trim() &&
+    (isEditing || form.image);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!canManage || !canSubmit) return;
     setSaving(true);
     setError('');
     try {
-      await axios.post(
-        `${BASE_URL}/api/portal/dtr/sort-machines`,
-        {
-          machine_id: form.machine_id.trim(),
-          name: form.name.trim(),
-          tailscale_ip: form.tailscale_ip.trim(),
-          port: Number(form.port) || 5173,
-          api_port: form.api_port.trim() ? Number(form.api_port) : null,
-          note: form.note.trim() || null,
-        },
-        { headers: authHeaders() },
+      const formData = new FormData();
+      formData.append('machine_id', form.machine_id.trim());
+      formData.append('machine_name', form.machine_name.trim());
+      formData.append('location', form.location.trim());
+      formData.append('tailscale_ip', form.tailscale_ip.trim());
+      formData.append('port', String(Number(form.port) || 5173));
+      if (form.api_port.trim()) {
+        formData.append('api_port', String(Number(form.api_port)));
+      } else {
+        formData.append('api_port', '');
+      }
+      formData.append('note', form.note.trim());
+      formData.append('handover_date', form.handover_date || '');
+      formData.append(
+        'bottle_glossary',
+        JSON.stringify(bottleGlossaryToMap(form.glossary)),
       );
-      setForm(emptyForm);
-      setFormOpen(false);
+      if (form.image) {
+        formData.append('image_url', form.image);
+      }
+
+      if (isEditing) {
+        await axios.put(
+          `${BASE_URL}/api/portal/dtr/sort-machines/${encodeURIComponent(editingId)}`,
+          formData,
+          { headers: authHeaders() },
+        );
+      } else {
+        await axios.post(`${BASE_URL}/api/portal/dtr/sort-machines`, formData, {
+          headers: authHeaders(),
+        });
+      }
+      closeForm();
       await loadMachines();
     } catch (err) {
-      setError(err.response?.data?.error || 'Thêm máy thất bại');
+      setError(
+        err.response?.data?.error
+          || (isEditing ? 'Cập nhật máy thất bại' : 'Thêm máy thất bại'),
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (machineId) => {
+    if (!canManage) return;
     if (!window.confirm(`Xóa máy "${machineId}"?`)) return;
     setDeletingId(machineId);
     setError('');
@@ -93,6 +190,7 @@ export default function SortMachinePage() {
         `${BASE_URL}/api/portal/dtr/sort-machines/${encodeURIComponent(machineId)}`,
         { headers: authHeaders() },
       );
+      if (editingId === machineId) closeForm();
       await loadMachines();
     } catch (err) {
       setError(err.response?.data?.error || 'Xóa máy thất bại');
@@ -101,65 +199,107 @@ export default function SortMachinePage() {
     }
   };
 
+  const displayName = (m) => m.machine_name || m.name || '—';
+
   return (
     <div className="dtr-page">
-      <header className="dtr-page__header">
-        <div>
-          <p className="dtr-page__eyebrow">DTR Portal</p>
-          <h1 className="dtr-page__title">Sort Machine</h1>
-        </div>
-        <div className="dtr-page__header-actions">
-          <span className="dtr-page__user">{email || '—'}</span>
-          <button type="button" className="btn btn-sm btn-outline-secondary" onClick={handleLogout}>
-            Đăng xuất
-          </button>
-        </div>
-      </header>
+      <AppNavbar title="GIÁM SÁT MÁY SORT DTR" />
 
+      <div className="dtr-page__body">
       <section className="dtr-page__toolbar">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => {
-            setFormOpen((open) => !open);
-            setError('');
-          }}
-        >
-          {formOpen ? 'Đóng form' : 'Thêm máy mới'}
-        </button>
+        {canManage ? (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              if (formOpen) closeForm();
+              else openCreateForm();
+            }}
+          >
+            {formOpen ? 'Đóng form' : 'Thêm máy mới'}
+          </button>
+        ) : null}
         <button type="button" className="btn btn-outline-secondary" onClick={loadMachines} disabled={loading}>
           Làm mới
         </button>
       </section>
 
-      {formOpen ? (
-        <form className="dtr-form card shadow-sm border-0" onSubmit={handleCreate}>
+      {canManage && formOpen ? (
+        <form className="dtr-form card shadow-sm border-0" onSubmit={handleSubmit}>
           <div className="card-body">
-            <h2 className="h6 mb-3">Thêm máy Sort</h2>
+            <h2 className="h6 mb-3">{isEditing ? `Sửa máy — ${editingId}` : 'Thêm máy Sort'}</h2>
             <div className="row g-3">
-              <div className="col-md-4">
+              <div className="col-md-6">
+                <label className="form-label" htmlFor="dtr-machine-name">
+                  Tên máy <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="dtr-machine-name"
+                  className="form-control"
+                  value={form.machine_name}
+                  onChange={onFormChange('machine_name')}
+                  autoComplete="off"
+                  required
+                />
+              </div>
+              <div className="col-md-6">
                 <label className="form-label" htmlFor="dtr-machine-id">
-                  Machine ID <span className="text-danger">*</span>
+                  ID máy <span className="text-danger">*</span>
                 </label>
                 <input
                   id="dtr-machine-id"
                   className="form-control"
                   value={form.machine_id}
                   onChange={onFormChange('machine_id')}
-                  placeholder="vd. 25231"
+                  placeholder="VD: 25231_100_70_140_122"
+                  autoComplete="off"
+                  required
+                  disabled={isEditing}
+                  title={isEditing ? 'Không đổi được ID máy khi sửa' : undefined}
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label" htmlFor="dtr-location">
+                  Nhà máy <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="dtr-location"
+                  className="form-control"
+                  value={form.location}
+                  onChange={onFormChange('location')}
+                  autoComplete="off"
                   required
                 />
               </div>
-              <div className="col-md-4">
-                <label className="form-label" htmlFor="dtr-name">
-                  Tên máy
+              <div className="col-md-6">
+                <label className="form-label" htmlFor="dtr-image">
+                  Hình ảnh {!isEditing ? <span className="text-danger">*</span> : null}
+                  {isEditing ? (
+                    <span className="text-muted fw-normal"> (để trống nếu giữ ảnh cũ)</span>
+                  ) : null}
                 </label>
                 <input
-                  id="dtr-name"
+                  id="dtr-image"
+                  type="file"
+                  accept="image/*"
                   className="form-control"
-                  value={form.name}
-                  onChange={onFormChange('name')}
-                  placeholder="Tên hiển thị"
+                  onChange={(e) => setForm((prev) => ({ ...prev, image: e.target.files?.[0] || null }))}
+                  required={!isEditing}
+                />
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label" htmlFor="dtr-tailscale">
+                  Tailscale IP <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="dtr-tailscale"
+                  className="form-control"
+                  value={form.tailscale_ip}
+                  onChange={onFormChange('tailscale_ip')}
+                  placeholder="vd. 100.70.140.122"
+                  autoComplete="off"
+                  required
                 />
               </div>
               <div className="col-md-3">
@@ -192,19 +332,18 @@ export default function SortMachinePage() {
                 />
               </div>
               <div className="col-md-6">
-                <label className="form-label" htmlFor="dtr-tailscale">
-                  Tailscale IP <span className="text-danger">*</span>
+                <label className="form-label" htmlFor="dtr-handover-date">
+                  Ngày bàn giao
                 </label>
                 <input
-                  id="dtr-tailscale"
+                  id="dtr-handover-date"
                   className="form-control"
-                  value={form.tailscale_ip}
-                  onChange={onFormChange('tailscale_ip')}
-                  placeholder="vd. 100.70.140.122"
-                  required
+                  type="date"
+                  value={form.handover_date}
+                  onChange={onFormChange('handover_date')}
                 />
               </div>
-              <div className="col-md-12">
+              <div className="col-md-6">
                 <label className="form-label" htmlFor="dtr-note">
                   Ghi chú
                 </label>
@@ -214,20 +353,46 @@ export default function SortMachinePage() {
                   value={form.note}
                   onChange={onFormChange('note')}
                   placeholder="Tùy chọn"
+                  autoComplete="off"
                 />
+              </div>
+
+              <div className="col-12">
+                <div className="dtr-glossary-edit">
+                  <div className="dtr-glossary-edit__title">
+                    Ký hiệu loại chai (biểu đồ thống kê số chai)
+                  </div>
+                  <p className="dtr-glossary-edit__hint mb-2">
+                    Chỉnh mô tả hiển thị khi bấm nút &quot;Ký hiệu&quot; trên trang giám sát máy.
+                  </p>
+                  <div className="row g-2">
+                    {DTR_BOTTLE_GLOSSARY_KEYS.map((item) => (
+                      <div className="col-md-6" key={item.key}>
+                        <label className="form-label mb-1" htmlFor={`dtr-glossary-${item.key}`}>
+                          <code>{item.label}</code>
+                        </label>
+                        <input
+                          id={`dtr-glossary-${item.key}`}
+                          className="form-control form-control-sm"
+                          value={form.glossary?.[item.key] ?? ''}
+                          onChange={onGlossaryChange(item.key)}
+                          maxLength={200}
+                          autoComplete="off"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="mt-3 d-flex gap-2">
-              <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? 'Đang lưu…' : 'Lưu máy'}
+              <button type="submit" className="btn btn-primary" disabled={saving || !canSubmit}>
+                {saving ? 'Đang lưu…' : isEditing ? 'Cập nhật' : 'Lưu máy'}
               </button>
               <button
                 type="button"
                 className="btn btn-outline-secondary"
-                onClick={() => {
-                  setForm(emptyForm);
-                  setFormOpen(false);
-                }}
+                onClick={closeForm}
               >
                 Hủy
               </button>
@@ -243,7 +408,11 @@ export default function SortMachinePage() {
           {loading ? (
             <p className="p-4 mb-0 text-muted">Đang tải danh sách máy…</p>
           ) : machines.length === 0 ? (
-            <p className="p-4 mb-0 text-muted">Chưa có máy nào. Bấm “Thêm máy mới” để bắt đầu.</p>
+            <p className="p-4 mb-0 text-muted">
+              {canManage
+                ? 'Chưa có máy nào. Bấm “Thêm máy mới” để bắt đầu.'
+                : 'Chưa có máy nào trong danh sách.'}
+            </p>
           ) : (
             <div className="table-responsive">
               <table className="table table-hover mb-0 align-middle dtr-table">
@@ -251,6 +420,8 @@ export default function SortMachinePage() {
                   <tr>
                     <th>ID</th>
                     <th>Tên</th>
+                    <th>Nhà máy</th>
+                    <th>Ngày bàn giao</th>
                     <th>Tailscale</th>
                     <th>FE</th>
                     <th>API</th>
@@ -259,15 +430,16 @@ export default function SortMachinePage() {
                 </thead>
                 <tbody>
                   {machines.map((m) => {
-                    const path = buildDtrPublicPath(m.machine_id);
+                    const detailPath = `/dtr/sortmachine/${encodeURIComponent(m.machine_id)}`;
+                    const openDetail = () => navigate(detailPath);
                     return (
                       <tr key={m.machine_id}>
                         <td>
                           <button
                             type="button"
                             className="btn btn-link p-0 text-decoration-none"
-                            onClick={() => openDtrTailscaleMachine(m)}
-                            title={`Mở ${path}`}
+                            onClick={openDetail}
+                            title={`Xem giám sát ${detailPath}`}
                           >
                             <code>{m.machine_id}</code>
                           </button>
@@ -276,12 +448,14 @@ export default function SortMachinePage() {
                           <button
                             type="button"
                             className="btn btn-link p-0 text-decoration-none"
-                            onClick={() => openDtrTailscaleMachine(m)}
-                            title={`Mở ${path}`}
+                            onClick={openDetail}
+                            title={`Xem giám sát ${detailPath}`}
                           >
-                            {m.name || '—'}
+                            {displayName(m)}
                           </button>
                         </td>
+                        <td>{m.location || '—'}</td>
+                        <td>{formatDateVi(m.handover_date)}</td>
                         <td>
                           <code>{m.tailscale_ip}</code>
                         </td>
@@ -290,20 +464,32 @@ export default function SortMachinePage() {
                         <td className="text-end text-nowrap">
                           <button
                             type="button"
-                            className="btn btn-sm btn-outline-primary me-2"
-                            onClick={() => openDtrTailscaleMachine(m)}
-                            title={`Mở ${path}`}
+                            className="btn btn-sm btn-outline-secondary me-2"
+                            onClick={openDetail}
+                            title={`Xem giám sát ${detailPath}`}
                           >
-                            Mở
+                            Xem
                           </button>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-danger"
-                            disabled={deletingId === m.machine_id}
-                            onClick={() => handleDelete(m.machine_id)}
-                          >
-                            {deletingId === m.machine_id ? '…' : 'Xóa'}
-                          </button>
+                          {canManage ? (
+                            <>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-primary me-2"
+                                onClick={() => openEditForm(m)}
+                                title={`Sửa thông tin ${m.machine_id}`}
+                              >
+                                Sửa
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                disabled={deletingId === m.machine_id}
+                                onClick={() => handleDelete(m.machine_id)}
+                              >
+                                {deletingId === m.machine_id ? '…' : 'Xóa'}
+                              </button>
+                            </>
+                          ) : null}
                         </td>
                       </tr>
                     );
@@ -314,6 +500,7 @@ export default function SortMachinePage() {
           )}
         </div>
       </section>
+      </div>
     </div>
   );
 }

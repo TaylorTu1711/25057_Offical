@@ -234,6 +234,26 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
       color: #93c5fd; text-decoration: none;
     }
     .dtr-side__link:hover { text-decoration: underline; }
+    .dtr-mode-toggle {
+      display: inline-flex; margin-top: 0.65rem; border-radius: 999px;
+      overflow: hidden; border: 1px solid rgba(59,130,246,0.45);
+      background: rgba(15, 23, 42, 0.55);
+    }
+    .dtr-mode-toggle__btn {
+      appearance: none; border: 0; margin: 0; padding: 0.28rem 0.7rem;
+      font-size: 0.68rem; font-weight: 800; letter-spacing: 0.04em;
+      text-transform: uppercase; color: var(--dtr-muted);
+      background: transparent; cursor: pointer;
+    }
+    .dtr-mode-toggle__btn + .dtr-mode-toggle__btn {
+      border-left: 1px solid rgba(59,130,246,0.35);
+    }
+    .dtr-mode-toggle__btn.is-active {
+      background: var(--dtr-accent); color: #fff;
+    }
+    .dtr-mode-toggle__btn:not(.is-active):hover {
+      background: rgba(59,130,246,0.18); color: var(--dtr-text);
+    }
     .dtr-tree {
       flex: 1; overflow: auto; padding: 0.55rem 0.45rem 0.85rem;
     }
@@ -326,6 +346,10 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
       <div class="dtr-side__head">
         <p class="dtr-side__eyebrow">DTR Portal</p>
         <h1 class="dtr-side__title">Sort machines</h1>
+        <div class="dtr-mode-toggle" role="group" aria-label="Chế độ Online / Offline">
+          <button type="button" class="dtr-mode-toggle__btn" id="dtr-mode-offline" title="Chế độ Offline">Offline</button>
+          <button type="button" class="dtr-mode-toggle__btn is-active" id="dtr-mode-online" title="Chế độ Online" aria-pressed="true">Online</button>
+        </div>
         <a class="dtr-side__link" href="/dtr/sortmachine">← Quản lý máy</a>
         <button type="button" class="dtr-side__close" id="dtr-side-close" aria-label="Đóng">×</button>
       </div>
@@ -348,8 +372,16 @@ export function buildFrameShell({ machineId, restPath, query = '' }) {
     var pullBtn = document.getElementById('dtr-sidebar-pull');
     var closeBtn = document.getElementById('dtr-side-close');
     var backdrop = document.getElementById('dtr-side-backdrop');
+    var offlineBtn = document.getElementById('dtr-mode-offline');
     var syncing = false;
     var drawerOpen = false;
+
+    if (offlineBtn) {
+      offlineBtn.addEventListener('click', function () {
+        if (!currentId) return;
+        window.location.assign('/dtr/sortmachine/' + encodeURIComponent(currentId));
+      });
+    }
 
     function isMobileDrawer() {
       return window.matchMedia('(max-width: 991.98px)').matches;

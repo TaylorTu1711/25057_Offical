@@ -123,7 +123,14 @@ export default function MachineTimeRangePanel({
   onDateChange,
   availableYears,
   pickerYear,
+  /** Danh sách mode hiển thị; mặc định đủ 6 (có Tuần). */
+  modes = MODE_ORDER,
 }) {
+  const visibleModes = useMemo(() => {
+    const allowed = new Set(modes?.length ? modes : MODE_ORDER);
+    return MODE_ORDER.filter((mode) => allowed.has(mode));
+  }, [modes]);
+
   const yearsDesc = useMemo(
     () => [...availableYears].sort((a, b) => b - a),
     [availableYears],
@@ -145,15 +152,22 @@ export default function MachineTimeRangePanel({
       onDayChange?.(day);
     });
 
+  const segmentClass =
+    visibleModes.length === 5
+      ? 'machine-view-mode-segment machine-view-mode-segment--five'
+      : visibleModes.length === 6
+        ? 'machine-view-mode-segment machine-view-mode-segment--six'
+        : 'machine-view-mode-segment';
+
   return (
     <div className="card shadow-sm border-0 machine-top-panel__alarms machine-top-panel__alarms--time w-100 h-100">
       <div className="machine-time-range-panel h-100 d-flex flex-column">
         <div
-          className="machine-view-mode-segment machine-view-mode-segment--six"
+          className={segmentClass}
           role="tablist"
           aria-label="Chế độ xem biểu đồ"
         >
-          {MODE_ORDER.map((mode) => (
+          {visibleModes.map((mode) => (
             <button
               key={mode}
               type="button"

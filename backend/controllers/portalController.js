@@ -1,6 +1,14 @@
 import pool from '../db.js';
 import { getUserAllowedLocations, PORTALS } from '../utils/userScope.js';
-import { alarmTableRef, ensureCncMachinesTable, ensureCncSchema, machineIdExists, midaMachinesTableRef, telemetryTableRef } from '../utils/machineSchema.js';
+import {
+  alarmTableRef,
+  ensureCncMachinesTable,
+  ensureCncSchema,
+  findMachineIdConflict,
+  machineIdConflictMessage,
+  midaMachinesTableRef,
+  telemetryTableRef,
+} from '../utils/machineSchema.js';
 import {
   bootCncTelemetryTable,
   ensureCncElectricalTelemetryColumns,
@@ -295,10 +303,13 @@ export const addMidaCncMachine = async (req, res) => {
   const alarmTable = alarmTableRef(id, machineType);
   const client = await pool.connect();
   try {
-    const existing = await machineIdExists(client, machine_id.trim());
-    if (existing) {
+    const conflict = await findMachineIdConflict(client, machine_id.trim());
+    if (conflict) {
       client.release();
-      return res.status(409).json({ error: `ID máy "${machine_id}" đã tồn tại` });
+      return res.status(409).json({
+        error: machineIdConflictMessage(machine_id.trim(), conflict),
+        conflict_schema: conflict.schema,
+      });
     }
 
     await client.query('BEGIN');

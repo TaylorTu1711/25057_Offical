@@ -1238,6 +1238,12 @@ export function buildErrorSeries(allErrors, viewMode, selection = {}) {
   };
 }
 
+/** Lọc rows theo cùng khoảng ngày/tháng/năm đang chọn trên biểu đồ. */
+export function filterRowsByChartSelection(rows, viewMode, selection = {}, timestampKey = 'timestamp') {
+  const { from, to } = getSelectionRange(viewMode, selection);
+  return filterInRange(rows || [], from, to, timestampKey);
+}
+
 const avgBucket = (sum, count) => (count > 0 ? sum / count : 0);
 
 const pushElectricalSample = (map, key, row) => {

@@ -96,6 +96,52 @@
   white-space: nowrap;
 }
 
+/* Cụm nút phải navbar — khoảng cách đều (hiển thị bởi Tailwind: hidden lg:flex) */
+.navbar-actions {
+  align-items: center;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+  margin-left: 0.5rem;
+}
+
+.navbar-actions__item {
+  flex: 0 0 auto;
+  margin: 0 !important;
+}
+
+.navbar-actions__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 2.25rem;
+  padding: 0 0.85rem;
+  border-radius: 0.5rem;
+  border: 0;
+  background: transparent;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.navbar-actions__link:hover {
+  background-color: var(--nav-hover-bg);
+}
+
+.navbar-actions .dtr-online-toggle {
+  height: 2.25rem;
+  align-items: stretch;
+}
+
+.navbar-actions .dtr-online-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 0.7rem;
+}
+
 /* Hide intrusive Google Translate top banner/toolbar */
 body {
   top: 0 !important;

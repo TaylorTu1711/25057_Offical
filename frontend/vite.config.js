@@ -25,8 +25,8 @@ export default defineConfig({
         target: backendTarget,
         changeOrigin: true,
       },
-      // Entry DTR: /dtr/sortmachine/:id → Express (set cookie + redirect)
-      '^/dtr/sortmachine/[^/]+': {
+      // Deep-link máy DTR (vd. /dtr/sortmachine/25231/s) → Express; /dtr/sortmachine/:id (SPA) giữ Vite
+      '^/dtr/sortmachine/[^/]+/.+': {
         target: backendTarget,
         changeOrigin: true,
         ws: true,
@@ -36,19 +36,43 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
-      // Khi đã có cookie dtr_machine: mọi path còn lại (trừ HMR Vite) → Express → Tailscale
+      // Cookie dtr_machine: chỉ proxy path máy DTR (iframe), giữ SPA Plenma trên Vite
       '/': {
         target: backendTarget,
         changeOrigin: true,
         ws: true,
         bypass(req) {
-          if (!hasDtrCookie(req)) return req.url
           const u = req.url || ''
-          if (u.startsWith('/api/')) return req.url
-          if (u.startsWith('/@vite') || u.startsWith('/@react-refresh')) return req.url
-          if (u.startsWith('/node_modules/.vite')) return req.url
-          // Plenma source khi đang dev mà không xem máy DTR — đã return ở trên nếu không cookie
-          if (u.startsWith('/src/') && !hasDtrCookie(req)) return req.url
+          const path = u.split('?')[0]
+
+          // Không cookie → luôn Vite
+          if (!hasDtrCookie(req)) return req.url
+
+          // Vite / SPA Plenma — không đẩy sang Express
+          if (
+            u.startsWith('/api/')
+            || u.startsWith('/@vite')
+            || u.startsWith('/@react-refresh')
+            || u.startsWith('/node_modules')
+            || u.startsWith('/src/')
+            || u.startsWith('/assets/')
+            || path === '/'
+            || path === '/index.html'
+            || path === '/favicon.ico'
+            || path.startsWith('/login')
+            || path.startsWith('/register')
+            || path.startsWith('/machines')
+            || path.startsWith('/mida')
+            || path === '/dtr/sortmachine'
+            || path === '/dtr/sortmachine/'
+            // SPA chi tiết: /dtr/sortmachine/:id (không có path con)
+            || /^\/dtr\/sortmachine\/[^/]+\/?$/.test(path)
+            || path.startsWith('/.well-known')
+          ) {
+            return req.url
+          }
+
+          // Còn lại (vd. /s, /dashboard khi đang xem máy DTR) → Express proxy
           return null
         },
       },

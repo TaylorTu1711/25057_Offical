@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import '../css/MachineTree.css';
+import useNow from '../hooks/useNow';
+import { resolveMachineDisplayStatus } from '../utils/machineStatus';
 
 const TreeNode = ({ node, level = 0, onMachineClick, selectedMachineId }) => {
   const hasChildren = node.children && node.children.length > 0;
@@ -54,8 +56,24 @@ const TreeNode = ({ node, level = 0, onMachineClick, selectedMachineId }) => {
             level === 0 ? 'tree-item__icon--level0' : level === 1 ? 'tree-item__icon--level1' : 'tree-item__icon--muted'
           }`}
         />
-        <span className={`tree-item__label ${level === 0 ? 'tree-item__label--level0' : ''}`} title={node.label}>
-          {node.label}
+        <span className="tree-item__label-wrap">
+          <span
+            className={`tree-item__label ${level === 0 ? 'tree-item__label--level0' : ''}`}
+            title={node.label}
+          >
+            {node.label}
+          </span>
+          {node.machine_id ? (
+            <span
+              className={`tree-item__status-dot ${
+                node.statusRunning
+                  ? 'tree-item__status-dot--running'
+                  : 'tree-item__status-dot--stopped'
+              }`}
+              title={node.statusLabel || (node.statusRunning ? 'Đang chạy' : 'Đang dừng')}
+              aria-label={node.statusLabel || (node.statusRunning ? 'Đang chạy' : 'Đang dừng')}
+            />
+          ) : null}
         </span>
       </div>
 
@@ -82,9 +100,42 @@ const MachineTreeSidebarMobile = ({
   selectedMachineId,
   duyTanLocations = [],
   otherLocations = [],
+  getMachinePath = (id) => `/machines/${id}`,
+  rootLabel = '',
+  onNavigate,
 }) => {
-  const buildTreeData = () => {
+  const now = useNow();
+
+  const treeData = useMemo(() => {
     if (!machines || machines.length === 0) return [];
+
+    const mapMachineNode = (machine) => {
+      const display = resolveMachineDisplayStatus(
+        machine.status,
+        machine.last_updated,
+        now,
+      );
+      return {
+        label: machine.machine_name,
+        machine_id: machine.machine_id,
+        icon: 'bi-cpu',
+        statusRunning: display.running,
+        statusLabel: display.label,
+      };
+    };
+
+    if (rootLabel) {
+      const sortedMachines = [...machines].sort((a, b) =>
+        a.machine_name.localeCompare(b.machine_name, 'vi', { numeric: true }),
+      );
+      return [
+        {
+          label: rootLabel,
+          icon: 'bi-building',
+          children: sortedMachines.map(mapMachineNode),
+        },
+      ];
+    }
 
     const tree = [];
 
@@ -108,11 +159,7 @@ const MachineTreeSidebarMobile = ({
       return {
         label: locationName,
         icon: 'bi-geo-alt',
-        children: sortedMachines.map((machine) => ({
-          label: machine.machine_name,
-          machine_id: machine.machine_id,
-          icon: 'bi-cpu',
-        })),
+        children: sortedMachines.map(mapMachineNode),
       };
     };
 
@@ -153,12 +200,11 @@ const MachineTreeSidebarMobile = ({
     }
 
     return tree;
-  };
-
-  const treeData = buildTreeData();
+  }, [machines, duyTanLocations, otherLocations, now, rootLabel]);
 
   const handleMachineClick = (machineId) => {
-    navigate(`/machines/${machineId}`);
+    navigate(getMachinePath(machineId));
+    onNavigate?.();
   };
 
   return (

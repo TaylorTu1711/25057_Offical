@@ -1,12 +1,16 @@
 import express from 'express';
 import { authenticate, authorizeRoles } from '../middleware/authMiddleware.js';
-import { attachUserScope, requirePortal } from '../middleware/portalMiddleware.js';
+import { attachUserScope, requireDtrSortAdmin, requirePortal } from '../middleware/portalMiddleware.js';
 import { addMidaCncMachine, bootMidaCncMachineData, deleteMidaCncMachine, deleteMidaCncMachineDowntime, getMidaCncMachineAlarms, getMidaCncMachineById, getMidaCncMachineDailySetup, getMidaCncMachineDowntime, getMidaCncMachineDowntimePareto, getMidaCncMachinePerformance, getMidaCncMachineTelemetry, getMidaCncMachineTelemetryDaily, getMidaCncMachines, getPortalHome, postMidaCncMachineDowntime, putMidaCncMachineDailySetup, updateMidaCncMachineInfo, updateMidaMachineLayout } from '../controllers/portalController.js';
 import {
   createDtrSortMachine,
   getDtrSortMachine,
+  getDtrSortMachineCountsHourly,
+  getDtrSortMachineStats,
+  getDtrSortMachineStatusTimeline,
   getDtrSortMachines,
   removeDtrSortMachine,
+  updateDtrSortMachineInfo,
 } from '../controllers/dtrSortMachineController.js';
 import { PORTALS } from '../utils/userScope.js';
 import { machineImageUpload } from '../utils/upload.js';
@@ -17,9 +21,42 @@ portalRoutes.use(authenticate, attachUserScope);
 portalRoutes.get('/me', getPortalHome);
 
 portalRoutes.get('/dtr/sort-machines', requirePortal(PORTALS.DTR_SORTMACHINE), getDtrSortMachines);
+portalRoutes.get(
+  '/dtr/sort-machines/:machine_id/counts/hourly',
+  requirePortal(PORTALS.DTR_SORTMACHINE),
+  getDtrSortMachineCountsHourly,
+);
+portalRoutes.get(
+  '/dtr/sort-machines/:machine_id/status',
+  requirePortal(PORTALS.DTR_SORTMACHINE),
+  getDtrSortMachineStatusTimeline,
+);
+portalRoutes.get(
+  '/dtr/sort-machines/:machine_id/stats',
+  requirePortal(PORTALS.DTR_SORTMACHINE),
+  getDtrSortMachineStats,
+);
 portalRoutes.get('/dtr/sort-machines/:machine_id', requirePortal(PORTALS.DTR_SORTMACHINE), getDtrSortMachine);
-portalRoutes.post('/dtr/sort-machines', requirePortal(PORTALS.DTR_SORTMACHINE), createDtrSortMachine);
-portalRoutes.delete('/dtr/sort-machines/:machine_id', requirePortal(PORTALS.DTR_SORTMACHINE), removeDtrSortMachine);
+portalRoutes.post(
+  '/dtr/sort-machines',
+  requirePortal(PORTALS.DTR_SORTMACHINE),
+  requireDtrSortAdmin,
+  machineImageUpload.single('image_url'),
+  createDtrSortMachine,
+);
+portalRoutes.put(
+  '/dtr/sort-machines/:machine_id',
+  requirePortal(PORTALS.DTR_SORTMACHINE),
+  requireDtrSortAdmin,
+  machineImageUpload.single('image_url'),
+  updateDtrSortMachineInfo,
+);
+portalRoutes.delete(
+  '/dtr/sort-machines/:machine_id',
+  requirePortal(PORTALS.DTR_SORTMACHINE),
+  requireDtrSortAdmin,
+  removeDtrSortMachine,
+);
 portalRoutes.get('/mida/cnc-machines/:machine_id', requirePortal(PORTALS.MIDA_CNC), getMidaCncMachineById);
 portalRoutes.get('/mida/cnc-machines/:machine_id/telemetry/daily', requirePortal(PORTALS.MIDA_CNC), getMidaCncMachineTelemetryDaily);
 portalRoutes.get('/mida/cnc-machines/:machine_id/telemetry', requirePortal(PORTALS.MIDA_CNC), getMidaCncMachineTelemetry);

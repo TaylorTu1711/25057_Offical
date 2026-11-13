@@ -62,10 +62,11 @@ const BarLineChart_Sanluong = ({
   const labelCount = labels?.length ?? 0;
   const productionLine = useMemo(() => getProductionLineStyle(), []);
   const showLinePoints = labelCount <= 24;
-  const { chartRef, zoomPluginOptions } = useChartZoomPreserve(
+  const { chartRef, zoomPluginOptions, zoomedScaleProps } = useChartZoomPreserve(
     [labels, dataValues, lineValues, showOutputBar, showInputLine],
     'x',
   );
+  const xZoom = zoomedScaleProps?.x;
 
   const data = useMemo(() => {
     const datasets = [];
@@ -169,10 +170,12 @@ const BarLineChart_Sanluong = ({
         zoom: zoomPluginOptions,
       },
       layout: { padding: { top: 4, right: 0, bottom: 0, left: 0 } },
+      ...(xZoom ? { animation: false, animations: { x: false, y: false, numbers: false } } : {}),
       scales: {
         x: themedXScale(
           {
             ticks: getCategoryXAxisTickOptions(labelCount, xTickMode),
+            ...(xZoom ? { min: xZoom.min, max: xZoom.max } : {}),
           },
           undefined,
           'category',
@@ -216,6 +219,7 @@ const BarLineChart_Sanluong = ({
       categoryPrefix,
       xTickMode,
       zoomPluginOptions,
+      xZoom,
       showOutputBar,
       showInputLine,
       productionLine.axisColor,
