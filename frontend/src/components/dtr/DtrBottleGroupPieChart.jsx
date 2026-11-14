@@ -28,14 +28,16 @@ function normKey(key) {
 
 /**
  * Biểu đồ quạt 2 phần:
- * - Tổng B1_KN + B4_KN + B5_KN
- * - Tổng các loại chai còn lại (gồm HU_KN)
+ * - Chai không nhãn: B1_KN + B4_KN + B5_KN
+ * - Các chai còn lại (gồm HU_KN và loại khác)
  */
 export default function DtrBottleGroupPieChart({
   keys = [],
   series = {},
   title = 'TỈ LỆ CHAI KHÔNG NHÃN',
   expandable = true,
+  /** Hiện chú thích màu (dùng khi phóng to). */
+  showLegend = false,
 }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -54,13 +56,13 @@ export default function DtrBottleGroupPieChart({
     const list = [
       {
         key: 'primary',
-        label: 'B1+B4+B5',
+        label: 'Chai không nhãn',
         total: primary,
         color: COLORS.primary,
       },
       {
         key: 'other',
-        label: 'Còn lại',
+        label: 'Các chai còn lại',
         total: other,
         color: isDark ? '#64748b' : COLORS.other,
       },
@@ -131,23 +133,56 @@ export default function DtrBottleGroupPieChart({
     </div>
   );
 
+  const legend = showLegend && slices.list.length > 0 ? (
+    <ul className="dtr-pie-card__legend dtr-pie-card__legend--group" aria-label="Chú thích nhóm chai">
+      {slices.list.map((it) => {
+        const pct = slices.grandTotal > 0
+          ? ((it.total / slices.grandTotal) * 100).toFixed(1)
+          : '0';
+        return (
+          <li key={it.key} className="dtr-pie-card__legend-item">
+            <i style={{ background: it.color }} aria-hidden="true" />
+            <span className="dtr-pie-card__legend-name">{it.label}</span>
+            <span className="dtr-pie-card__legend-meta">
+              {it.total.toLocaleString('vi-VN')} · {pct}%
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  ) : null;
+
   return (
-    <div className="dtr-pie-card card shadow d-flex flex-column min-h-0">
+    <div
+      className={`dtr-pie-card card shadow d-flex flex-column min-h-0${
+        showLegend ? ' dtr-pie-card--with-legend' : ''
+      }`}
+    >
       <div className="chart-title-brand machine-chart-head dtr-pie-card__head">
         <div className="dtr-pie-card__title">{title}</div>
         {expandable && slices.grandTotal > 0 ? (
-          <MidaChartExpand title={title} tone="plenma" variant="pie">
+          <MidaChartExpand
+            title="TỈ LỆ CHAI KHÔNG NHÃN VÀ CÁC CHAI CÒN LẠI"
+            tone="plenma"
+            variant="pie"
+          >
             <DtrBottleGroupPieChart
               keys={keys}
               series={series}
-              title={title}
+              title="TỈ LỆ CHAI KHÔNG NHÃN VÀ CÁC CHAI CÒN LẠI"
               expandable={false}
+              showLegend
             />
           </MidaChartExpand>
         ) : null}
       </div>
-      <div className="dtr-pie-card__body flex-grow-1 min-h-0 d-flex align-items-center justify-content-center">
+      <div
+        className={`dtr-pie-card__body flex-grow-1 min-h-0 d-flex align-items-center justify-content-center${
+          showLegend ? ' dtr-pie-card__body--with-legend' : ''
+        }`}
+      >
         {chartBody}
+        {legend}
       </div>
     </div>
   );

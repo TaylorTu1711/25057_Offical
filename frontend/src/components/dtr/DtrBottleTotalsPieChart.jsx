@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import useTheme from '../../hooks/useTheme';
@@ -8,6 +8,18 @@ import { DTR_BOTTLE_COUNT_COLORS } from './DtrBottleCountsHourlyChart';
 import MidaChartExpand from '../mida/MidaChartExpand';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
+
+/** Tooltip giữa doughnut — đè lên vùng số Tổng. */
+if (!Tooltip.positioners.dtrPieCenter) {
+  Tooltip.positioners.dtrPieCenter = function dtrPieCenter() {
+    const { chartArea } = this.chart;
+    if (!chartArea) return false;
+    return {
+      x: (chartArea.left + chartArea.right) / 2,
+      y: (chartArea.top + chartArea.bottom) / 2,
+    };
+  };
+}
 
 const FALLBACK_COLORS = [
   '#3498db',
@@ -50,6 +62,8 @@ export default function DtrBottleTotalsPieChart({
 }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  /** Hover lát: ẩn số Tổng để tooltip đè lên giữa doughnut. */
+  const [hovering, setHovering] = useState(false);
 
   const glossaryByKey = useMemo(() => {
     const map = {};
@@ -64,10 +78,12 @@ export default function DtrBottleTotalsPieChart({
       const total = sumArr(series[key] || []);
       const k = String(key || '').toLowerCase();
       const gloss = glossaryByKey[k];
+      const code = gloss?.label || String(key || '').toUpperCase();
+      const meaning = String(gloss?.meaning || '').trim();
       return {
         key,
-        label: gloss?.label || String(key || '').toUpperCase(),
-        meaning: gloss?.meaning || '',
+        /** Tên chi tiết (glossary); fallback mã nếu chưa có mô tả. */
+        displayName: meaning || code,
         total,
         color: colorForKey(key, index),
       };
@@ -78,7 +94,7 @@ export default function DtrBottleTotalsPieChart({
 
   const data = useMemo(
     () => ({
-      labels: slices.list.map((it) => it.label),
+      labels: slices.list.map((it) => it.displayName),
       datasets: [
         {
           data: slices.list.map((it) => it.total),
@@ -92,39 +108,68 @@ export default function DtrBottleTotalsPieChart({
     [slices.list, isDark],
   );
 
+  const onHoverSlice = useCallback((_event, elements) => {
+    setHovering(Boolean(elements?.length));
+  }, []);
+
   const options = useMemo(
     () => ({
       ...chartDoughnutAnimationOptions,
       responsive: true,
       maintainAspectRatio: false,
       cutout: '42%',
+      interaction: { mode: 'nearest', intersect: true },
+      onHover: onHoverSlice,
       plugins: {
         legend: { display: false },
         datalabels: { display: false },
         tooltip: {
+          enabled: true,
+          position: 'dtrPieCenter',
+          xAlign: 'center',
+          yAlign: 'center',
+          displayColors: true,
+          padding: 10,
+          caretSize: 0,
+          /* Nền đặc — đè kín chỗ Tổng phía dưới canvas */
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.97)',
+          titleColor: isDark ? '#f8fafc' : '#0f172a',
+          bodyColor: isDark ? '#e2e8f0' : '#334155',
+          borderColor: isDark ? 'rgba(148, 163, 184, 0.35)' : 'rgba(15, 23, 42, 0.12)',
+          borderWidth: 1,
           callbacks: {
+            title: (items) => {
+              const item = items?.[0];
+              return item?.label || '';
+            },
             label: (ctx) => {
               const v = Number(ctx.raw) || 0;
               const pct = slices.grandTotal > 0
                 ? ((v / slices.grandTotal) * 100).toFixed(1)
                 : '0';
-              return ` ${ctx.label}: ${v.toLocaleString('vi-VN')} (${pct}%)`;
+              return ` ${v.toLocaleString('vi-VN')} chai (${pct}%)`;
             },
           },
         },
       },
     }),
-    [slices.grandTotal],
+    [onHoverSlice, slices.grandTotal, isDark],
   );
 
   const chartBody = slices.grandTotal > 0 ? (
-    <div className="dtr-pie-card__chart">
+    <div
+      className="dtr-pie-card__chart"
+      onMouseLeave={() => setHovering(false)}
+    >
       <Doughnut
         key={`${theme}-${slices.grandTotal}-${slices.list.length}`}
         data={data}
         options={options}
       />
-      <div className="dtr-pie-card__center" aria-hidden="true">
+      <div
+        className={`dtr-pie-card__center${hovering ? ' is-hidden' : ''}`}
+        aria-hidden="true"
+      >
         <div className="dtr-pie-card__center-label">Tổng</div>
         <div className="dtr-pie-card__center-value">
           {slices.grandTotal.toLocaleString('vi-VN')} chai
@@ -146,12 +191,9 @@ export default function DtrBottleTotalsPieChart({
         return (
           <li key={it.key} className="dtr-pie-card__legend-item">
             <i style={{ background: it.color }} aria-hidden="true" />
-            <div className="dtr-pie-card__legend-text">
-              <span className="dtr-pie-card__legend-label">{it.label}</span>
-              {it.meaning ? (
-                <span className="dtr-pie-card__legend-meaning">{it.meaning}</span>
-              ) : null}
-            </div>
+            <span className="dtr-pie-card__legend-name" title={it.displayName}>
+              {it.displayName}
+            </span>
             <span className="dtr-pie-card__legend-meta">
               {it.total.toLocaleString('vi-VN')} · {pct}%
             </span>

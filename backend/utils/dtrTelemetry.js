@@ -319,9 +319,77 @@ async function getDtrLifetimeDailyProductionTotal(db, table) {
 }
 
 /**
- * Live KPI: HIỆU SUẤT SỬ DỤNG
- * = time_running / thời gian mở máy kể từ bản ghi telemetry đầu tiên.
- * Ưu tiên mẫu số = time_on (PLC); nếu time_on = 0 thì dùng (now − first_telemetry).
+ * THỜI GIAN LŨY KẾ = Σ (cuối ngày − đầu ngày) của time_on / time_running.
+ * Giống sản lượng: mỗi ngày một delta ≥ 0 (hỗ trợ ngày backfill 12h).
+ */
+async function getDtrLifetimeDailyTimeTotals(db, table) {
+  const [firstRes, lastRes] = await Promise.all([
+    db.query(
+      `SELECT DISTINCT ON (date_trunc('day', timestamp))
+         date_trunc('day', timestamp) AS bucket,
+         time_on,
+         time_running
+       FROM ${table}
+       WHERE timestamp IS NOT NULL
+       ORDER BY date_trunc('day', timestamp), timestamp ASC, id ASC`,
+    ),
+    db.query(
+      `SELECT DISTINCT ON (date_trunc('day', timestamp))
+         date_trunc('day', timestamp) AS bucket,
+         time_on,
+         time_running
+       FROM ${table}
+       WHERE timestamp IS NOT NULL
+       ORDER BY date_trunc('day', timestamp), timestamp DESC, id DESC`,
+    ),
+  ]);
+
+  const firstByDay = new Map();
+  for (const row of firstRes.rows) {
+    const ts = new Date(row.bucket).getTime();
+    if (!Number.isFinite(ts)) continue;
+    firstByDay.set(ts, {
+      time_on: Number(row.time_on) || 0,
+      time_running: Number(row.time_running) || 0,
+    });
+  }
+
+  let timeOn = 0;
+  let timeRunning = 0;
+  for (const row of lastRes.rows) {
+    const ts = new Date(row.bucket).getTime();
+    if (!Number.isFinite(ts)) continue;
+    const first = firstByDay.get(ts);
+    if (!first) continue;
+    const lastOn = Number(row.time_on) || 0;
+    const lastRun = Number(row.time_running) || 0;
+    timeOn += Math.max(0, lastOn - first.time_on);
+    timeRunning += Math.max(0, lastRun - first.time_running);
+  }
+  return { time_on: timeOn, time_running: timeRunning };
+}
+
+/** Parse timestamp/date từ PG (string hoặc Date) → Date hợp lệ, hoặc null. */
+function parsePgDateTime(raw) {
+  if (raw == null || raw === '') return null;
+  if (raw instanceof Date) {
+    return Number.isNaN(raw.getTime()) ? null : raw;
+  }
+  const str = String(raw).trim();
+  if (!str) return null;
+  // DATE YYYY-MM-DD → đầu ngày local
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const d = new Date(`${str}T00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(str);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Live KPI: HIỆU SUẤT SỬ DỤNG + THỜI GIAN CHẠY LŨY KẾ
+ * HIỆU SUẤT = thời gian chạy lũy kế / (now − ngày bàn giao).
+ * Không có ngày bàn giao → mẫu số = (now − bản ghi telemetry cũ nhất).
  */
 export async function getDtrUtilizationSummary(db, machineId) {
   const registryId = await resolveDtrRegistryMachineId(db, machineId);
@@ -330,7 +398,7 @@ export async function getDtrUtilizationSummary(db, machineId) {
   }
 
   const machineRes = await db.query(
-    `SELECT machine_id, created_at, status, last_updated
+    `SELECT machine_id, created_at, status, last_updated, handover_date
      FROM ${DTR_MACHINES_TABLE}
      WHERE machine_id = $1`,
     [registryId],
@@ -340,7 +408,7 @@ export async function getDtrUtilizationSummary(db, machineId) {
 
   await ensureDtrTelemetryTable(db, registryId);
   const table = dtrTelemetryTableRef(registryId);
-  const [latestRes, firstRes, totalCounts] = await Promise.all([
+  const [latestRes, firstRes, totalCounts, dailyTime] = await Promise.all([
     db.query(
       `SELECT time_running, time_on, status, timestamp, counts
        FROM ${table}
@@ -355,63 +423,63 @@ export async function getDtrUtilizationSummary(db, machineId) {
        LIMIT 1`,
     ),
     getDtrLifetimeDailyProductionTotal(db, table),
+    getDtrLifetimeDailyTimeTotals(db, table),
   ]);
   const latest = latestRes.rows[0] || null;
   const first = firstRes.rows[0] || null;
   const firstTsRaw = first?.timestamp ?? null;
+  const handoverRaw = machine.handover_date ?? null;
 
-  const timeRunning = Number(latest?.time_running) || 0;
-  const timeOn = Number(latest?.time_on) || 0;
-  const firstRunning = Number(first?.time_running) || 0;
-  const firstOn = Number(first?.time_on) || 0;
-  // Delta kể từ bản ghi đầu tiên (tránh cộng dồn trước khi có telemetry portal)
-  const runSinceFirst = Math.max(0, timeRunning - firstRunning);
-  const onSinceFirst = Math.max(0, timeOn - firstOn);
+  const timeRunning = Number(dailyTime.time_running) || 0;
+  const timeOn = Number(dailyTime.time_on) || 0;
+  const latestRunning = Number(latest?.time_running) || 0;
+  const latestOn = Number(latest?.time_on) || 0;
 
   const counts = normalizeCountsObject(latest?.counts);
-  const firstAt = firstTsRaw ? new Date(firstTsRaw) : null;
+  const firstAt = parsePgDateTime(firstTsRaw);
+  const handoverAt = parsePgDateTime(handoverRaw);
   const now = new Date();
+
+  const denomStart = handoverAt || firstAt;
+  const denomSource = handoverAt ? 'handover_date' : (firstAt ? 'first_telemetry' : null);
   const elapsedSeconds =
-    firstAt && !Number.isNaN(firstAt.getTime())
-      ? Math.max(0, Math.floor((now.getTime() - firstAt.getTime()) / 1000))
+    denomStart
+      ? Math.max(0, Math.floor((now.getTime() - denomStart.getTime()) / 1000))
       : 0;
 
   let utilizationPct = 0;
-  const denom = onSinceFirst > 0 ? onSinceFirst : elapsedSeconds;
-  const numer = onSinceFirst > 0 ? runSinceFirst : timeRunning;
-  if (denom > 0) {
-    utilizationPct = (numer / denom) * 100;
+  if (elapsedSeconds > 0) {
+    utilizationPct = (timeRunning / elapsedSeconds) * 100;
   }
   if (!Number.isFinite(utilizationPct) || utilizationPct < 0) utilizationPct = 0;
-  // Không cắt trần 100% — nếu PLC lệch có thể >100; UI doughnut vẫn hiển thị số
   utilizationPct = Number(utilizationPct.toFixed(2));
 
   return {
     machine_id: registryId,
     created_at: machine.created_at,
+    handover_date: handoverRaw,
     first_telemetry_at: firstTsRaw,
+    utilization_denom_source: denomSource,
     elapsed_seconds: elapsedSeconds,
+    /** THỜI GIAN CHẠY LŨY KẾ = Σ (cuối ngày − đầu ngày) */
     time_running: timeRunning,
     time_on: timeOn,
-    time_running_since_first: runSinceFirst,
-    time_on_since_first: onSinceFirst,
+    time_running_since_first: timeRunning,
+    time_on_since_first: timeOn,
+    time_running_latest: latestRunning,
+    time_on_latest: latestOn,
     counts,
     /** SẢN LƯỢNG LŨY KẾ = Σ (cuối ngày − đầu ngày) mọi ngày */
     total_counts: totalCounts,
     status: latest?.status ?? machine.status ?? null,
     last_telemetry_at: latest?.timestamp ?? null,
     last_updated: machine.last_updated,
-    /** HIỆU SUẤT SỬ DỤNG = Δtime_running / Δtime_on (từ bản ghi đầu) */
+    /** HIỆU SUẤT SỬ DỤNG = time_running lũy kế / (now − bàn giao | dữ liệu cũ nhất) */
     utilization_pct: utilizationPct,
     available_years: await getDtrTelemetryYears(db, registryId),
   };
 }
 
-/**
- * Hiệu suất theo khung giờ/ngày/tháng/quý/năm (cùng khoảng với biểu đồ số chai).
- * = Δtime_running trong khoảng / độ dài khoảng thực tế * 100
- * (nếu khung chứa "hiện tại" thì cắt đến now).
- */
 export async function getDtrPeriodUtilization(
   db,
   machineId,
@@ -528,7 +596,29 @@ export async function getDtrPeriodUtilization(
  * Chuỗi status theo thời gian (biểu đồ chạy/dừng).
  * DTR: 0 = dừng, 1 = chạy.
  * Hỗ trợ { from, to } ISO hoặc { hours } (mặc định 24h gần nhất).
+ *
+ * Khoảng không có telemetry (gap > DTR_STATUS_GAP_MS) → ép status = 0 (dừng),
+ * kể cả đoạn từ mẫu cuối đến hết cửa sổ xem.
  */
+/** Ngưỡng mất dữ liệu — khớp isMachineConnected (~2 phút). */
+const DTR_STATUS_GAP_MS = 2 * 60_000;
+
+function pushStatusPoint(timestamps, statusValues, ts, status) {
+  const t = Number(ts);
+  const s = Number(status);
+  if (!Number.isFinite(t) || (s !== 0 && s !== 1)) return;
+  const lastI = timestamps.length - 1;
+  if (lastI >= 0) {
+    if (timestamps[lastI] === t) {
+      statusValues[lastI] = s;
+      return;
+    }
+    if (t < timestamps[lastI]) return;
+  }
+  timestamps.push(t);
+  statusValues.push(s);
+}
+
 export async function getDtrStatusTimeline(db, machineId, { hours = 24, from, to } = {}) {
   const registryId = await resolveDtrRegistryMachineId(db, machineId);
   if (!registryId) {
@@ -558,25 +648,117 @@ export async function getDtrStatusTimeline(db, machineId, { hours = 24, from, to
     rangeStart = new Date(rangeEnd.getTime() - hourCount * 3600_000);
   }
 
-  const { rows } = await db.query(
-    `SELECT timestamp, status
-     FROM ${table}
-     WHERE timestamp >= $1 AND timestamp <= $2 AND status IS NOT NULL
-     ORDER BY timestamp ASC, id ASC`,
-    [rangeStart, rangeEnd],
-  );
+  const rangeStartMs = rangeStart.getTime();
+  const rangeEndMs = rangeEnd.getTime();
 
-  const timestamps = [];
-  const statusValues = [];
+  const [{ rows }, beforeRes] = await Promise.all([
+    db.query(
+      `SELECT timestamp, status
+       FROM ${table}
+       WHERE timestamp >= $1 AND timestamp <= $2 AND status IS NOT NULL
+       ORDER BY timestamp ASC, id ASC`,
+      [rangeStart, rangeEnd],
+    ),
+    db.query(
+      `SELECT timestamp, status
+       FROM ${table}
+       WHERE timestamp < $1 AND status IS NOT NULL
+       ORDER BY timestamp DESC, id DESC
+       LIMIT 1`,
+      [rangeStart],
+    ),
+  ]);
+
+  const samples = [];
   for (const row of rows) {
     const ts = row.timestamp != null ? new Date(row.timestamp).getTime() : NaN;
     if (!Number.isFinite(ts)) continue;
     const s = Number(row.status);
-    if (!Number.isFinite(s)) continue;
-    // Chỉ giữ 0/1 (chuẩn DTR); giá trị khác bỏ qua
     if (s !== 0 && s !== 1) continue;
-    timestamps.push(ts);
-    statusValues.push(s);
+    samples.push({ ts, status: s });
+  }
+
+  const before = beforeRes.rows[0] || null;
+  let prevTs = null;
+  let prevStatus = null;
+  if (before?.timestamp != null) {
+    const bts = new Date(before.timestamp).getTime();
+    const bs = Number(before.status);
+    if (Number.isFinite(bts) && (bs === 0 || bs === 1)) {
+      prevTs = bts;
+      prevStatus = bs;
+    }
+  }
+
+  const timestamps = [];
+  const statusValues = [];
+
+  // Trạng thái tại đầu cửa sổ
+  if (prevTs != null) {
+    const age = rangeStartMs - prevTs;
+    pushStatusPoint(
+      timestamps,
+      statusValues,
+      rangeStartMs,
+      age > DTR_STATUS_GAP_MS ? 0 : prevStatus,
+    );
+    if (age > DTR_STATUS_GAP_MS) {
+      prevStatus = 0;
+      prevTs = rangeStartMs;
+    } else {
+      prevTs = rangeStartMs;
+    }
+  } else if (samples.length === 0) {
+    // Không có dữ liệu trong/ trước khoảng → cả cửa sổ = dừng
+    pushStatusPoint(timestamps, statusValues, rangeStartMs, 0);
+    pushStatusPoint(timestamps, statusValues, rangeEndMs, 0);
+    return {
+      registryId,
+      timestamps,
+      statusValues,
+      from: rangeStart.toISOString(),
+      to: rangeEnd.toISOString(),
+    };
+  }
+
+  for (const sample of samples) {
+    if (prevTs != null) {
+      const gap = sample.ts - prevTs;
+      if (gap > DTR_STATUS_GAP_MS) {
+        const stopAt = prevTs + DTR_STATUS_GAP_MS;
+        if (stopAt < sample.ts) {
+          pushStatusPoint(timestamps, statusValues, stopAt, 0);
+        }
+        // Neo dừng sát trước mẫu mới để step chart hạ xuống 0
+        if (sample.ts - 1 > (timestamps[timestamps.length - 1] || 0)) {
+          pushStatusPoint(timestamps, statusValues, sample.ts - 1, 0);
+        }
+      }
+    } else if (sample.ts > rangeStartMs) {
+      // Có mẫu đầu tiên sau đầu cửa sổ, trước đó không seed → đoạn đầu = dừng
+      pushStatusPoint(timestamps, statusValues, rangeStartMs, 0);
+      if (sample.ts - rangeStartMs > DTR_STATUS_GAP_MS) {
+        pushStatusPoint(timestamps, statusValues, sample.ts - 1, 0);
+      }
+    }
+
+    pushStatusPoint(timestamps, statusValues, sample.ts, sample.status);
+    prevTs = sample.ts;
+    prevStatus = sample.status;
+  }
+
+  // Từ mẫu cuối → hết cửa sổ
+  if (prevTs != null) {
+    const tailGap = rangeEndMs - prevTs;
+    if (tailGap > DTR_STATUS_GAP_MS) {
+      const stopAt = prevTs + DTR_STATUS_GAP_MS;
+      if (stopAt < rangeEndMs) {
+        pushStatusPoint(timestamps, statusValues, stopAt, 0);
+      }
+      pushStatusPoint(timestamps, statusValues, rangeEndMs, 0);
+    } else if (rangeEndMs > prevTs) {
+      pushStatusPoint(timestamps, statusValues, rangeEndMs, prevStatus);
+    }
   }
 
   return {

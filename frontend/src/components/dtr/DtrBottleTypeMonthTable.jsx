@@ -7,8 +7,11 @@ const ROW_ORDER = [
   'b4_kn', 'b4_oh', 'b4_nl', 'b4_nn',
   'b5_kn', 'b5_nl', 'b5_nn',
   'hu_kn', 'hu_nl',
-  'ptp', 'zz_cochai', 'zz_nap', 'no_classify',
+  'ptp', 'no_classify',
 ];
+
+/** Ẩn khỏi bảng giám sát (vẫn có thể còn trong telemetry). */
+const TABLE_EXCLUDED_KEYS = new Set(['zz_cochai', 'zz_nap']);
 
 const GROUP_BREAK_AFTER = new Set(['b1_nn', 'b4_nn', 'b5_nn', 'hu_nl']);
 
@@ -35,7 +38,10 @@ function fmtPct(n) {
 }
 
 function sumCounts(counts = {}) {
-  return Object.values(counts).reduce((s, v) => s + (Number(v) || 0), 0);
+  return Object.entries(counts).reduce((s, [key, v]) => {
+    if (TABLE_EXCLUDED_KEYS.has(String(key).toLowerCase())) return s;
+    return s + (Number(v) || 0);
+  }, 0);
 }
 
 function pad2(n) {
@@ -114,9 +120,16 @@ export default function DtrBottleTypeMonthTable({
       };
     });
 
-    const keySet = new Set((keys || []).map((k) => String(k).toLowerCase()));
+    const keySet = new Set(
+      (keys || [])
+        .map((k) => String(k).toLowerCase())
+        .filter((k) => !TABLE_EXCLUDED_KEYS.has(k)),
+    );
     for (const c of cols) {
-      Object.keys(c.counts || {}).forEach((k) => keySet.add(String(k).toLowerCase()));
+      Object.keys(c.counts || {}).forEach((k) => {
+        const code = String(k).toLowerCase();
+        if (!TABLE_EXCLUDED_KEYS.has(code)) keySet.add(code);
+      });
     }
 
     const ordered = [

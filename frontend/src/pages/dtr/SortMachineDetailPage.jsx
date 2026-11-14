@@ -53,8 +53,26 @@ const dtrStatusForTree = (status) => {
 
 const DTR_STATUS_TICKS = { 0: 'Dừng', 1: 'Chạy' };
 const DTR_TREE_ROOT_LABEL = 'Danh sách máy Sort DTR';
-/** Ẩn khỏi biểu đồ thống kê số chai + 2 pie (bảng loại chai vẫn giữ). */
+/** Ẩn khỏi biểu đồ thống kê số chai, pie và bảng loại chai. */
 const BOTTLE_CHART_EXCLUDED_KEYS = new Set(['zz_cochai', 'zz_nap']);
+
+/** SẢN LƯỢNG LŨY KẾ: ≥ 10 triệu → "10,x triệu". */
+function formatCumulativeBottleCount(raw) {
+  const n = Number(raw) || 0;
+  if (n >= 10_000_000) {
+    const millions = n / 1_000_000;
+    const text = millions.toLocaleString('vi-VN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    });
+    return { text, unit: ' triệu chai', full: `${n.toLocaleString('vi-VN')} chai` };
+  }
+  return {
+    text: n.toLocaleString('vi-VN'),
+    unit: ' chai',
+    full: `${n.toLocaleString('vi-VN')} chai`,
+  };
+}
 
 const STATUS_RANGE_PRESETS = [
   { id: '1h', label: '1h', minutes: 60 },
@@ -377,12 +395,17 @@ export default function SortMachineDetailPage() {
     </div>
   );
 
-  /** HIỆU SUẤT SỬ DỤNG = time_running / time_on kể từ dữ liệu đầu tiên */
+  /** HIỆU SUẤT SỬ DỤNG = thời gian chạy lũy kế / (now − ngày bàn giao | dữ liệu cũ nhất) */
   const lifetimeUtilizationPct = useMemo(() => {
     const v = Number(liveStats.utilization_pct) || 0;
     if (!Number.isFinite(v) || v < 0) return 0;
     return Math.min(100, v);
   }, [liveStats.utilization_pct]);
+
+  const cumulativeBottleDisplay = useMemo(
+    () => formatCumulativeBottleCount(liveStats.total_counts),
+    [liveStats.total_counts],
+  );
 
   // DTR: status 0 = dừng, 1 = chạy
   const statusLastSeen =
@@ -630,7 +653,7 @@ export default function SortMachineDetailPage() {
                         <div className="col-6">
                           <div
                             className="border rounded text-center shadow d-flex flex-column bg-white machine-top-panel__stat-box"
-                            title="time_running / time_on kể từ bản ghi telemetry đầu tiên"
+                            title="Thời gian chạy lũy kế / thời gian từ ngày bàn giao (hoặc từ dữ liệu cũ nhất) đến nay"
                           >
                             <p className="fw-semibold mb-0 text-brand">HIỆU SUẤT SỬ DỤNG</p>
                             <div className="flex-grow-1 d-flex align-items-center justify-content-center">
@@ -648,11 +671,13 @@ export default function SortMachineDetailPage() {
                             <p className="fw-semibold mb-0 text-brand">SẢN LƯỢNG LŨY KẾ</p>
                             <div
                               className="flex-grow-1 d-flex align-items-center justify-content-center"
-                              title="Tổng sản lượng mọi ngày (không gồm zz_cochai, zz_nap)"
+                              title={`Tổng sản lượng mọi ngày (không gồm zz_cochai, zz_nap): ${cumulativeBottleDisplay.full}`}
                             >
                               <h5 className="m-0 text-dark machine-top-panel__stat-value">
-                                {Number(liveStats.total_counts || 0).toLocaleString('vi-VN')}
-                                <span className="machine-top-panel__stat-unit"> chai</span>
+                                {cumulativeBottleDisplay.text}
+                                <span className="machine-top-panel__stat-unit">
+                                  {cumulativeBottleDisplay.unit}
+                                </span>
                               </h5>
                             </div>
                           </div>
@@ -823,7 +848,7 @@ export default function SortMachineDetailPage() {
                         year={selectedYear}
                         month={selectedMonth}
                         day={selectedDay}
-                        keys={countsSeries.keys}
+                        keys={bottleChartKeys}
                         buckets={countsSeries.buckets}
                       />
                     )}

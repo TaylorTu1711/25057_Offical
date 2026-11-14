@@ -18,6 +18,7 @@ import {
   themedScale,
   themedXScale,
 } from '../../utils/chartTheme';
+import { resolveBottleGlossary } from '../../utils/dtrBottleGlossary';
 
 function ensureBottleTooltipEl() {
   let el = document.getElementById('dtr-bottle-tooltip');
@@ -148,6 +149,22 @@ function colorForKey(key, index) {
   return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
 }
 
+function buildGlossaryLabelMap(bottleGlossary) {
+  const map = {};
+  for (const item of resolveBottleGlossary(bottleGlossary)) {
+    map[String(item.key).toLowerCase()] = item.meaning || item.label || displayKey(item.key);
+  }
+  return map;
+}
+
+/** Legend / tooltip: ưu tiên tên chi tiết (vd. B1 Không nhãn). */
+function displayBottleLabel(key, glossaryByKey) {
+  const k = String(key || '').toLowerCase();
+  const meaning = glossaryByKey?.[k];
+  if (meaning) return meaning;
+  return displayKey(key);
+}
+
 /** Tiêu đề tooltip theo mode xem (tránh luôn hiện «Giờ …»). */
 export function formatBottleBucketTooltipTitle(label, mode = 'hour') {
   const raw = String(label || '').trim();
@@ -189,10 +206,15 @@ export default function DtrBottleCountsHourlyChart({
   hideLegend = false,
   hiddenKeys = null,
   onToggleKey = null,
+  bottleGlossary = null,
 }) {
   const { theme } = useTheme();
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  const glossaryByKey = useMemo(
+    () => buildGlossaryLabelMap(bottleGlossary),
+    [bottleGlossary],
+  );
   const { chartRef, zoomPluginOptions } = useChartZoomPreserve(
     [labels, keys, series],
     'x',
@@ -219,7 +241,7 @@ export default function DtrBottleCountsHourlyChart({
     () => ({
       labels,
       datasets: keys.map((key, index) => ({
-        label: displayKey(key),
+        label: displayBottleLabel(key, glossaryByKey),
         data: series[key] || labels.map(() => 0),
         backgroundColor: colorForKey(key, index),
         borderColor: colorForKey(key, index),
@@ -230,7 +252,7 @@ export default function DtrBottleCountsHourlyChart({
         categoryPercentage: 0.9,
       })),
     }),
-    [labels, keys, series, isKeyHidden],
+    [labels, keys, series, isKeyHidden, glossaryByKey],
   );
 
   const options = useMemo(
@@ -309,6 +331,7 @@ export default function DtrBottleCountsHourlyChart({
         >
           {keys.map((key, index) => {
             const hidden = isKeyHidden(key);
+            const label = displayBottleLabel(key, glossaryByKey);
             return (
               <button
                 key={key}
@@ -316,14 +339,14 @@ export default function DtrBottleCountsHourlyChart({
                 className={`dtr-bottle-chart__legend-item${hidden ? ' is-hidden' : ''}`}
                 role="listitem"
                 aria-pressed={!hidden}
-                title={hidden ? `Hiện ${displayKey(key)}` : `Ẩn ${displayKey(key)}`}
+                title={hidden ? `Hiện ${label}` : `Ẩn ${label}`}
                 onClick={() => onToggleKey?.(key)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 6,
-                  fontSize: 11,
-                  lineHeight: 1.2,
+                  gap: 4,
+                  fontSize: 9,
+                  lineHeight: 1.15,
                   color: labelColor,
                   whiteSpace: 'nowrap',
                   appearance: 'none',
@@ -336,14 +359,14 @@ export default function DtrBottleCountsHourlyChart({
                 <span
                   aria-hidden="true"
                   style={{
-                    width: 12,
-                    height: 12,
+                    width: 10,
+                    height: 10,
                     borderRadius: 2,
                     backgroundColor: colorForKey(key, index),
                     flexShrink: 0,
                   }}
                 />
-                {displayKey(key)}
+                {label}
               </button>
             );
           })}
@@ -365,11 +388,16 @@ export function DtrBottleCountsLegend({
   theme = 'light',
   hiddenKeys = null,
   onToggleKey = null,
+  bottleGlossary = null,
 }) {
   const legendRef = useRef(null);
   const [rows, setRows] = useState(2);
-  const COL_GAP = 14;
+  const COL_GAP = 10;
   const MAX_ROWS = 4;
+  const glossaryByKey = useMemo(
+    () => buildGlossaryLabelMap(bottleGlossary),
+    [bottleGlossary],
+  );
 
   const isKeyHidden = (key) => {
     if (!hiddenKeys || typeof hiddenKeys.has !== 'function') return false;
@@ -420,7 +448,7 @@ export function DtrBottleCountsLegend({
       ro.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [keys]);
+  }, [keys, glossaryByKey]);
 
   if (!keys.length) return null;
   const legendCols = Math.max(1, Math.ceil(keys.length / rows));
@@ -435,7 +463,7 @@ export function DtrBottleCountsLegend({
         gridTemplateRows: `repeat(${rows}, auto)`,
         gridAutoFlow: 'column',
         columnGap: COL_GAP,
-        rowGap: 4,
+        rowGap: 3,
         justifyContent: 'center',
         marginBottom: 6,
         padding: '0 2px',
@@ -445,6 +473,7 @@ export function DtrBottleCountsLegend({
     >
       {keys.map((key, index) => {
         const hidden = isKeyHidden(key);
+        const label = displayBottleLabel(key, glossaryByKey);
         return (
           <button
             key={key}
@@ -452,14 +481,14 @@ export function DtrBottleCountsLegend({
             className={`dtr-bottle-chart__legend-item${hidden ? ' is-hidden' : ''}`}
             role="listitem"
             aria-pressed={!hidden}
-            title={hidden ? `Hiện ${displayKey(key)}` : `Ẩn ${displayKey(key)}`}
+            title={hidden ? `Hiện ${label}` : `Ẩn ${label}`}
             onClick={() => onToggleKey?.(key)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 6,
-              fontSize: 11,
-              lineHeight: 1.2,
+              gap: 4,
+              fontSize: 9,
+              lineHeight: 1.15,
               color: labelColor,
               whiteSpace: 'nowrap',
               appearance: 'none',
@@ -472,14 +501,14 @@ export function DtrBottleCountsLegend({
             <span
               aria-hidden="true"
               style={{
-                width: 12,
-                height: 12,
+                width: 10,
+                height: 10,
                 borderRadius: 2,
                 backgroundColor: colorForKey(key, index),
                 flexShrink: 0,
               }}
             />
-            {displayKey(key)}
+            {label}
           </button>
         );
       })}
