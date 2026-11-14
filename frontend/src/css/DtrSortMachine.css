@@ -3136,6 +3136,27 @@ html[data-theme='dark']:has(.dtr-page) .mida-chart-fs--plenma .mida-chart-expand
   width: max(100%, 1100px);
 }
 
+/* Dark mode + phóng to bảng: chữ trắng rõ trên nền tối */
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table,
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table__title,
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table__hint,
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table__table th,
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table__table td,
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table__type,
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table__count,
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table__pct {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table__hint,
+[data-theme='dark'] .mida-chart-fs__body--table .dtr-bottle-month-table__pct {
+  opacity: 0.88;
+}
+
+[data-theme='dark'] .mida-chart-fs--plenma .mida-chart-fs__title {
+  color: #ffffff !important;
+}
+
 .dtr-bottle-month-table__hint {
   margin-top: 0.15rem;
   font-size: 0.68rem;
@@ -3181,6 +3202,7 @@ html[data-theme='dark']:has(.dtr-page) .mida-chart-fs--plenma .mida-chart-expand
 [data-theme='dark'] .dtr-bottle-month-table__table th,
 [data-theme='dark'] .dtr-bottle-month-table__table td {
   border-bottom-color: rgba(158, 240, 106, 0.18);
+  color: #ffffff;
 }
 
 .dtr-bottle-month-table__table thead th {
@@ -3194,6 +3216,18 @@ html[data-theme='dark']:has(.dtr-page) .mida-chart-fs--plenma .mida-chart-expand
 
 [data-theme='dark'] .dtr-bottle-month-table__table thead th {
   background: var(--dtr-card-bg, #122c1a);
+  color: #ffffff;
+}
+
+[data-theme='dark'] .dtr-bottle-month-table__title,
+[data-theme='dark'] .dtr-bottle-month-table__type,
+[data-theme='dark'] .dtr-bottle-month-table__count {
+  color: #ffffff;
+}
+
+[data-theme='dark'] .dtr-bottle-month-table__hint,
+[data-theme='dark'] .dtr-bottle-month-table__pct {
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .dtr-bottle-month-table__sticky {
@@ -3202,8 +3236,9 @@ html[data-theme='dark']:has(.dtr-page) .mida-chart-fs--plenma .mida-chart-expand
   z-index: 1;
   text-align: left !important;
   padding-left: 0.45rem !important;
-  min-width: 5.5rem;
-  width: 5.5rem;
+  min-width: 9.5rem;
+  width: 9.5rem;
+  max-width: 12rem;
   background: var(--dtr-card-bg, #f3ffe9);
 }
 
@@ -3216,8 +3251,13 @@ html[data-theme='dark']:has(.dtr-page) .mida-chart-fs--plenma .mida-chart-expand
 }
 
 .dtr-bottle-month-table__type {
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  letter-spacing: 0;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .dtr-bottle-month-table__cell {

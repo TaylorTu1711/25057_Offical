@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import MidaChartExpand from '../mida/MidaChartExpand';
+import { resolveBottleGlossary } from '../../utils/dtrBottleGlossary';
 
 /** Thứ tự hiển thị + nhóm (separator sau mỗi group). */
 const ROW_ORDER = [
@@ -108,7 +109,18 @@ export default function DtrBottleTypeMonthTable({
   keys = [],
   buckets = [],
   expandable = true,
+  bottleGlossary = null,
 }) {
+  const glossaryByKey = useMemo(() => {
+    const map = {};
+    for (const item of resolveBottleGlossary(bottleGlossary)) {
+      const code = String(item.key).toLowerCase();
+      map[code] = String(item.meaning || item.label || item.key).trim()
+        || String(item.key).toUpperCase();
+    }
+    return map;
+  }, [bottleGlossary]);
+
   const model = useMemo(() => {
     const cols = (buckets || []).map((b, index) => {
       const counts = b?.counts || {};
@@ -148,9 +160,11 @@ export default function DtrBottleTypeMonthTable({
         });
         const rowTotal = cells.reduce((s, cell) => s + cell.count, 0);
         const rowPct = grandTotal > 0 ? (rowTotal / grandTotal) * 100 : 0;
+        const code = String(key).toLowerCase();
         return {
           key,
-          label: String(key).toUpperCase(),
+          label: glossaryByKey[code] || String(key).toUpperCase(),
+          code: String(key).toUpperCase(),
           cells,
           rowTotal,
           rowPct,
@@ -172,7 +186,7 @@ export default function DtrBottleTypeMonthTable({
       title: buildTitle({ mode, year, month, day }),
       hint: buildHint(mode),
     };
-  }, [keys, buckets, mode, year, month, day]);
+  }, [keys, buckets, mode, year, month, day, glossaryByKey]);
 
   return (
     <div className="dtr-bottle-month-table">
@@ -188,6 +202,7 @@ export default function DtrBottleTypeMonthTable({
                 day={day}
                 keys={keys}
                 buckets={buckets}
+                bottleGlossary={bottleGlossary}
                 expandable={false}
               />
             </MidaChartExpand>
@@ -213,7 +228,10 @@ export default function DtrBottleTypeMonthTable({
                 key={row.key}
                 className={row.breakAfter ? 'dtr-bottle-month-table__row--break' : undefined}
               >
-                <td className="dtr-bottle-month-table__sticky dtr-bottle-month-table__type">
+                <td
+                  className="dtr-bottle-month-table__sticky dtr-bottle-month-table__type"
+                  title={row.code}
+                >
                   {row.label}
                 </td>
                 {row.cells.map((cell, i) => (

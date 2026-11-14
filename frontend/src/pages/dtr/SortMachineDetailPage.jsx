@@ -850,6 +850,7 @@ export default function SortMachineDetailPage() {
                         day={selectedDay}
                         keys={bottleChartKeys}
                         buckets={countsSeries.buckets}
+                        bottleGlossary={dtrMachine?.bottle_glossary}
                       />
                     )}
                   </div>
