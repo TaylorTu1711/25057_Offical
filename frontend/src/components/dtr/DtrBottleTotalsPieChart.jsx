@@ -117,7 +117,7 @@ export default function DtrBottleTotalsPieChart({
       ...chartDoughnutAnimationOptions,
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '42%',
+      cutout: '48%',
       interaction: { mode: 'nearest', intersect: true },
       onHover: onHoverSlice,
       plugins: {
@@ -172,7 +172,10 @@ export default function DtrBottleTotalsPieChart({
       >
         <div className="dtr-pie-card__center-label">Tổng</div>
         <div className="dtr-pie-card__center-value">
-          {slices.grandTotal.toLocaleString('vi-VN')} chai
+          <span className="dtr-pie-card__center-value-num">
+            {slices.grandTotal.toLocaleString('vi-VN')}
+          </span>
+          <span className="dtr-pie-card__center-value-unit">chai</span>
         </div>
       </div>
     </div>

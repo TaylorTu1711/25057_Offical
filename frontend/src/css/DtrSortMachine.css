@@ -337,7 +337,7 @@ body:has(.dtr-monitor-page),
 
 .dtr-pie-card__center {
   position: absolute;
-  inset: 18%;
+  inset: 20%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -345,15 +345,15 @@ body:has(.dtr-monitor-page),
   pointer-events: none;
   line-height: 1.15;
   text-align: center;
-  padding: 0.2rem;
+  padding: 0.25rem 0.2rem;
   box-sizing: border-box;
-  /* Dưới canvas: tooltip vẽ trên canvas sẽ đè lên Tổng */
-  z-index: 1;
+  /* Trên canvas: số Tổng luôn đọc được trong lỗ doughnut */
+  z-index: 3;
   opacity: 1;
   transition: opacity 0.12s ease;
 }
 
-/* Hover lát: ẩn hẳn Tổng (tránh xen với tooltip) */
+/* Hover lát: ẩn Tổng để tooltip trên canvas không bị xen */
 .dtr-pie-card__center.is-hidden {
   opacity: 0;
   visibility: hidden;
@@ -368,14 +368,29 @@ body:has(.dtr-monitor-page),
 }
 
 .dtr-pie-card__center-value {
-  font-size: 0.8rem;
+  font-size: clamp(0.58rem, 2.8cqi, 0.82rem);
   font-weight: 700;
   color: #14532d;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+.dtr-pie-card__center-value-num {
+  display: block;
+}
+
+.dtr-pie-card__center-value-unit {
+  display: block;
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-top: 0.05rem;
 }
 
 .dtr-pie-card__chart canvas {
   position: relative;
-  z-index: 2;
+  z-index: 1;
 }
 
 /* Phóng to TỈ LỆ LOẠI CHAI: pie + chú thích màu */
@@ -2890,7 +2905,7 @@ html[data-theme='dark']:has(.dtr-page) .mida-chart-fs--plenma .mida-chart-fs__ti
   inset: 22% !important;
   width: auto !important;
   height: auto !important;
-  z-index: 1 !important;
+  z-index: 3 !important;
   opacity: 1;
 }
 

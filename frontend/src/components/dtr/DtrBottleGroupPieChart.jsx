@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import useTheme from '../../hooks/useTheme';
@@ -6,6 +6,18 @@ import { chartDoughnutAnimationOptions } from '../../utils/chartTheme';
 import MidaChartExpand from '../mida/MidaChartExpand';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
+
+/** Tooltip giữa doughnut — đè lên vùng số Tổng. */
+if (!Tooltip.positioners.dtrPieCenter) {
+  Tooltip.positioners.dtrPieCenter = function dtrPieCenter() {
+    const { chartArea } = this.chart;
+    if (!chartArea) return false;
+    return {
+      x: (chartArea.left + chartArea.right) / 2,
+      y: (chartArea.top + chartArea.bottom) / 2,
+    };
+  };
+}
 
 /** Nhóm chai không nhãn: B1_KN, B4_KN, B5_KN (không gồm HU_KN) */
 const PRIMARY_KEYS = new Set(['b1_kn', 'b4_kn', 'b5_kn']);
@@ -41,6 +53,7 @@ export default function DtrBottleGroupPieChart({
 }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const [hovering, setHovering] = useState(false);
 
   const slices = useMemo(() => {
     let primary = 0;
@@ -88,42 +101,70 @@ export default function DtrBottleGroupPieChart({
     [slices.list, isDark],
   );
 
+  const onHoverSlice = useCallback((_event, elements) => {
+    setHovering(Boolean(elements?.length));
+  }, []);
+
   const options = useMemo(
     () => ({
       ...chartDoughnutAnimationOptions,
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '42%',
+      cutout: '48%',
+      interaction: { mode: 'nearest', intersect: true },
+      onHover: onHoverSlice,
       plugins: {
         legend: { display: false },
         datalabels: { display: false },
         tooltip: {
+          enabled: true,
+          position: 'dtrPieCenter',
+          xAlign: 'center',
+          yAlign: 'center',
+          displayColors: true,
+          padding: 10,
+          caretSize: 0,
+          backgroundColor: isDark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.97)',
+          titleColor: isDark ? '#f8fafc' : '#0f172a',
+          bodyColor: isDark ? '#e2e8f0' : '#334155',
+          borderColor: isDark ? 'rgba(148, 163, 184, 0.35)' : 'rgba(15, 23, 42, 0.12)',
+          borderWidth: 1,
           callbacks: {
+            title: (items) => items?.[0]?.label || '',
             label: (ctx) => {
               const v = Number(ctx.raw) || 0;
               const pct = slices.grandTotal > 0
                 ? ((v / slices.grandTotal) * 100).toFixed(1)
                 : '0';
-              return ` ${ctx.label}: ${v.toLocaleString('vi-VN')} (${pct}%)`;
+              return ` ${v.toLocaleString('vi-VN')} chai (${pct}%)`;
             },
           },
         },
       },
     }),
-    [slices.grandTotal],
+    [onHoverSlice, slices.grandTotal, isDark],
   );
 
   const chartBody = slices.grandTotal > 0 ? (
-    <div className="dtr-pie-card__chart">
+    <div
+      className="dtr-pie-card__chart"
+      onMouseLeave={() => setHovering(false)}
+    >
       <Doughnut
         key={`${theme}-${slices.grandTotal}-${slices.primary}-${slices.other}`}
         data={data}
         options={options}
       />
-      <div className="dtr-pie-card__center" aria-hidden="true">
+      <div
+        className={`dtr-pie-card__center${hovering ? ' is-hidden' : ''}`}
+        aria-hidden="true"
+      >
         <div className="dtr-pie-card__center-label">Tổng</div>
         <div className="dtr-pie-card__center-value">
-          {slices.grandTotal.toLocaleString('vi-VN')} chai
+          <span className="dtr-pie-card__center-value-num">
+            {slices.grandTotal.toLocaleString('vi-VN')}
+          </span>
+          <span className="dtr-pie-card__center-value-unit">chai</span>
         </div>
       </div>
     </div>
