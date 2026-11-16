@@ -122,7 +122,7 @@ export default function SortMachineDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [dtrMachines, setDtrMachines] = useState([]);
   const [dtrMachine, setDtrMachine] = useState(null);
-  const [chartViewMode, setChartViewMode] = useState(CHART_VIEW_MODES.hour);
+  const [chartViewMode, setChartViewMode] = useState(CHART_VIEW_MODES.day);
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
@@ -135,7 +135,7 @@ export default function SortMachineDetailPage() {
     rangeFrom: null,
     rangeTo: null,
   });
-  const [statusRangeMode, setStatusRangeMode] = useState('1h');
+  const [statusRangeMode, setStatusRangeMode] = useState('24h');
   const [statusFrom, setStatusFrom] = useState(null);
   const [statusTo, setStatusTo] = useState(null);
   const [showStatusRangeModal, setShowStatusRangeModal] = useState(false);

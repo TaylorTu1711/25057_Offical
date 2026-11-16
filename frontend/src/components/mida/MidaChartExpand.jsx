@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function MidaChartExpand({
@@ -13,6 +13,8 @@ export default function MidaChartExpand({
   const titleId = useId();
   const toneBtnClass = tone === 'plenma' ? 'mida-chart-expand-btn--plenma' : '';
   const toneFsClass = tone === 'plenma' ? 'mida-chart-fs--plenma' : '';
+  /** Chặn ghost-click mobile: chạm cột biểu đồ → click ảo trúng nút đóng. */
+  const ignoreCloseUntilRef = useRef(0);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -28,6 +30,19 @@ export default function MidaChartExpand({
     };
   }, [open]);
 
+  const armCloseGuard = () => {
+    ignoreCloseUntilRef.current = Date.now() + 450;
+  };
+
+  const handleClose = (event) => {
+    if (Date.now() < ignoreCloseUntilRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    setOpen(false);
+  };
+
   return (
     <>
       <button
@@ -41,12 +56,19 @@ export default function MidaChartExpand({
       </button>
       {open
         ? createPortal(
-            <div className={`mida-chart-fs ${toneFsClass}`.trim()} role="presentation">
+            <div
+              className={`mida-chart-fs ${toneFsClass}`.trim()}
+              role="presentation"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div
                 className="mida-chart-fs__panel"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
               >
                 <div className="mida-chart-fs__head">
                   <div className="mida-chart-fs__title" id={titleId}>
@@ -56,14 +78,18 @@ export default function MidaChartExpand({
                   <button
                     type="button"
                     className={`mida-chart-expand-btn mida-chart-expand-btn--close ${toneBtnClass}`.trim()}
-                    onClick={() => setOpen(false)}
+                    onClick={handleClose}
                     title="Thu nhỏ"
                     aria-label="Đóng biểu đồ phóng to"
                   >
                     <i className="bi bi-fullscreen-exit" aria-hidden="true" />
                   </button>
                 </div>
-                <div className={`mida-chart-fs__body mida-chart-fs__body--${variant}`}>
+                <div
+                  className={`mida-chart-fs__body mida-chart-fs__body--${variant}`}
+                  onPointerDown={armCloseGuard}
+                  onTouchStart={armCloseGuard}
+                >
                   {variant === 'chart' ? (
                     <div className="machine-chart-plot mida-chart-fs__plot">
                       <div className="machine-chart-plot-inner">{children}</div>

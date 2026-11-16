@@ -38,14 +38,25 @@ function rangesEqual(a, b) {
 /**
  * Giữ zoom khi react-chartjs-2 gán lại options/data (Object.assign thay cả scales).
  * Merge `zoomedScaleProps` vào scales trong options của chart.
+ *
+ * @param {unknown} restoreDeps
+ * @param {'x'|'y'} mode
+ * @param {{ getDefaultRange?: Function, touchGestures?: boolean }} [opts]
+ *   touchGestures: bật pinch/pan trên cảm ứng + touch-action:none (biểu đồ riêng, không ưu tiên scroll trang).
  */
-export default function useChartZoomPreserve(restoreDeps, mode = 'x', { getDefaultRange } = {}) {
+export default function useChartZoomPreserve(
+  restoreDeps,
+  mode = 'x',
+  { getDefaultRange, touchGestures = false } = {},
+) {
   const chartRef = useRef(null);
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const suppressRef = useRef(false);
   const getDefaultRangeRef = useRef(getDefaultRange);
   getDefaultRangeRef.current = getDefaultRange;
+  const touchGesturesRef = useRef(touchGestures);
+  touchGesturesRef.current = touchGestures;
   const defaultAppliedRef = useRef(false);
 
   const [xZoom, setXZoom] = useState(null);
@@ -76,7 +87,10 @@ export default function useChartZoomPreserve(restoreDeps, mode = 'x', { getDefau
     const applyCanvasTouchAction = (chart) => {
       const canvas = chart?.canvas;
       if (!canvas) return;
-      if (touchUiRef.current) {
+      if (touchGesturesRef.current) {
+        // Pinch/pan biểu đồ — chặn scroll/zoom trang trên canvas
+        canvas.style.setProperty('touch-action', 'none', 'important');
+      } else if (touchUiRef.current) {
         canvas.style.setProperty('touch-action', 'pan-y', 'important');
       } else {
         canvas.style.removeProperty('touch-action');
@@ -191,12 +205,14 @@ export default function useChartZoomPreserve(restoreDeps, mode = 'x', { getDefau
     return () => cancelAnimationFrame(id);
   }, [depsKey, commitXZoom]);
 
-  // Zoom plugin hay gán touch-action:none — ép lại pan-y để scroll trang trên điện thoại
+  // Zoom plugin hay gán touch-action — ép lại theo chế độ scroll vs pinch
   useEffect(() => {
     const applyTouchAction = () => {
       const canvas = chartRef.current?.canvas;
       if (!canvas) return;
-      if (touchUiRef.current) {
+      if (touchGesturesRef.current) {
+        canvas.style.setProperty('touch-action', 'none', 'important');
+      } else if (touchUiRef.current) {
         canvas.style.setProperty('touch-action', 'pan-y', 'important');
       } else {
         canvas.style.removeProperty('touch-action');
@@ -205,24 +221,27 @@ export default function useChartZoomPreserve(restoreDeps, mode = 'x', { getDefau
     applyTouchAction();
     const id = requestAnimationFrame(applyTouchAction);
     return () => cancelAnimationFrame(id);
-  }, [touchUi, depsKey]);
+  }, [touchUi, touchGestures, depsKey]);
+
+  const allowTouchGestures = touchGestures || !touchUi;
 
   const zoomPluginOptions = useMemo(
     () => ({
-      // Cảm ứng: tắt pan + pinch (tránh nuốt vuốt scroll); desktop giữ wheel/pan
+      // Mặc định cảm ứng: tắt pan + pinch (ưu tiên scroll trang).
+      // touchGestures=true: bật pinch/pan trên canvas (biểu đồ số chai).
       pan: {
-        enabled: !touchUi,
+        enabled: allowTouchGestures,
         mode,
         onPanComplete: markUserZoom,
       },
       zoom: {
         wheel: { enabled: true },
-        pinch: { enabled: !touchUi },
+        pinch: { enabled: allowTouchGestures },
         mode,
         onZoomComplete: markUserZoom,
       },
     }),
-    [markUserZoom, mode, touchUi],
+    [markUserZoom, mode, allowTouchGestures],
   );
 
   const zoomedScaleProps = useMemo(() => {

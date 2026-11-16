@@ -1572,12 +1572,15 @@ body:has(.dtr-monitor-page),
   height: 100%;
   min-height: 0;
   box-sizing: border-box;
+  /* Fullscreen: vùng chạm dành cho pinch/pan Hammer của chartjs-plugin-zoom */
+  touch-action: none;
 }
 
 .dtr-bottle-expand-surface .dtr-bottle-chart,
 .dtr-bottle-expand-surface .dtr-bottle-chart__plot {
   height: 100%;
   min-height: 0;
+  touch-action: none;
 }
 
 .dtr-monitor-page .machine-top-panel__status-icon--stopped {
@@ -2365,11 +2368,44 @@ body:has(.dtr-page),
   width: 100%;
 }
 
+/*
+ * Mobile: pinch/pan biểu đồ số chai.
+ * Machine.css gắn touch-action:pan-y lên .machine-chart-plot — phải ghi đè
+ * cả overlay phóng to (.mida-chart-fs), nếu không 2 ngón không zoom được.
+ */
+@media (hover: none), (pointer: coarse) {
+  .dtr-monitor-page .dtr-bottle-chart__plot--touch,
+  .dtr-monitor-page .dtr-bottle-chart__plot--touch > div,
+  .dtr-monitor-page .dtr-bottle-chart__plot--touch canvas,
+  .dtr-monitor-page .dtr-bottle-total-wrap__plot.machine-chart-plot,
+  .dtr-monitor-page .dtr-bottle-total-wrap__plot .machine-chart-plot-inner,
+  .dtr-monitor-page .dtr-bottle-total-wrap__plot canvas,
+  .mida-chart-fs .dtr-bottle-expand-surface,
+  .mida-chart-fs .dtr-bottle-expand-surface .dtr-bottle-chart,
+  .mida-chart-fs .dtr-bottle-expand-surface .dtr-bottle-chart__plot,
+  .mida-chart-fs .dtr-bottle-expand-surface .dtr-bottle-chart__plot > div,
+  .mida-chart-fs .dtr-bottle-expand-surface canvas,
+  .mida-chart-fs .machine-chart-plot,
+  .mida-chart-fs .machine-chart-plot-inner,
+  .mida-chart-fs .machine-chart-plot canvas,
+  .mida-chart-fs .machine-chart-plot-inner canvas {
+    touch-action: none !important;
+    -ms-touch-action: none !important;
+  }
+}
+
 .dtr-bottle-chart__plot > canvas,
 .dtr-bottle-chart__plot > div {
   width: 100% !important;
   height: 100% !important;
   min-height: 180px !important;
+}
+
+/* Tooltip cảm ứng: không animate opacity (tránh cảm giác giật khi tap) */
+@media (hover: none), (pointer: coarse) {
+  .dtr-bottle-tooltip {
+    transition: none;
+  }
 }
 
 /* Cột TỔNG bên phải — giống Mida time/energy */

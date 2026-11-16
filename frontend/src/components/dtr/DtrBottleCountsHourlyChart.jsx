@@ -13,12 +13,25 @@ import {
 import useTheme from '../../hooks/useTheme';
 import useSyncChartTheme from '../../hooks/useSyncChartTheme';
 import useChartZoomPreserve from '../../hooks/useChartZoomPreserve';
+import useTouchUi from '../../hooks/useTouchUi';
 import {
   chartStackedBarAnimationOptions,
   themedScale,
   themedXScale,
 } from '../../utils/chartTheme';
 import { resolveBottleGlossary } from '../../utils/dtrBottleGlossary';
+
+/** Mobile: không animate khi chạm/zoom — tránh giật cột + tooltip. */
+const TOUCH_STACKED_BAR_OPTIONS = {
+  animation: false,
+  animations: {},
+  transitions: {
+    active: { animation: { duration: 0 } },
+    resize: { animation: { duration: 0 } },
+    show: { animations: { colors: { duration: 0 } } },
+    hide: { animations: { colors: { duration: 0 } } },
+  },
+};
 
 function ensureBottleTooltipEl() {
   let el = document.getElementById('dtr-bottle-tooltip');
@@ -82,6 +95,11 @@ function renderBottleTooltip({ chart, tooltip }, theme) {
     const rect = el.getBoundingClientRect();
     let left = canvasRect.left + scrollX + tooltip.caretX + 12;
     let top = canvasRect.top + scrollY + tooltip.caretY + 12;
+    // Trong overlay phóng to: không đè lên hàng nút đóng (tránh ghost-click đóng overlay)
+    const fsHead = chart.canvas?.closest?.('.mida-chart-fs')?.querySelector?.('.mida-chart-fs__head');
+    const headBottom = fsHead
+      ? fsHead.getBoundingClientRect().bottom + scrollY + 8
+      : scrollY + 8;
     if (rect.right > window.innerWidth - 8) {
       left = scrollX + window.innerWidth - rect.width - 8;
     }
@@ -89,7 +107,7 @@ function renderBottleTooltip({ chart, tooltip }, theme) {
       top = scrollY + window.innerHeight - rect.height - 8;
     }
     if (left < scrollX + 8) left = scrollX + 8;
-    if (top < scrollY + 8) top = scrollY + 8;
+    if (top < headBottom) top = headBottom;
     el.style.left = `${left}px`;
     el.style.top = `${top}px`;
   });
@@ -209,6 +227,7 @@ export default function DtrBottleCountsHourlyChart({
   bottleGlossary = null,
 }) {
   const { theme } = useTheme();
+  const touchUi = useTouchUi();
   const themeRef = useRef(theme);
   themeRef.current = theme;
   const glossaryByKey = useMemo(
@@ -218,11 +237,47 @@ export default function DtrBottleCountsHourlyChart({
   const { chartRef, zoomPluginOptions } = useChartZoomPreserve(
     [labels, keys, series],
     'x',
+    // Mobile: pinch/pan trên canvas (không pan-y scroll) để zoom không giật
+    { touchGestures: true },
   );
 
   const externalTooltip = useCallback((context) => {
     renderBottleTooltip(context, themeRef.current);
   }, []);
+
+  /** Chạm cột: giữ tooltip đến khi chạm chỗ khác (Chart.js mặc định tắt ngay sau touch). */
+  const onChartClick = useCallback((event, elements, chart) => {
+    // Tránh ghost-click xuyên tooltip/canvas làm đóng overlay phóng to
+    event?.native?.stopPropagation?.();
+    if (typeof event?.native?.stopImmediatePropagation === 'function') {
+      event.native.stopImmediatePropagation();
+    }
+    if (!touchUi || !chart) return;
+    if (!elements?.length) {
+      chart.setActiveElements([]);
+      chart.tooltip?.setActiveElements([], { x: 0, y: 0 });
+      chart.update('none');
+      return;
+    }
+    const active = elements.map((el) => ({
+      datasetIndex: el.datasetIndex,
+      index: el.index,
+    }));
+    // index mode: kích hoạt mọi dataset cùng bucket để tooltip đủ loại chai
+    const index = elements[0].index;
+    const byIndex = (chart.data?.datasets || []).map((_, datasetIndex) => ({
+      datasetIndex,
+      index,
+    }));
+    chart.setActiveElements(byIndex.length ? byIndex : active);
+    const meta = chart.getDatasetMeta(elements[0].datasetIndex);
+    const bar = meta?.data?.[index];
+    const pos = bar
+      ? { x: bar.x, y: bar.y }
+      : { x: 0, y: 0 };
+    chart.tooltip?.setActiveElements(byIndex.length ? byIndex : active, pos);
+    chart.update('none');
+  }, [touchUi]);
 
   useEffect(() => () => {
     const el = document.getElementById('dtr-bottle-tooltip');
@@ -257,15 +312,23 @@ export default function DtrBottleCountsHourlyChart({
 
   const options = useMemo(
     () => ({
-      ...chartStackedBarAnimationOptions,
+      ...(touchUi ? TOUCH_STACKED_BAR_OPTIONS : chartStackedBarAnimationOptions),
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      // Mobile: chỉ click (tooltip dính). Không lắng nghe touchmove — tránh giật khi pinch.
+      // Zoom plugin tự gắn listener riêng, không phụ thuộc options.events.
+      events: touchUi
+        ? ['click']
+        : ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove', 'touchend'],
+      onClick: onChartClick,
       plugins: {
         legend: { display: false },
         tooltip: {
           enabled: false,
           external: externalTooltip,
+          // Chỉ mở/đóng theo click trên cảm ứng — không flicker khi ngón rời canvas
+          events: touchUi ? ['click'] : ['mousemove', 'mouseout', 'click'],
           callbacks: {
             title: (items) => formatBottleBucketTooltipTitle(items?.[0]?.label, mode),
           },
@@ -294,7 +357,8 @@ export default function DtrBottleCountsHourlyChart({
           title: {
             display: true,
             text: 'Số lượng',
-            color: theme === 'dark' ? '#94a3b8' : '#64748b',            font: { size: 11 },
+            color: theme === 'dark' ? '#94a3b8' : '#64748b',
+            font: { size: 11 },
           },
           ticks: {
             ...themedScale(theme).ticks,
@@ -303,7 +367,7 @@ export default function DtrBottleCountsHourlyChart({
         },
       },
     }),
-    [theme, zoomPluginOptions, externalTooltip, mode],
+    [theme, zoomPluginOptions, externalTooltip, mode, touchUi, onChartClick],
   );
 
   useSyncChartTheme(chartRef, theme, options);
@@ -372,7 +436,9 @@ export default function DtrBottleCountsHourlyChart({
           })}
         </div>
       ) : null}
-      <div className="dtr-bottle-chart__plot">
+      <div
+        className={`dtr-bottle-chart__plot${touchUi ? ' dtr-bottle-chart__plot--touch' : ''}`}
+      >
         <Chart ref={chartRef} type="bar" data={data} options={options} />
       </div>
     </div>

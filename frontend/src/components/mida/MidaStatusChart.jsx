@@ -292,19 +292,6 @@ export default function MidaStatusChart({
       onMouseLeave={resumeLive}
       onTouchStart={pauseLive}
     >
-      {paused ? (
-        <button
-          type="button"
-          className="mida-power-chart__resume"
-          onClick={(e) => {
-            e.stopPropagation();
-            resumeLive();
-          }}
-          title="Chạy lại cập nhật realtime và reset zoom"
-        >
-          Tạm dừng — bấm để chạy lại
-        </button>
-      ) : null}
       <Chart
         ref={chartRef}
         key={theme}
