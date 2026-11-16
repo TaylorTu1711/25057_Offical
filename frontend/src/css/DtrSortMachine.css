@@ -337,16 +337,18 @@ body:has(.dtr-monitor-page),
 
 .dtr-pie-card__center {
   position: absolute;
-  inset: 20%;
+  /* cutout 48% → đường kính lỗ ≈ 48% chart; inset 27% → hộp ~46% (không tràn vòng trong) */
+  inset: 27%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  line-height: 1.15;
+  line-height: 1.12;
   text-align: center;
-  padding: 0.25rem 0.2rem;
+  padding: 0.1rem 0.12rem;
   box-sizing: border-box;
+  overflow: hidden;
   /* Trên canvas: số Tổng luôn đọc được trong lỗ doughnut */
   z-index: 3;
   opacity: 1;
@@ -360,21 +362,22 @@ body:has(.dtr-monitor-page),
 }
 
 .dtr-pie-card__center-label {
-  font-size: 0.62rem;
-  font-weight: 600;
+  font-size: clamp(0.7rem, 3.4cqi, 0.82rem);
+  font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
   max-width: 100%;
+  letter-spacing: 0.02em;
 }
 
 .dtr-pie-card__center-value {
-  font-size: clamp(0.58rem, 2.8cqi, 0.82rem);
-  font-weight: 700;
+  font-size: clamp(0.72rem, 4.2cqi, 0.98rem);
+  font-weight: 800;
   color: #14532d;
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
-  line-height: 1.2;
+  line-height: 1.15;
 }
 
 .dtr-pie-card__center-value-num {
@@ -383,9 +386,9 @@ body:has(.dtr-monitor-page),
 
 .dtr-pie-card__center-value-unit {
   display: block;
-  font-size: 0.85em;
-  font-weight: 600;
-  margin-top: 0.05rem;
+  font-size: 0.8em;
+  font-weight: 650;
+  margin-top: 0.04rem;
 }
 
 .dtr-pie-card__chart canvas {
@@ -2938,11 +2941,12 @@ html[data-theme='dark']:has(.dtr-page) .mida-chart-fs--plenma .mida-chart-fs__ti
 }
 
 .mida-chart-fs__body--pie .dtr-pie-card__center {
-  inset: 22% !important;
+  inset: 27% !important;
   width: auto !important;
   height: auto !important;
   z-index: 3 !important;
   opacity: 1;
+  overflow: hidden;
 }
 
 .mida-chart-fs__body--pie .dtr-pie-card__center.is-hidden {
@@ -2951,11 +2955,11 @@ html[data-theme='dark']:has(.dtr-page) .mida-chart-fs--plenma .mida-chart-fs__ti
 }
 
 .mida-chart-fs__body--pie .dtr-pie-card__center-label {
-  font-size: clamp(0.85rem, 2.2vmin, 1.15rem) !important;
+  font-size: clamp(0.95rem, 2.6vmin, 1.25rem) !important;
 }
 
 .mida-chart-fs__body--pie .dtr-pie-card__center-value {
-  font-size: clamp(1.1rem, 3.2vmin, 1.75rem) !important;
+  font-size: clamp(1.2rem, 3.6vmin, 1.85rem) !important;
 }
 
 /* Phóng to + legend: pie vẫn đủ chỗ hiện Tổng giữa */
