@@ -3,6 +3,7 @@ import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import useTheme from '../../hooks/useTheme';
 import { chartDoughnutAnimationOptions } from '../../utils/chartTheme';
+import { formatDtrBottleCenterTotal } from '../../utils/dtrSortMachine';
 import MidaChartExpand from '../mida/MidaChartExpand';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -145,6 +146,8 @@ export default function DtrBottleGroupPieChart({
     [onHoverSlice, slices.grandTotal, isDark],
   );
 
+  const centerTotal = formatDtrBottleCenterTotal(slices.grandTotal);
+
   const chartBody = slices.grandTotal > 0 ? (
     <div
       className="dtr-pie-card__chart"
@@ -158,13 +161,14 @@ export default function DtrBottleGroupPieChart({
       <div
         className={`dtr-pie-card__center${hovering ? ' is-hidden' : ''}`}
         aria-hidden="true"
+        title={centerTotal.full}
       >
         <div className="dtr-pie-card__center-label">Tổng</div>
         <div className="dtr-pie-card__center-value">
           <span className="dtr-pie-card__center-value-num">
-            {slices.grandTotal.toLocaleString('vi-VN')}
+            {centerTotal.text}
           </span>
-          <span className="dtr-pie-card__center-value-unit">chai</span>
+          <span className="dtr-pie-card__center-value-unit">{centerTotal.unit}</span>
         </div>
       </div>
     </div>

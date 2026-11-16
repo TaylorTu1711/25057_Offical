@@ -31,7 +31,7 @@ import MidaStatusChart from '../../components/mida/MidaStatusChart';
 import { BASE_URL } from '../../config/config';
 import { authHeaders } from '../../utils/auth';
 import { CHART_VIEW_MODES } from '../../utils/chartViewRange';
-import { buildDtrPublicPath } from '../../utils/dtrSortMachine';
+import { buildDtrPublicPath, formatDtrBottleCenterTotal } from '../../utils/dtrSortMachine';
 import useNow from '../../hooks/useNow';
 import { isMachineConnected } from '../../utils/machineStatus';
 
@@ -55,24 +55,6 @@ const DTR_STATUS_TICKS = { 0: 'Dừng', 1: 'Chạy' };
 const DTR_TREE_ROOT_LABEL = 'Danh sách máy Sort DTR';
 /** Ẩn khỏi biểu đồ thống kê số chai, pie và bảng loại chai. */
 const BOTTLE_CHART_EXCLUDED_KEYS = new Set(['zz_cochai', 'zz_nap']);
-
-/** SẢN LƯỢNG LŨY KẾ: ≥ 10 triệu → "10,x triệu". */
-function formatCumulativeBottleCount(raw) {
-  const n = Number(raw) || 0;
-  if (n >= 10_000_000) {
-    const millions = n / 1_000_000;
-    const text = millions.toLocaleString('vi-VN', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 1,
-    });
-    return { text, unit: ' triệu chai', full: `${n.toLocaleString('vi-VN')} chai` };
-  }
-  return {
-    text: n.toLocaleString('vi-VN'),
-    unit: ' chai',
-    full: `${n.toLocaleString('vi-VN')} chai`,
-  };
-}
 
 const STATUS_RANGE_PRESETS = [
   { id: '1h', label: '1h', minutes: 60 },
@@ -403,7 +385,7 @@ export default function SortMachineDetailPage() {
   }, [liveStats.utilization_pct]);
 
   const cumulativeBottleDisplay = useMemo(
-    () => formatCumulativeBottleCount(liveStats.total_counts),
+    () => formatDtrBottleCenterTotal(liveStats.total_counts),
     [liveStats.total_counts],
   );
 

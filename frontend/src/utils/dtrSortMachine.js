@@ -1,3 +1,20 @@
+/**
+ * Số tổng giữa pie / cột tổng: > 1 triệu → "1,x" + đơn vị "triệu chai".
+ * @returns {{ text: string, unit: string, full: string }}
+ */
+export function formatDtrBottleCenterTotal(raw) {
+  const n = Number(raw) || 0;
+  const full = `${n.toLocaleString('vi-VN')} chai`;
+  if (n > 1_000_000) {
+    const text = (n / 1_000_000).toLocaleString('vi-VN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    });
+    return { text, unit: 'triệu chai', full };
+  }
+  return { text: n.toLocaleString('vi-VN'), unit: 'chai', full };
+}
+
 /** Deep-link tới route app máy (vd. /s, /online, /dashboard). */
 export function buildDtrPublicDeepPath(machineId, appPath = '/s') {
   const id = encodeURIComponent(String(machineId || '').trim());
