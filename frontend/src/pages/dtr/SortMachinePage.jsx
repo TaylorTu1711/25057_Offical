@@ -422,9 +422,13 @@ export default function SortMachinePage() {
                     <th>Tên</th>
                     <th>Nhà máy</th>
                     <th>Ngày bàn giao</th>
-                    <th>Tailscale</th>
-                    <th>FE</th>
-                    <th>API</th>
+                    {canManage ? (
+                      <>
+                        <th>Tailscale</th>
+                        <th>FE</th>
+                        <th>API</th>
+                      </>
+                    ) : null}
                     <th className="text-end">Thao tác</th>
                   </tr>
                 </thead>
@@ -456,11 +460,15 @@ export default function SortMachinePage() {
                         </td>
                         <td>{m.location || '—'}</td>
                         <td>{formatDateVi(m.handover_date)}</td>
-                        <td>
-                          <code>{m.tailscale_ip}</code>
-                        </td>
-                        <td>{m.port}</td>
-                        <td>{m.api_port ?? '—'}</td>
+                        {canManage ? (
+                          <>
+                            <td>
+                              <code>{m.tailscale_ip}</code>
+                            </td>
+                            <td>{m.port}</td>
+                            <td>{m.api_port ?? '—'}</td>
+                          </>
+                        ) : null}
                         <td className="text-end text-nowrap">
                           <button
                             type="button"
