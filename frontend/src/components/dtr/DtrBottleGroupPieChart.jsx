@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import useTheme from '../../hooks/useTheme';
 import { chartDoughnutAnimationOptions } from '../../utils/chartTheme';
 import { formatDtrBottleCenterTotal } from '../../utils/dtrSortMachine';
 import MidaChartExpand from '../mida/MidaChartExpand';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
 
 /** Tooltip giữa doughnut — đè lên vùng số Tổng. */
 if (!Tooltip.positioners.dtrPieCenter) {
@@ -116,7 +117,34 @@ export default function DtrBottleGroupPieChart({
       onHover: onHoverSlice,
       plugins: {
         legend: { display: false },
-        datalabels: { display: false },
+        /* Lát > 20% — hiện % ngay trên vòng doughnut */
+        datalabels: {
+          display: (ctx) => {
+            const v = Number(ctx.dataset.data?.[ctx.dataIndex]) || 0;
+            if (!(slices.grandTotal > 0) || !(v > 0)) return false;
+            return (v / slices.grandTotal) * 100 > 20;
+          },
+          formatter: (value) => {
+            const v = Number(value) || 0;
+            const pct = slices.grandTotal > 0 ? (v / slices.grandTotal) * 100 : 0;
+            return `${pct.toLocaleString('vi-VN', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 1,
+            })}%`;
+          },
+          color: '#ffffff',
+          backgroundColor: 'rgba(15, 23, 42, 0.45)',
+          borderRadius: 4,
+          padding: { top: 2, bottom: 2, left: 5, right: 5 },
+          font: {
+            weight: '800',
+            size: 11,
+          },
+          anchor: 'center',
+          align: 'center',
+          clamp: true,
+          clip: false,
+        },
         tooltip: {
           enabled: true,
           position: 'dtrPieCenter',

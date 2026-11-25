@@ -128,6 +128,7 @@ export default function SortMachineDetailPage() {
     period_utilization_pct: null,
     time_running: 0,
     total_counts: 0,
+    counts_by_key: {},
     status: null,
     last_telemetry_at: null,
     last_updated: null,
@@ -241,6 +242,10 @@ export default function SortMachineDetailPage() {
         ? res.data.available_years.map(Number).filter((y) => Number.isFinite(y))
         : [];
       const periodPct = res.data?.period_utilization_pct;
+      const countsByKey =
+        res.data?.counts_by_key && typeof res.data.counts_by_key === 'object'
+          ? res.data.counts_by_key
+          : {};
       setLiveStats({
         utilization_pct: Number(res.data?.utilization_pct) || 0,
         period_utilization_pct:
@@ -249,6 +254,7 @@ export default function SortMachineDetailPage() {
             : null,
         time_running: Number(res.data?.time_running) || 0,
         total_counts: Number(res.data?.total_counts) || 0,
+        counts_by_key: countsByKey,
         status: res.data?.status ?? null,
         last_telemetry_at: res.data?.last_telemetry_at ?? null,
         last_updated: res.data?.last_updated ?? null,
@@ -263,6 +269,7 @@ export default function SortMachineDetailPage() {
         period_utilization_pct: null,
         time_running: 0,
         total_counts: 0,
+        counts_by_key: {},
         status: null,
         last_telemetry_at: null,
         last_updated: null,
@@ -516,6 +523,24 @@ export default function SortMachineDetailPage() {
     }
     return out;
   }, [countsChartKeys, countsSeries.buckets]);
+
+  /** Pie TỈ LỆ LOẠI CHAI: lũy kế từ dữ liệu đầu → hiện tại (không theo tab giờ/ngày/…). */
+  const lifetimeBottleKeys = useMemo(() => {
+    const fromLifetime = Object.keys(liveStats.counts_by_key || {});
+    const merged = [...new Set([...fromLifetime, ...bottleChartKeys])];
+    return merged.filter(
+      (k) => !BOTTLE_CHART_EXCLUDED_KEYS.has(String(k).toLowerCase()),
+    );
+  }, [liveStats.counts_by_key, bottleChartKeys]);
+
+  const lifetimeBottleSeries = useMemo(() => {
+    const out = {};
+    const byKey = liveStats.counts_by_key || {};
+    for (const key of lifetimeBottleKeys) {
+      out[key] = [Number(byKey[key]) || 0];
+    }
+    return out;
+  }, [lifetimeBottleKeys, liveStats.counts_by_key]);
 
   return (
     <div className="dtr-monitor-page">
@@ -783,8 +808,8 @@ export default function SortMachineDetailPage() {
               <div className="dtr-monitor-page__pies" ref={piesColRef}>
                 <DtrBottleTotalsPieChart
                   title="TỈ LỆ LOẠI CHAI"
-                  keys={bottleChartKeys}
-                  series={countsChartSeries}
+                  keys={lifetimeBottleKeys}
+                  series={lifetimeBottleSeries}
                   bottleGlossary={dtrMachine?.bottle_glossary}
                 />
                 <DtrBottleGroupPieChart

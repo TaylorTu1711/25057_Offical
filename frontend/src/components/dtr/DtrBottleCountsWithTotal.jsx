@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useTheme from '../../hooks/useTheme';
 import MidaChartExpand from '../mida/MidaChartExpand';
 import DtrBottleCountsHourlyChart, {
@@ -6,6 +6,80 @@ import DtrBottleCountsHourlyChart, {
   DtrBottleCountsLegend,
 } from './DtrBottleCountsHourlyChart';
 import { resolveBottleGlossary } from '../../utils/dtrBottleGlossary';
+
+function ensureBottleTooltipEl() {
+  let el = document.getElementById('dtr-bottle-tooltip');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'dtr-bottle-tooltip';
+  el.className = 'dtr-bottle-tooltip';
+  el.style.opacity = '0';
+  document.body.appendChild(el);
+  return el;
+}
+
+function hideBottleTooltip() {
+  const el = document.getElementById('dtr-bottle-tooltip');
+  if (el) el.style.opacity = '0';
+}
+
+/** Tooltip cột TỔNG — cùng format với tooltip cột biểu đồ. */
+function showTotalColumnTooltip({ items, grandTotal, theme, clientX, clientY }) {
+  const el = ensureBottleTooltipEl();
+  const list = (items || []).filter((it) => (Number(it.total) || 0) > 0);
+  const total = Number(grandTotal) || list.reduce((s, it) => s + (Number(it.total) || 0), 0);
+  if (!list.length || !(total > 0)) {
+    el.style.opacity = '0';
+    return;
+  }
+
+  const isDark = theme === 'dark';
+  const rowsHtml = list
+    .map((it) => {
+      const count = Number(it.total) || 0;
+      const value = count.toLocaleString('vi-VN');
+      const pct = total > 0 ? (count / total) * 100 : 0;
+      const pctText = pct.toLocaleString('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1,
+      });
+      return `<div class="dtr-bottle-tooltip__item">
+        <span class="dtr-bottle-tooltip__swatch" style="background:${it.color || '#94a3b8'}"></span>
+        <span class="dtr-bottle-tooltip__label">${it.label || ''}</span>
+        <span class="dtr-bottle-tooltip__value">${value} <span class="dtr-bottle-tooltip__pct">(${pctText}%)</span></span>
+      </div>`;
+    })
+    .join('');
+
+  el.className = `dtr-bottle-tooltip${isDark ? ' dtr-bottle-tooltip--dark' : ''}`;
+  el.innerHTML = `
+    <div class="dtr-bottle-tooltip__title">Tổng (chai)</div>
+    <div class="dtr-bottle-tooltip__grid">${rowsHtml}</div>
+    <div class="dtr-bottle-tooltip__footer">Tổng: ${total.toLocaleString('vi-VN')}</div>
+  `;
+
+  const scrollX = window.scrollX || 0;
+  const scrollY = window.scrollY || 0;
+  el.style.opacity = '1';
+  el.style.left = `${scrollX + clientX + 12}px`;
+  el.style.top = `${scrollY + clientY + 12}px`;
+
+  requestAnimationFrame(() => {
+    const rect = el.getBoundingClientRect();
+    let left = scrollX + clientX + 12;
+    let top = scrollY + clientY + 12;
+    if (rect.right > window.innerWidth - 8) {
+      left = scrollX + window.innerWidth - rect.width - 8;
+    }
+    if (rect.bottom > window.innerHeight - 8) {
+      top = scrollY + window.innerHeight - rect.height - 8;
+    }
+    if (left < scrollX + 8) left = scrollX + 8;
+    if (top < scrollY + 8) top = scrollY + 8;
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  });
+}
 
 /** @deprecated dùng resolveBottleGlossary / DTR_BOTTLE_GLOSSARY_KEYS */
 export const DTR_BOTTLE_KEY_GLOSSARY = resolveBottleGlossary(null);
@@ -72,6 +146,9 @@ export default function DtrBottleCountsWithTotal({
   mode = 'hour',
 }) {
   const { theme } = useTheme();
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
+  const totalsRef = useRef(null);
   const glossaryByKey = useMemo(() => {
     const map = {};
     for (const item of resolveBottleGlossary(bottleGlossary)) {
@@ -142,6 +219,40 @@ export default function DtrBottleCountsWithTotal({
     };
   }, [keys, visibleKeys, series, labels.length, glossaryByKey]);
 
+  totalsRef.current = totals;
+
+  useEffect(() => () => {
+    hideBottleTooltip();
+  }, []);
+
+  const onTotalBarEnter = useCallback((event) => {
+    const t = totalsRef.current;
+    if (!t?.hasData) return;
+    showTotalColumnTooltip({
+      items: t.perKey,
+      grandTotal: t.grandTotal,
+      theme: themeRef.current,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+  }, []);
+
+  const onTotalBarMove = useCallback((event) => {
+    const t = totalsRef.current;
+    if (!t?.hasData) return;
+    showTotalColumnTooltip({
+      items: t.perKey,
+      grandTotal: t.grandTotal,
+      theme: themeRef.current,
+      clientX: event.clientX,
+      clientY: event.clientY,
+    });
+  }, []);
+
+  const onTotalBarLeave = useCallback(() => {
+    hideBottleTooltip();
+  }, []);
+
   const chartOnly = (
     <DtrBottleCountsHourlyChart
       labels={labels}
@@ -208,6 +319,9 @@ export default function DtrBottleCountsWithTotal({
                 ? `Tổng ${totals.display.full}`
                 : 'Chưa có dữ liệu tổng'
             }
+            onMouseEnter={onTotalBarEnter}
+            onMouseMove={onTotalBarMove}
+            onMouseLeave={onTotalBarLeave}
           >
             <div className="dtr-bottle-total__col">
               <div className="dtr-bottle-total__track">
@@ -215,15 +329,17 @@ export default function DtrBottleCountsWithTotal({
                   <div
                     className="dtr-bottle-total__stack"
                     style={{ height: `${totals.stackH}%` }}
-                    title={totals.perKey
-                      .map((it) => `${it.label}: ${it.total.toLocaleString('vi-VN')}`)
-                      .join('\n')}
                   >
                     {/* Cùng thứ tự dataset Chart.js: key đầu ở đáy stack */}
                     {totals.perKey.map((it) => {
                       const pct = totals.grandTotal > 0
                         ? (it.total / totals.grandTotal) * 100
                         : 0;
+                      const showPct = pct > 20;
+                      const pctText = pct.toLocaleString('vi-VN', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 1,
+                      });
                       return (
                         <div
                           key={it.key}
@@ -232,8 +348,11 @@ export default function DtrBottleCountsWithTotal({
                             flexGrow: Math.max(pct, 0.01),
                             backgroundColor: it.color,
                           }}
-                          title={`${it.label}: ${it.total.toLocaleString('vi-VN')}`}
-                        />
+                        >
+                          {showPct ? (
+                            <span className="dtr-bottle-total__seg-pct">{pctText}%</span>
+                          ) : null}
+                        </div>
                       );
                     })}
                   </div>

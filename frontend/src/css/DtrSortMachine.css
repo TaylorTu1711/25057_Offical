@@ -2677,6 +2677,7 @@ body:has(.dtr-page),
   flex: 1 1 auto;
   display: flex;
   align-items: stretch;
+  cursor: default;
   justify-content: center;
   width: 100%;
   min-height: 0;
@@ -2742,10 +2743,31 @@ body:has(.dtr-page),
 }
 
 .dtr-bottle-total__seg {
+  position: relative;
   width: 100%;
   min-height: 1px;
   flex-shrink: 1;
   transition: flex-grow 0.45s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* % trên đoạn cột tổng khi > 20% */
+.dtr-bottle-total__seg-pct {
+  position: relative;
+  z-index: 1;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 3px;
+  padding: 1px 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
 }
 
 .dtr-bottle-chart__legend--with-total .dtr-bottle-chart__legend-item {
@@ -2797,8 +2819,8 @@ body:has(.dtr-page),
   position: absolute;
   pointer-events: none;
   z-index: 10050;
-  min-width: 300px;
-  max-width: min(440px, calc(100vw - 16px));
+  min-width: 320px;
+  max-width: min(480px, calc(100vw - 16px));
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid rgba(15, 23, 42, 0.12);
@@ -2854,6 +2876,13 @@ body:has(.dtr-page),
 .dtr-bottle-tooltip__value {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.dtr-bottle-tooltip__pct {
+  font-weight: 500;
+  opacity: 0.72;
+  margin-left: 0.15em;
 }
 
 .dtr-bottle-tooltip__footer {

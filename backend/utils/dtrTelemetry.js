@@ -272,10 +272,12 @@ export async function getDtrTelemetryYears(db, machineId) {
 const DTR_PRODUCTION_EXCLUDED_KEYS = new Set(['zz_cochai', 'zz_nap']);
 
 /**
- * SẢN LƯỢNG LŨY KẾ = tổng sản lượng mọi ngày (không gồm zz_cochai, zz_nap).
- * Mỗi ngày = (snapshot cuối ngày − snapshot đầu ngày) theo từng loại chai (delta ≥ 0).
+ * SẢN LƯỢNG LŨY KẾ theo từng loại chai (mọi ngày có dữ liệu → hiện tại).
+ * Mỗi ngày = (snapshot cuối ngày − snapshot đầu ngày), delta ≥ 0.
+ * Không gồm zz_cochai, zz_nap.
+ * @returns {{ total: number, byKey: Record<string, number> }}
  */
-async function getDtrLifetimeDailyProductionTotal(db, table) {
+async function getDtrLifetimeDailyProductionByKey(db, table) {
   const [firstRes, lastRes] = await Promise.all([
     db.query(
       `SELECT DISTINCT ON (date_trunc('day', timestamp))
@@ -302,6 +304,7 @@ async function getDtrLifetimeDailyProductionTotal(db, table) {
     firstByDay.set(ts, normalizeCountsObject(row.counts));
   }
 
+  const byKey = {};
   let total = 0;
   for (const row of lastRes.rows) {
     const ts = new Date(row.bucket).getTime();
@@ -312,10 +315,13 @@ async function getDtrLifetimeDailyProductionTotal(db, table) {
     const delta = diffCounts(firstSnap, lastSnap);
     for (const [key, value] of Object.entries(delta)) {
       if (DTR_PRODUCTION_EXCLUDED_KEYS.has(String(key).toLowerCase())) continue;
-      total += Number(value) || 0;
+      const n = Number(value) || 0;
+      if (!(n > 0)) continue;
+      byKey[key] = (Number(byKey[key]) || 0) + n;
+      total += n;
     }
   }
-  return total;
+  return { total, byKey };
 }
 
 /**
@@ -408,7 +414,7 @@ export async function getDtrUtilizationSummary(db, machineId) {
 
   await ensureDtrTelemetryTable(db, registryId);
   const table = dtrTelemetryTableRef(registryId);
-  const [latestRes, firstRes, totalCounts, dailyTime] = await Promise.all([
+  const [latestRes, firstRes, production, dailyTime] = await Promise.all([
     db.query(
       `SELECT time_running, time_on, status, timestamp, counts
        FROM ${table}
@@ -422,7 +428,7 @@ export async function getDtrUtilizationSummary(db, machineId) {
        ORDER BY timestamp ASC, id ASC
        LIMIT 1`,
     ),
-    getDtrLifetimeDailyProductionTotal(db, table),
+    getDtrLifetimeDailyProductionByKey(db, table),
     getDtrLifetimeDailyTimeTotals(db, table),
   ]);
   const latest = latestRes.rows[0] || null;
@@ -434,6 +440,11 @@ export async function getDtrUtilizationSummary(db, machineId) {
   const timeOn = Number(dailyTime.time_on) || 0;
   const latestRunning = Number(latest?.time_running) || 0;
   const latestOn = Number(latest?.time_on) || 0;
+  const totalCounts = Number(production?.total) || 0;
+  const countsByKey =
+    production?.byKey && typeof production.byKey === 'object'
+      ? production.byKey
+      : {};
 
   const counts = normalizeCountsObject(latest?.counts);
   const firstAt = parsePgDateTime(firstTsRaw);
@@ -471,6 +482,8 @@ export async function getDtrUtilizationSummary(db, machineId) {
     counts,
     /** SẢN LƯỢNG LŨY KẾ = Σ (cuối ngày − đầu ngày) mọi ngày */
     total_counts: totalCounts,
+    /** Tỉ lệ loại chai lũy kế: { b1_kn: n, ... } — không đổi theo khung giờ/ngày/… */
+    counts_by_key: countsByKey,
     status: latest?.status ?? machine.status ?? null,
     last_telemetry_at: latest?.timestamp ?? null,
     last_updated: machine.last_updated,

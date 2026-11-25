@@ -67,11 +67,17 @@ function renderBottleTooltip({ chart, tooltip }, theme) {
     .map((it) => {
       const color = it.dataset?.backgroundColor || '#94a3b8';
       const label = it.dataset?.label || '';
-      const value = (Number(it.raw) || 0).toLocaleString('vi-VN');
+      const count = Number(it.raw) || 0;
+      const value = count.toLocaleString('vi-VN');
+      const pct = total > 0 ? ((count / total) * 100) : 0;
+      const pctText = pct.toLocaleString('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1,
+      });
       return `<div class="dtr-bottle-tooltip__item">
         <span class="dtr-bottle-tooltip__swatch" style="background:${color}"></span>
         <span class="dtr-bottle-tooltip__label">${label}</span>
-        <span class="dtr-bottle-tooltip__value">${value}</span>
+        <span class="dtr-bottle-tooltip__value">${value} <span class="dtr-bottle-tooltip__pct">(${pctText}%)</span></span>
       </div>`;
     })
     .join('');
