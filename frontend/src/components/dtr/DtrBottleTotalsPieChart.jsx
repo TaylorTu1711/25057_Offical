@@ -56,7 +56,7 @@ function sumArr(values = []) {
 export default function DtrBottleTotalsPieChart({
   keys = [],
   series = {},
-  title = 'TỈ LỆ LOẠI CHAI',
+  title = 'TỈ LỆ LOẠI CHAI LŨY KẾ',
   expandable = true,
   /** Hiện chú thích màu (dùng khi phóng to). */
   showLegend = false,

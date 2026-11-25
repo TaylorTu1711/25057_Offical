@@ -807,7 +807,7 @@ export default function SortMachineDetailPage() {
             >
               <div className="dtr-monitor-page__pies" ref={piesColRef}>
                 <DtrBottleTotalsPieChart
-                  title="TỈ LỆ LOẠI CHAI"
+                  title="TỈ LỆ LOẠI CHAI LŨY KẾ"
                   keys={lifetimeBottleKeys}
                   series={lifetimeBottleSeries}
                   bottleGlossary={dtrMachine?.bottle_glossary}
