@@ -816,6 +816,10 @@ export default function SortMachineDetailPage() {
                   title="TỈ LỆ CHAI KHÔNG NHÃN"
                   keys={bottleChartKeys}
                   series={countsChartSeries}
+                  mode={chartViewMode}
+                  year={selectedYear}
+                  month={selectedMonth}
+                  day={selectedDay}
                 />
               </div>
               <div className="dtr-monitor-page__bottles-chart">
@@ -848,6 +852,9 @@ export default function SortMachineDetailPage() {
                         series={countsChartSeries}
                         bottleGlossary={dtrMachine?.bottle_glossary}
                         mode={chartViewMode}
+                        year={selectedYear}
+                        month={selectedMonth}
+                        day={selectedDay}
                       />
                     ) : (
                       <DtrBottleTypeMonthTable

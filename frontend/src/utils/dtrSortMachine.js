@@ -1,4 +1,35 @@
 /**
+ * Dòng chữ nhỏ theo tab giờ/ngày/tháng/quý/năm đang chọn
+ * (pie không nhãn, biểu đồ thống kê số chai, …).
+ */
+export function formatDtrPeriodCaption(mode, { year, month, day } = {}) {
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day);
+  const hasY = Number.isFinite(y) && y > 0;
+  const hasM = Number.isFinite(m) && m >= 1 && m <= 12;
+  const hasD = Number.isFinite(d) && d >= 1 && d <= 31;
+  const pad2 = (n) => String(Number(n) || 0).padStart(2, '0');
+  switch (String(mode || '').toLowerCase()) {
+    case 'hour':
+      if (hasD && hasM && hasY) return `Ngày ${pad2(d)}/${pad2(m)}/${y}`;
+      return '';
+    case 'day':
+    case 'week':
+      if (hasM && hasY) return `Tháng ${pad2(m)}/${y}`;
+      return '';
+    case 'month':
+      return hasY ? `Năm ${y}` : '';
+    case 'quarter':
+      return hasY ? `Theo quý · ${y}` : '';
+    case 'year':
+      return 'Theo năm';
+    default:
+      return '';
+  }
+}
+
+/**
  * Số tổng giữa pie / cột tổng: > 1 triệu → "1,x" + đơn vị "triệu chai".
  * @returns {{ text: string, unit: string, full: string }}
  */

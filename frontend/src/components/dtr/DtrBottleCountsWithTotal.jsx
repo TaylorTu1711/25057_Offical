@@ -6,6 +6,7 @@ import DtrBottleCountsHourlyChart, {
   DtrBottleCountsLegend,
 } from './DtrBottleCountsHourlyChart';
 import { resolveBottleGlossary } from '../../utils/dtrBottleGlossary';
+import { formatDtrPeriodCaption } from '../../utils/dtrSortMachine';
 
 function ensureBottleTooltipEl() {
   let el = document.getElementById('dtr-bottle-tooltip');
@@ -144,11 +145,18 @@ export default function DtrBottleCountsWithTotal({
   title = 'BIỂU ĐỒ THỐNG KÊ SỐ CHAI',
   bottleGlossary = null,
   mode = 'hour',
+  year = null,
+  month = null,
+  day = null,
 }) {
   const { theme } = useTheme();
   const themeRef = useRef(theme);
   themeRef.current = theme;
   const totalsRef = useRef(null);
+  const periodCaption = useMemo(
+    () => formatDtrPeriodCaption(mode, { year, month, day }),
+    [mode, year, month, day],
+  );
   const glossaryByKey = useMemo(() => {
     const map = {};
     for (const item of resolveBottleGlossary(bottleGlossary)) {
@@ -270,7 +278,14 @@ export default function DtrBottleCountsWithTotal({
     <div className="dtr-bottle-total-wrap">
       <div className="dtr-bottle-total-wrap__titles">
         <div className="chart-title-brand machine-chart-head mida-status-chart-head dtr-bottle-total-head">
-          <div className="dtr-bottle-total-head__main">{title}</div>
+          <div className="dtr-bottle-total-head__text">
+            <div className="dtr-bottle-total-head__main">{title}</div>
+            {periodCaption ? (
+              <div className="dtr-bottle-total-head__period" title={periodCaption}>
+                {periodCaption}
+              </div>
+            ) : null}
+          </div>
           <div className="dtr-bottle-total-head__actions">
             <MidaChartExpand title={title} tone="plenma">
               <div className="dtr-bottle-expand-surface">

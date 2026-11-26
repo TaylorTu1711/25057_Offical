@@ -4,7 +4,10 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import useTheme from '../../hooks/useTheme';
 import { chartDoughnutAnimationOptions } from '../../utils/chartTheme';
-import { formatDtrBottleCenterTotal } from '../../utils/dtrSortMachine';
+import {
+  formatDtrBottleCenterTotal,
+  formatDtrPeriodCaption,
+} from '../../utils/dtrSortMachine';
 import MidaChartExpand from '../mida/MidaChartExpand';
 
 ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
@@ -52,10 +55,22 @@ export default function DtrBottleGroupPieChart({
   expandable = true,
   /** Hiện chú thích màu (dùng khi phóng to). */
   showLegend = false,
+  mode = 'day',
+  year = null,
+  month = null,
+  day = null,
+  periodCaption: periodCaptionProp = null,
 }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [hovering, setHovering] = useState(false);
+
+  const periodCaption = useMemo(() => {
+    if (periodCaptionProp != null && String(periodCaptionProp).trim()) {
+      return String(periodCaptionProp).trim();
+    }
+    return formatDtrPeriodCaption(mode, { year, month, day });
+  }, [periodCaptionProp, mode, year, month, day]);
 
   const slices = useMemo(() => {
     let primary = 0;
@@ -232,7 +247,14 @@ export default function DtrBottleGroupPieChart({
       }`}
     >
       <div className="chart-title-brand machine-chart-head dtr-pie-card__head">
-        <div className="dtr-pie-card__title">{title}</div>
+        <div className="dtr-pie-card__head-text">
+          <div className="dtr-pie-card__title">{title}</div>
+          {periodCaption ? (
+            <div className="dtr-pie-card__period" title={periodCaption}>
+              {periodCaption}
+            </div>
+          ) : null}
+        </div>
         {expandable && slices.grandTotal > 0 ? (
           <MidaChartExpand
             title="TỈ LỆ CHAI KHÔNG NHÃN VÀ CÁC CHAI CÒN LẠI"
@@ -245,6 +267,11 @@ export default function DtrBottleGroupPieChart({
               title="TỈ LỆ CHAI KHÔNG NHÃN VÀ CÁC CHAI CÒN LẠI"
               expandable={false}
               showLegend
+              mode={mode}
+              year={year}
+              month={month}
+              day={day}
+              periodCaption={periodCaption}
             />
           </MidaChartExpand>
         ) : null}
